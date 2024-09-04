@@ -11,7 +11,6 @@ namespace HudCopyPaste.Windows;
 
 public class MainWindow : Window, IDisposable
 {
-    private string GoatImagePath;
     private Plugin Plugin;
 
     public MainWindow(Plugin plugin)
