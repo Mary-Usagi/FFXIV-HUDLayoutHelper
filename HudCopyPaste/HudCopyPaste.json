@@ -5,7 +5,7 @@
   "Description": "Allows using Ctrl+C and Ctrl+V to copy and paste the position of single elements in the HUD Layout editor. \n",
   "ApplicableVersion": "any",
   "RepoUrl": "https://github.com/Mary-Usagi/FFXIV-HudCopyPaste",
-  "IconUrl": "https://github.com/Mary-Usagi/FFXIV-HudCopyPaste/blob/32671987ad575da3d0f8d0ca664023cc62304717/HudCopyPaste/Images/icon.png",
+  "IconUrl": "https://github.com/Mary-Usagi/FFXIV-HudCopyPaste/tree/main/HudCopyPaste/Images/icon.png",
   "Tags": [
     "hud",
     "layout",

@@ -1,8 +1,9 @@
 # HudCopyPaste
 
-## Main Points
+A Dalamud Plugin for FFXIV. 
+
 - Copy and paste HUD element positions.
-- Supports undo and redo actions.
+- Supports undo and redo.
 
 ## How To Use
 1. Open the HUD Layout Editor.
