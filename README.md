@@ -2,9 +2,9 @@
 > 
 > This is a GitHub Template repo. If you want to use this for a plugin, just [use this template][new-repo] to make a new repo!
 >
-> ![image](https://github.com/goatcorp/SamplePlugin/assets/16760685/d9732094-e1ed-4769-a70b-58ed2b92580c)
+> ![image](https://github.com/goatcorp/HudCopyPaste/assets/16760685/d9732094-e1ed-4769-a70b-58ed2b92580c)
 
-# SamplePlugin
+# HudCopyPaste
 
 [![Use This Template badge](https://img.shields.io/badge/Use%20This%20Template-0?logo=github&labelColor=grey)][new-repo]
 
@@ -40,13 +40,13 @@ To begin, [clone this template repository][new-repo] to your own GitHub account.
 
 Be sure to also check out the [Dalamud Developer Docs][dalamud-docs] for helpful information about building your own plugin. The Developer Docs includes helpful information about all sorts of things, including [how to submit][submit] your newly-created plugin to the official repository. Assuming you use this template repository, the provided project build configuration and license are already chosen to make everything a breeze.
 
-[new-repo]: https://github.com/new?template_name=SamplePlugin&template_owner=goatcorp
+[new-repo]: https://github.com/new?template_name=HudCopyPaste&template_owner=goatcorp
 [dalamud-docs]: https://dalamud.dev
 [submit]: https://dalamud.dev/plugin-development/plugin-submission
 
 ### Prerequisites
 
-SamplePlugin assumes all the following prerequisites are met:
+HudCopyPaste assumes all the following prerequisites are met:
 
 * XIVLauncher, FINAL FANTASY XIV, and Dalamud have all been installed and the game has been run with Dalamud at least once.
 * XIVLauncher is installed to its default directories and configurations.
@@ -55,22 +55,22 @@ SamplePlugin assumes all the following prerequisites are met:
 
 ### Building
 
-1. Open up `SamplePlugin.sln` in your C# editor of choice (likely [Visual Studio 2022](https://visualstudio.microsoft.com) or [JetBrains Rider](https://www.jetbrains.com/rider/)).
+1. Open up `HudCopyPaste.sln` in your C# editor of choice (likely [Visual Studio 2022](https://visualstudio.microsoft.com) or [JetBrains Rider](https://www.jetbrains.com/rider/)).
 2. Build the solution. By default, this will build a `Debug` build, but you can switch to `Release` in your IDE.
-3. The resulting plugin can be found at `SamplePlugin/bin/x64/Debug/SamplePlugin.dll` (or `Release` if appropriate.)
+3. The resulting plugin can be found at `HudCopyPaste/bin/x64/Debug/HudCopyPaste.dll` (or `Release` if appropriate.)
 
 ### Activating in-game
 
 1. Launch the game and use `/xlsettings` in chat or `xlsettings` in the Dalamud Console to open up the Dalamud settings.
-    * In here, go to `Experimental`, and add the full path to the `SamplePlugin.dll` to the list of Dev Plugin Locations.
+    * In here, go to `Experimental`, and add the full path to the `HudCopyPaste.dll` to the list of Dev Plugin Locations.
 2. Next, use `/xlplugins` (chat) or `xlplugins` (console) to open up the Plugin Installer.
-    * In here, go to `Dev Tools > Installed Dev Plugins`, and the `SamplePlugin` should be visible. Enable it.
+    * In here, go to `Dev Tools > Installed Dev Plugins`, and the `HudCopyPaste` should be visible. Enable it.
 3. You should now be able to use `/pmycommand` (chat) or `pmycommand` (console)!
 
 Note that you only need to add it to the Dev Plugin Locations once (Step 1); it is preserved afterwards. You can disable, enable, or load your plugin on startup through the Plugin Installer.
 
 ### Reconfiguring for your own uses
 
-Basically, just replace all references to `SamplePlugin` in all of the files and filenames with your desired name, then start building the plugin of your dreams. You'll figure it out 😁
+Basically, just replace all references to `HudCopyPaste` in all of the files and filenames with your desired name, then start building the plugin of your dreams. You'll figure it out 😁
 
-Dalamud will load the JSON file (by default, `SamplePlugin/SamplePlugin.json`) next to your DLL and use it for metadata, including the description for your plugin in the Plugin Installer. Make sure to update this with information relevant to _your_ plugin!
+Dalamud will load the JSON file (by default, `HudCopyPaste/HudCopyPaste.json`) next to your DLL and use it for metadata, including the description for your plugin in the Plugin Installer. Make sure to update this with information relevant to _your_ plugin!

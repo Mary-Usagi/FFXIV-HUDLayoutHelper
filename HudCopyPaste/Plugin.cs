@@ -11,14 +11,14 @@ using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
-using SamplePlugin.Windows;
+using HudCopyPaste.Windows;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 
 
-namespace SamplePlugin;
+namespace HudCopyPaste;
 
 public sealed class Plugin : IDalamudPlugin
 {
@@ -30,7 +30,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public Configuration Configuration { get; init; }
 
-    public readonly WindowSystem WindowSystem = new("SamplePlugin");
+    public readonly WindowSystem WindowSystem = new("HudCopyPaste");
     private ConfigWindow ConfigWindow { get; init; }
     private MainWindow MainWindow { get; init; }
 
@@ -394,9 +394,7 @@ public sealed class Plugin : IDalamudPlugin
             if (cKeystate.HasFlag(KeyStateFlags.Pressed)) keyboardAction = KeyboardAction.Copy;
             if (vKeystate.HasFlag(KeyStateFlags.Released)) keyboardAction = KeyboardAction.Paste;
             if (zKeystate.HasFlag(KeyStateFlags.Pressed)) keyboardAction = KeyboardAction.Undo;
-            // TODO: undo last operation
             if (yKeystate.HasFlag(KeyStateFlags.Pressed)) keyboardAction = KeyboardAction.Redo;
-            // TODO: redo last operation
         } else {
             return;
         }
@@ -513,6 +511,7 @@ public sealed class Plugin : IDalamudPlugin
                 break;
             /*
              * Undo the last operation
+             * TODO: Implement for standard element movements? 
              */
             case KeyboardAction.Undo:
                 this.Log.Debug("======= UNDO =======");
