@@ -53,22 +53,14 @@ public sealed class Plugin : IDalamudPlugin
         this.Framework = framework;
         this.ChatGui = chatGui;
 
-        // you might normally want to embed resources and load them from the manifest stream
-        var goatImagePath = Path.Combine(PluginInterface.AssemblyLocation.Directory?.FullName!, "goat.png");
-
-        MainWindow = new MainWindow(this, goatImagePath);
+        MainWindow = new MainWindow(this);
 
         WindowSystem.AddWindow(MainWindow);
-
-        //CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand) {
-        //    HelpMessage = "A useful message to display in /xlhelp"
-        //});
 
         PluginInterface.UiBuilder.Draw += DrawUI;
 
         // Adds another button that is doing the same but for the main ui of the plugin
         PluginInterface.UiBuilder.OpenMainUi += ToggleMainUI;
-
 
         this.Framework.Update += OnUpdate;
 
@@ -572,14 +564,7 @@ public sealed class Plugin : IDalamudPlugin
         WindowSystem.RemoveAllWindows();
 
         MainWindow.Dispose();
-
-        //CommandManager.RemoveHandler(CommandName);
     }
-
-    //private void OnCommand(string command, string args) {
-    //    // in response to the slash command, just toggle the display status of our main ui
-    //    ToggleMainUI();
-    //}
 
     private void DrawUI() => WindowSystem.Draw();
 

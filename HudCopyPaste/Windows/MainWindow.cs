@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Numerics;
 using Dalamud.Interface.Internal;
 using Dalamud.Interface.Utility;
@@ -13,39 +14,50 @@ public class MainWindow : Window, IDisposable
     private string GoatImagePath;
     private Plugin Plugin;
 
-    // We give this window a hidden ID using ##
-    // So that the user will see "My Amazing Window" as window title,
-    // but for ImGui the ID is "My Amazing Window##With a hidden ID"
-    public MainWindow(Plugin plugin, string goatImagePath)
-        : base("My Amazing Window##With a hidden ID", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
+    public MainWindow(Plugin plugin)
+        : base("Hud Copy Paste Controls", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.AlwaysAutoResize)
     {
         SizeConstraints = new WindowSizeConstraints
         {
-            MinimumSize = new Vector2(375, 330),
+            MinimumSize = new Vector2(290, 200),
             MaximumSize = new Vector2(float.MaxValue, float.MaxValue)
         };
-
-        GoatImagePath = goatImagePath;
         Plugin = plugin;
     }
 
     public void Dispose() { }
 
+    private string[][] keybindDescriptions = [
+        ["Ctrl + C", "Copy selected HUD element"],
+        ["Ctrl + V", "Paste copied HUD element"],
+        ["Ctrl + Z", "Undo last action"],
+        ["Ctrl + Y", "Redo last action"]
+    ];
+
     public override void Draw()
     {
         ImGui.Spacing();
 
-        ImGui.Text("Have a goat:");
-        var goatImage = Plugin.TextureProvider.GetFromFile(GoatImagePath).GetWrapOrDefault();
-        if (goatImage != null)
+        ImGui.Text(" (Only when in HUD Layout Editor)");
+        ImGui.Spacing();
+
+        ImGui.BeginTable("##Table1", 2, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.PadOuterX);
+        ImGui.TableSetupColumn("##Column1", ImGuiTableColumnFlags.WidthFixed, 75f);
+        ImGui.TableSetupColumn("##Column2", ImGuiTableColumnFlags.WidthStretch);
+
+        ImGui.TableNextColumn();
+        ImGui.TableHeader("Keybinds");
+        ImGui.TableNextColumn();
+        ImGui.TableHeader("Description");
+
+        foreach (var keybind in keybindDescriptions)
         {
-            ImGuiHelpers.ScaledIndent(55f);
-            ImGui.Image(goatImage.ImGuiHandle, new Vector2(goatImage.Width, goatImage.Height));
-            ImGuiHelpers.ScaledIndent(-55f);
+            for (var i = 0; i < keybind.Length; i++)
+            {
+                ImGui.TableNextColumn();
+                ImGui.Text(keybind[i]);
+            }
         }
-        else
-        {
-            ImGui.Text("Image not found.");
-        }
+        ImGui.EndTable();
     }
 }
