@@ -63,7 +63,7 @@ public sealed class Plugin : IDalamudPlugin
         PluginInterface.UiBuilder.OpenMainUi += ToggleMainUI;
 
         this.Framework.Update += OnUpdate;
-
+        
         // For debugging purposes
         this.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", (type, args) => {
             unsafe {
