@@ -73,6 +73,9 @@ public sealed class Plugin : IDalamudPlugin
         return;
     }
 
+    /// <summary>
+    /// Represents data for a HUD element.
+    /// </summary>
     private class HudElementData
     {
         public int elementId { get; set; }
@@ -94,6 +97,10 @@ public sealed class Plugin : IDalamudPlugin
             this.scale = 1.0f;
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="HudElementData"/> class from an AtkResNode.
+        /// </summary>
+        /// <param name="resNode">The AtkResNode pointer.</param>
         public unsafe HudElementData(AtkResNode* resNode) {
             try {
                 this.resNodeDisplayName = resNode->ParentNode->GetComponent()->GetTextNodeById(4)->GetAsAtkTextNode()->NodeText.ToString();
@@ -114,6 +121,11 @@ public sealed class Plugin : IDalamudPlugin
     private List<HudElementData> undoHistory = new List<HudElementData>();
     private List<HudElementData> redoHistory = new List<HudElementData>();
 
+    /// <summary>
+    /// Pretty prints a list of <see cref="HudElementData"/> to the debug log.
+    /// </summary>
+    /// <param name="list">The list of HUD element data.</param>
+    /// <param name="title">The title for the log entry.</param>
     private void PrettyPrintList(List<HudElementData> list, string title) {
         this.Log.Debug($"'{title}' count: {list.Count}");
         foreach (var element in list) {
@@ -132,9 +144,13 @@ public sealed class Plugin : IDalamudPlugin
         Redo
     }
 
-    /*
-     * Simulate a mouse click on a HUD element
-     */
+    /// <summary>
+    /// Simulates a mouse click on a HUD element.
+    /// </summary>
+    /// <param name="resNode">The AtkResNode pointer.</param>
+    /// <param name="resNodeID">The resource node ID.</param>
+    /// <param name="hudElementData">The HUD element data.</param>
+    /// <param name="hudLayoutScreen">The HUD layout screen pointer.</param>
     private unsafe void SimulateMouseClickOnHudElement(AtkResNode* resNode, uint resNodeID, HudElementData hudElementData, AddonHudLayoutScreen* hudLayoutScreen) {
         if (resNode == null) {
             this.Log.Warning("ResNode is null");
@@ -194,9 +210,10 @@ public sealed class Plugin : IDalamudPlugin
         AddonEventManager.ResetCursor();
     }
 
-    /*
-     * Send a change event to the HUD layout
-     */
+    /// <summary>
+    /// Sends a change event to the HUD layout.
+    /// </summary>
+    /// <param name="agentHudLayout">The agent HUD layout pointer.</param>
     private unsafe void SendChangeEvent(AgentHUDLayout* agentHudLayout) {
         AtkValue* result = stackalloc AtkValue[1];
         AtkValue* command = stackalloc AtkValue[2];
@@ -205,6 +222,12 @@ public sealed class Plugin : IDalamudPlugin
         agentHudLayout->ReceiveEvent(result, command, 1, 0);
     }
 
+    /// <summary>
+    /// Finds a HUD resource node by name.
+    /// </summary>
+    /// <param name="hudLayoutScreen">The HUD layout screen pointer.</param>
+    /// <param name="searchName">The name to search for.</param>
+    /// <returns>A tuple containing the node pointer and its ID.</returns>
     private unsafe (nint, uint) FindHudResnodeByName(AddonHudLayoutScreen* hudLayoutScreen, string searchName) {
         AtkResNode** resNodes = hudLayoutScreen->CollisionNodeList;
         uint resNodeCount = hudLayoutScreen->CollisionNodeListCount;
@@ -224,6 +247,10 @@ public sealed class Plugin : IDalamudPlugin
         return (nint.Zero, 0);
     }
 
+    /// <summary>
+    /// Handles keyboard shortcuts for copy, paste, undo, and redo actions.
+    /// </summary>
+    /// <param name="framework">The framework interface.</param>
     private unsafe void HandleKeyboardShortcuts(IFramework framework) {
         // Executes every frame
         if (!ClientState.IsLoggedIn) return;

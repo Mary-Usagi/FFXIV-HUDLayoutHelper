@@ -6,9 +6,18 @@ using System.Collections.Generic;
 
 namespace HudCopyPaste
 {
+    /// <summary>
+    /// Provides debugging functionality for the HudCopyPaste plugin.
+    /// </summary>
     public sealed class Debug
     {
         private Plugin Plugin { get; }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Debug"/> class.
+        /// </summary>
+        /// <param name="plugin">The plugin instance.</param>
+        /// <param name="enabled">Indicates whether debugging is enabled.</param>
         public Debug(Plugin plugin, bool enabled) {
             Plugin = plugin;
 
@@ -65,6 +74,7 @@ namespace HudCopyPaste
                             PrintAtkEventData(eventData);
 
                             if (eventData->ListItemData.ListItemRenderer != null) {
+                                // Additional processing if ListItemRenderer is not null
                             }
 
                             bytePtr = (byte*) receiveEventArgs.Data;
@@ -92,6 +102,10 @@ namespace HudCopyPaste
             }
         }
 
+        /// <summary>
+        /// Prints detailed information about the specified <see cref="AtkEvent"/>.
+        /// </summary>
+        /// <param name="atkEvent">The <see cref="AtkEvent"/> to print.</param>
         private unsafe void PrintAtkEvent(AtkEvent* atkEvent) {
             if (atkEvent == null) {
                 Plugin.Log.Debug("AtkEvent is null");
@@ -104,10 +118,10 @@ namespace HudCopyPaste
             Plugin.Log.Debug($"AtkEvent Node: {(uint) atkEvent->Node:X}");
             Plugin.Log.Debug($"AtkEvent Unk29: {atkEvent->Unk29}");
             Plugin.Log.Debug($"AtkEvent NextEvent: {(uint) atkEvent->NextEvent:X}");
-            // ===> MouseUp Target: 1892F212190 ---> AddonInventory -> AddonControl -> AtkStage (!) (AtkStage.Instance()?)
             Plugin.Log.Debug($"(AtkStage): {(uint) AtkStage.Instance():X}");
             Plugin.Log.Debug($"AtkEvent Target: {(uint) atkEvent->Target:X}");
             try {
+                // Uncomment the following lines to print detailed information about the target collision node
                 //AtkCollisionNode* targetCollisionNode = (AtkCollisionNode*) atkEvent->Target;
                 //if (targetCollisionNode == null) {
                 //    Plugin.Log.Debug("AtkEvent Target is null");
@@ -130,6 +144,10 @@ namespace HudCopyPaste
             Plugin.Log.Debug($"AtkEvent Type: {atkEvent->Type}");
         }
 
+        /// <summary>
+        /// Prints the byte values of the specified <see cref="AtkEventData"/> struct, 8 bytes per line.
+        /// </summary>
+        /// <param name="atkEventData">The <see cref="AtkEventData"/> to print.</param>
         private unsafe void PrintAtkEventData(AtkEventData* atkEventData) {
             if (atkEventData == null) {
                 Plugin.Log.Debug("AtkEventData is null");
