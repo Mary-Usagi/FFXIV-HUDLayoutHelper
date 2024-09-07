@@ -1,19 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Dalamud.Game.Addon.Lifecycle;
+﻿using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using HudCopyPaste;
+using System;
+using System.Collections.Generic;
 
 namespace HudCopyPaste
 {
     public sealed class Debug
-    {   
+    {
         private Plugin Plugin { get; }
-        public Debug(Plugin plugin, bool enabled) { 
+        public Debug(Plugin plugin, bool enabled) {
             Plugin = plugin;
 
             if (enabled) {

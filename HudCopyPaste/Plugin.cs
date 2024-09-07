@@ -1,8 +1,5 @@
-using Dalamud.Game;
 using Dalamud.Game.Addon.Lifecycle;
-using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using Dalamud.Interface.Windowing;
-using Dalamud.Game.ClientState.Keys;
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
@@ -13,9 +10,7 @@ using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Text.Json;
-using Lumina.Excel.GeneratedSheets2;
 
 namespace HudCopyPaste;
 
@@ -172,7 +167,7 @@ public sealed class Plugin : IDalamudPlugin
 
         // Call the mouse down event on the HUD layout
         this.Log.Debug("Calling MouseDown event");
-        hudLayoutScreen->ReceiveEvent(AtkEventType.MouseDown, (int)mouseDownEvent.Param, &mouseDownEvent, mouseDownEventData);
+        hudLayoutScreen->ReceiveEvent(AtkEventType.MouseDown, (int) mouseDownEvent.Param, &mouseDownEvent, mouseDownEventData);
 
         // ----> MouseUp Event
         // Create the mouse up event from the selected node's event
@@ -219,7 +214,7 @@ public sealed class Plugin : IDalamudPlugin
             try {
                 Utf8String resNodeName = resNode->ParentNode->GetComponent()->GetTextNodeById(4)->GetAsAtkTextNode()->NodeText;
                 if (resNodeName.ToString() == searchName) {
-                    return ((nint)resNode, (uint)i);
+                    return ((nint) resNode, (uint) i);
                 }
             }
             catch (NullReferenceException) {
