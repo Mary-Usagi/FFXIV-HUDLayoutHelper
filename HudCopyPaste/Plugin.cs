@@ -69,8 +69,6 @@ public sealed class Plugin : IDalamudPlugin
             this.Log.Debug("HudLayoutScreen finalize.");
             this.Framework.Update -= HandleKeyboardShortcuts;
         });
-
-        return;
     }
 
     /// <summary>
@@ -471,7 +469,8 @@ public sealed class Plugin : IDalamudPlugin
         this.Framework.Update -= HandleKeyboardShortcuts;
         AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, "_HudLayoutScreen");
         AddonLifecycle.UnregisterListener(AddonEvent.PreFinalize, "_HudLayoutScreen");
-        AddonLifecycle.UnregisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen");
+        
+        this.Debug.Dispose();
 
         WindowSystem.RemoveAllWindows();
 

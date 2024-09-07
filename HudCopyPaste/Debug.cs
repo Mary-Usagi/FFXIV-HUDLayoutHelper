@@ -9,7 +9,7 @@ namespace HudCopyPaste
     /// <summary>
     /// Provides debugging functionality for the HudCopyPaste plugin.
     /// </summary>
-    public sealed class Debug
+    public sealed class Debug : IDisposable
     {
         private Plugin Plugin { get; }
 
@@ -23,84 +23,78 @@ namespace HudCopyPaste
 
             if (enabled) {
                 // Register a listener for the PreReceiveEvent of the "_HudLayoutScreen" addon
-                Plugin.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", (type, args) => {
-                    unsafe {
-                        if (args is not AddonReceiveEventArgs receiveEventArgs) return;
+                Plugin.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", HandleHudLayoutScreenEvent);
+            }
+        }
 
-                        // List of AtkEventTypes to handle
-                        var handledTypeList = new List<AtkEventType> {
-                            // Uncomment the following lines to handle specific AtkEventTypes
-                            // AtkEventType.MouseMove,
-                            // AtkEventType.MouseOut,
-                            // AtkEventType.MouseOver,
-                            // AtkEventType.MouseDown,
-                            // AtkEventType.MouseUp
-                        };
+        /// <summary>
+        /// Handles the PreReceiveEvent for the "_HudLayoutScreen" addon.
+        /// </summary>
+        /// <param name="type">The type of the addon event.</param>
+        /// <param name="args">The arguments for the addon event.</param>
+        private unsafe void HandleHudLayoutScreenEvent(AddonEvent type, AddonArgs args) {
+            if (args is not AddonReceiveEventArgs receiveEventArgs) return;
 
-                        // Check if the event type is in the handled list
-                        if (!handledTypeList.Contains((AtkEventType) receiveEventArgs.AtkEventType)) return;
+            // List of AtkEventTypes to handle
+            var handledTypeList = new List<AtkEventType> {
+                // Uncomment the following lines to handle specific AtkEventTypes
+                // AtkEventType.MouseMove,
+                // AtkEventType.MouseOut,
+                // AtkEventType.MouseOver,
+                // AtkEventType.MouseDown,
+                // AtkEventType.MouseUp
+            };
 
-                        // FINDINGS:
-                        // - MouseDown AtkEvent:
-                        //   - Param: current index in collisionNodeList
-                        //   - eventid: 0
-                        //   - NextEvent: selected resnode (collisionnode) -> atkeventmanager->atkevent->nextevent
-                        //   - listener: selected resnode (collisionnode) -> atkeventmanager->atkevent->listener
-                        //   - target: Pointer to selected resnode (collisionnode) == CollisionNodeList[Param]
-                        // - MouseUp AtkEvent:
-                        //   - eventid: 99
-                        //   - Target: AtkStage.Instance()
+            // Check if the event type is in the handled list
+            if (!handledTypeList.Contains((AtkEventType) receiveEventArgs.AtkEventType)) return;
 
-                        // Log the event details for debugging purposes
-                        Plugin.Log.Debug("=====================================");
-                        Plugin.Log.Debug("AtkEventType: " + (AtkEventType) receiveEventArgs.AtkEventType);
-                        Plugin.Log.Debug("AddonArgsType: " + receiveEventArgs.Type);
-                        Plugin.Log.Debug($"AtkEvent nint: {receiveEventArgs.AtkEvent:X}");
+            // Log the event details for debugging purposes
+            Plugin.Log.Debug("=====================================");
+            Plugin.Log.Debug($"AtkEventType: {(AtkEventType) receiveEventArgs.AtkEventType}");
+            Plugin.Log.Debug($"AddonArgsType: {receiveEventArgs.Type}");
+            Plugin.Log.Debug($"AtkEvent nint: {receiveEventArgs.AtkEvent:X}");
 
-                        if (receiveEventArgs.AtkEvent != nint.Zero) {
-                            AtkEvent* atkEvent = (AtkEvent*) receiveEventArgs.AtkEvent;
-                            Plugin.Log.Debug("---------- AtkEvent ----------");
-                            Plugin.Log.Debug($"AtkEvent: {atkEvent->ToString()}");
-                            PrintAtkEvent(atkEvent);
-                            Plugin.Log.Debug("---------- AtkEvent End ----------");
-                        }
+            if (receiveEventArgs.AtkEvent != nint.Zero) {
+                AtkEvent* atkEvent = (AtkEvent*) receiveEventArgs.AtkEvent;
+                Plugin.Log.Debug("---------- AtkEvent ----------");
+                Plugin.Log.Debug($"AtkEvent: {atkEvent->ToString()}");
+                PrintAtkEvent(atkEvent);
+                Plugin.Log.Debug("---------- AtkEvent End ----------");
+            }
 
-                        Plugin.Log.Debug("AddonName: " + receiveEventArgs.AddonName);
-                        Plugin.Log.Debug("EventId int: " + receiveEventArgs.EventParam);
-                        Plugin.Log.Debug($"Data Ptr: {receiveEventArgs.Data:X}");
+            Plugin.Log.Debug($"AddonName: {receiveEventArgs.AddonName}");
+            Plugin.Log.Debug($"EventId int: {receiveEventArgs.EventParam}");
+            Plugin.Log.Debug($"Data Ptr: {receiveEventArgs.Data:X}");
 
-                        if (receiveEventArgs.Data != nint.Zero) {
-                            AtkEventData* eventData = (AtkEventData*) receiveEventArgs.Data;
-                            Plugin.Log.Debug($"EventData: {eventData->ToString()}");
-                            Plugin.Log.Debug($"ListItemData: {eventData->ListItemData}");
-                            Plugin.Log.Debug($"SelectedIndex: {eventData->ListItemData.SelectedIndex}");
+            if (receiveEventArgs.Data != nint.Zero) {
+                AtkEventData* eventData = (AtkEventData*) receiveEventArgs.Data;
+                Plugin.Log.Debug($"EventData: {eventData->ToString()}");
+                Plugin.Log.Debug($"ListItemData: {eventData->ListItemData}");
+                Plugin.Log.Debug($"SelectedIndex: {eventData->ListItemData.SelectedIndex}");
 
-                            PrintAtkEventData(eventData);
+                PrintAtkEventData(eventData);
 
-                            if (eventData->ListItemData.ListItemRenderer != null) {
-                                // Additional processing if ListItemRenderer is not null
-                            }
+                if (eventData->ListItemData.ListItemRenderer != null) {
+                    // Additional processing if ListItemRenderer is not null
+                }
 
-                            // Interpret the first 8 bytes as mouse position values
-                            byte* bytePtr = (byte*) receiveEventArgs.Data;
-                            uint[] mousePositions = new uint[4];
-                            for (int i = 0; i < 4; i++) {
-                                mousePositions[i] = BitConverter.ToUInt16(new byte[] { bytePtr[i * 2], bytePtr[i * 2 + 1] }, 0);
-                            }
-                            Plugin.Log.Debug($"Mouse Position: X={mousePositions[0]}, Y={mousePositions[1]}, Z={mousePositions[2]}, W={mousePositions[3]}");
+                // Interpret the first 8 bytes as mouse position values
+                byte* bytePtr = (byte*) receiveEventArgs.Data;
+                uint[] mousePositions = new uint[4];
+                for (int i = 0; i < 4; i++) {
+                    mousePositions[i] = BitConverter.ToUInt16(new byte[] { bytePtr[i * 2], bytePtr[i * 2 + 1] }, 0);
+                }
+                Plugin.Log.Debug($"Mouse Position: X={mousePositions[0]}, Y={mousePositions[1]}, Z={mousePositions[2]}, W={mousePositions[3]}");
 
-                            // Print the rest of the bytes in groups of 8
-                            int structSize = sizeof(AtkEventData);
-                            for (int i = 8; i < structSize; i += 8) {
-                                string byteGroup = string.Empty;
-                                for (int j = 0; j < 8 && i + j < structSize; j++) {
-                                    byteGroup += $"{bytePtr[i + j]} ";
-                                }
-                                Plugin.Log.Debug($"Bytes {i}-{i + 7}: {byteGroup.Trim()}");
-                            }
-                        }
+                // Print the rest of the bytes in groups of 8
+                int structSize = sizeof(AtkEventData);
+                for (int i = 8; i < structSize; i += 8) {
+                    string byteGroup = string.Empty;
+                    for (int j = 0; j < 8 && i + j < structSize; j++) {
+                        byteGroup += $"{bytePtr[i + j]} ";
                     }
-                });
+                    Plugin.Log.Debug($"Bytes {i}-{i + 7}: {byteGroup.Trim()}");
+                }
             }
         }
 
@@ -172,6 +166,10 @@ namespace HudCopyPaste
                 }
                 Plugin.Log.Debug($"Bytes {i}-{i + 7}: {byteGroup.Trim()}");
             }
+        }
+
+        public void Dispose() {
+            Plugin.AddonLifecycle.UnregisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", HandleHudLayoutScreenEvent);
         }
     }
 }
