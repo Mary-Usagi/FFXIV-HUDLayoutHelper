@@ -12,10 +12,12 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 
-namespace HudCopyPaste
-{
-    public sealed class Plugin : IDalamudPlugin
-    {
+namespace HudCopyPaste {
+    public sealed class Plugin : IDalamudPlugin {
+
+        public string Name => "HudCopyPaste";
+        private const string CommandName = "/hudcp";
+
         [PluginService] internal static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
         [PluginService] internal static ITextureProvider TextureProvider { get; private set; } = null!;
 
@@ -60,12 +62,12 @@ namespace HudCopyPaste
             PluginInterface.UiBuilder.OpenMainUi += ToggleMainUI;
 
             this.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "_HudLayoutScreen", (type, args) => {
-                this.Log.Debug("HudLayoutScreen setup.");
+                this.Debug.Log(this.Log.Debug, "HudLayoutScreen setup.");
                 this.Framework.Update += HandleKeyboardShortcuts;
             });
 
             this.AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, "_HudLayoutScreen", (type, args) => {
-                this.Log.Debug("HudLayoutScreen finalize.");
+                this.Debug.Log(this.Log.Debug, "HudLayoutScreen finalize.");
                 this.Framework.Update -= HandleKeyboardShortcuts;
             });
         }
@@ -73,26 +75,20 @@ namespace HudCopyPaste
         /// <summary>
         /// Represents data for a HUD element.
         /// </summary>
-        private class HudElementData
-        {
-            public int ElementId { get; set; }
-            public string ResNodeDisplayName { get; set; }
-            public string AddonName { get; set; }
-            public short PosX { get; set; }
-            public short PosY { get; set; }
-            public float Scale { get; set; }
+        internal class HudElementData {
+            public int ElementId { get; set; } = -1;
+            public string ResNodeDisplayName { get; set; } = string.Empty;
+            public string AddonName { get; set; } = string.Empty;
+            public short PosX { get; set; } = 0;
+            public short PosY { get; set; } = 0;
+            public float Scale { get; set; } = 1.0f;
 
             public override string ToString() {
                 return JsonSerializer.Serialize(this);
             }
 
-            public HudElementData() {
-                ElementId = -1;
-                ResNodeDisplayName = string.Empty;
-                AddonName = string.Empty;
-                PosX = 0;
-                PosY = 0;
-                Scale = 1.0f;
+            public string PrettyPrint() {
+                return $"{ResNodeDisplayName} ({PosX}, {PosY})";
             }
 
             /// <summary>
@@ -100,10 +96,12 @@ namespace HudCopyPaste
             /// </summary>
             /// <param name="resNode">The AtkResNode pointer.</param>
             public unsafe HudElementData(AtkResNode* resNode) {
+                if (resNode->ParentNode == null) {
+                    return; 
+                }
                 try {
                     ResNodeDisplayName = resNode->ParentNode->GetComponent()->GetTextNodeById(4)->GetAsAtkTextNode()->NodeText.ToString();
-                }
-                catch (NullReferenceException) {
+                } catch (NullReferenceException) {
                     ResNodeDisplayName = "Unknown";
                 }
                 PosX = resNode->ParentNode->GetXShort();
@@ -119,27 +117,56 @@ namespace HudCopyPaste
         private List<HudElementData> undoHistory = new List<HudElementData>();
         private List<HudElementData> redoHistory = new List<HudElementData>();
 
-        /// <summary>
-        /// Pretty prints a list of <see cref="HudElementData"/> to the debug log.
-        /// </summary>
-        /// <param name="list">The list of HUD element data.</param>
-        /// <param name="title">The title for the log entry.</param>
-        private void PrettyPrintList(List<HudElementData> list, string title) {
-            this.Log.Debug($"'{title}' count: {list.Count}");
-            foreach (var element in list) {
-                this.Log.Debug($"\t{element.ResNodeDisplayName} ({element.PosX}, {element.PosY})");
-            }
-        }
-
         private HudElementData? currentlyCopied = null;
 
-        private enum KeyboardAction
-        {
+        private enum KeyboardAction {
             None,
             Copy,
             Paste,
             Undo,
             Redo
+        }
+
+        /// <summary>
+        /// Represents the data for a mouse event.
+        /// </summary>
+        public unsafe struct MouseEventData {
+            public short PosX;
+            public short PosY;
+
+            public MouseEventData(short posX, short posY) {
+                PosX = posX;
+                PosY = posY;
+            }
+
+            /// <summary>
+            /// Converts the mouse event data to an AtkEventData struct. 
+            /// By placing the x and y values at the beginning of the byte array and padding the rest with 0. 
+            /// </summary>
+            public AtkEventData ToAtkEventData() {
+                // Create a byte array with the size of the AtkEventData struct
+                int size = sizeof(AtkEventData);
+                byte[] eventDataBytes = new byte[size];
+
+                // Convert the PosX and PosY values to byte arrays and add an offset of 10 
+                byte[] xBytes = BitConverter.GetBytes(PosX + 10);
+                byte[] yBytes = BitConverter.GetBytes(PosY + 10);
+
+                // Copy the xBytes to the beginning of the eventDataBytes array
+                Array.Copy(xBytes, 0, eventDataBytes, 0, 2);
+
+                // Copy the yBytes to the eventDataBytes array starting at index 2
+                Array.Copy(yBytes, 0, eventDataBytes, 2, 2);
+
+                // Create the event data struct from the byte array
+                AtkEventData eventData = new AtkEventData();
+
+                // Use a fixed block to pin the byte array in memory and cast it to an AtkEventData pointer
+                fixed (byte* p = eventDataBytes) {
+                    eventData = *(AtkEventData*) p;
+                }
+                return eventData;
+            }
         }
 
         /// <summary>
@@ -155,19 +182,9 @@ namespace HudCopyPaste
                 return;
             }
 
-            // Create the event data by converting the parsed x and y values as mouse position to a byte array
-            int size = sizeof(AtkEventData);
-            byte[] eventDataBytes = new byte[size];
-            byte[] xBytes = BitConverter.GetBytes(hudElementData.PosX + 10);
-            byte[] yBytes = BitConverter.GetBytes(hudElementData.PosY + 10);
-            Array.Copy(xBytes, 0, eventDataBytes, 0, 2);
-            Array.Copy(yBytes, 0, eventDataBytes, 2, 2);
-
-            // Create the event data struct from the byte array
-            AtkEventData eventData = new AtkEventData();
-            fixed (byte* p = eventDataBytes) {
-                eventData = *(AtkEventData*) p;
-            }
+            // Create the event data struct with the x and y position of the mouse click
+            MouseEventData mouseEventData = new MouseEventData(hudElementData.PosX, hudElementData.PosY);
+            AtkEventData eventData = mouseEventData.ToAtkEventData();
 
             // ----> MouseDown Event
             // Create the mouse down event from the selected node's event
@@ -180,7 +197,7 @@ namespace HudCopyPaste
             AtkEventData* mouseDownEventData = &eventData;
 
             // Call the mouse down event on the HUD layout
-            this.Log.Debug("Calling MouseDown event");
+            this.Debug.Log(this.Log.Debug, "Calling MouseDown event");
             hudLayoutScreen->ReceiveEvent(AtkEventType.MouseDown, (int) mouseDownEvent.Param, &mouseDownEvent, mouseDownEventData);
 
             // ----> MouseUp Event
@@ -195,7 +212,7 @@ namespace HudCopyPaste
             mouseUpEvent.Unk29 = 0;
 
             // Set the event data with the x and y position of the mouse click
-            this.Log.Debug("Calling MouseUp event");
+            this.Debug.Log(this.Log.Debug, "Calling MouseUp event");
             AtkEventData* mouseUpEventData = &eventData;
 
             // Call the mouse up event on the HUD layout
@@ -234,8 +251,7 @@ namespace HudCopyPaste
                     if (resNodeName.ToString() == searchName) {
                         return ((nint) resNode, (uint) i);
                     }
-                }
-                catch (NullReferenceException) {
+                } catch (NullReferenceException) {
                     continue;
                 }
             }
@@ -271,13 +287,13 @@ namespace HudCopyPaste
             }
 
             if (keyboardAction == KeyboardAction.None) return;
-            this.Log.Debug($"KeyboardAction: {keyboardAction}");
+            this.Debug.Log(this.Log.Debug, $"KeyboardAction: {keyboardAction}");
 
             // Check for open popups
             AddonHudLayoutWindow* hudLayoutWindow = (AddonHudLayoutWindow*) GameGui.GetAddonByName("_HudLayoutWindow", 1);
             if (hudLayoutWindow == null) return;
             if (hudLayoutWindow->NumOpenPopups > 0) {
-                this.Log.Debug("Popup open, not executing action.");
+                this.Debug.Log(this.Log.Warning, "Popup open, not executing action.");
                 return;
             }
 
@@ -293,18 +309,17 @@ namespace HudCopyPaste
             // Get the currently selected element, abort if none is selected
             AtkResNode* selectedNode = hudLayoutScreen->CollisionNodeList[0];
             if (selectedNode == null) {
-                this.Log.Debug("No element selected.");
+                this.Log.Debug($"[{this.Name}] No element selected.");
                 return;
             }
             if (selectedNode->ParentNode == null) return;
 
             // Depending on the keyboard action, execute the corresponding operation
             switch (keyboardAction) {
-                /*
-                 * Copy the position of the selected element to the clipboard
-                 */
                 case KeyboardAction.Copy:
-                    this.Log.Debug("======= COPY =======");
+                    // ===== Copy the position of the selected element to the clipboard =====
+                    this.Debug.Log(this.Log.Debug, "======= COPY =======");
+
                     // Create a new HudElementData object with the data of the selected element
                     var selectedNodeData = new HudElementData(selectedNode);
 
@@ -312,26 +327,23 @@ namespace HudCopyPaste
 
                     // Copy the data to the clipboard
                     ImGui.SetClipboardText(selectedNodeData.ToString());
-                    this.Log.Debug($"Copied to Clipboard: {selectedNodeData}");
+                    this.Debug.Log(this.Log.Debug, $"Copied to Clipboard: {selectedNodeData}");
 
-                    // Print a chat message 
-                    Dalamud.Game.Text.XivChatEntry chatEntry = new Dalamud.Game.Text.XivChatEntry();
-                    chatEntry.Message = "Copied position to clipboard: " + selectedNodeData.ResNodeDisplayName;
-                    //this.ChatGui.Print(chatEntry);
+                    // Print a debug message
+                    this.Log.Debug($"[{this.Name}] Copied position to clipboard: {selectedNodeData.PrettyPrint()}");
 
-                    PrettyPrintList(undoHistory, "Undo");
-                    PrettyPrintList(redoHistory, "Redo");
+                    this.Debug.PrettyPrintList(undoHistory, "Undo");
+                    this.Debug.PrettyPrintList(redoHistory, "Redo");
                     break;
-                /*
-                 * Paste the position of the selected element from the clipboard to the selected element
-                 * And simulate a mouse click event on the element
-                 */
                 case KeyboardAction.Paste:
-                    this.Log.Debug("======= PASTE =======");
+                    // ===== Paste the position from the clipboard to the selected element =====
+                    // ===== and simulate a mouse click on the element =====
+                    this.Debug.Log(this.Log.Debug, "======= PASTE =======");
+
                     // Get the clipboard text
                     string clipboardText = ImGui.GetClipboardText();
                     if (clipboardText == null) {
-                        this.Log.Warning("Clipboard is empty.");
+                        this.Log.Info($"[{this.Name}] Clipboard is empty.");
                         return;
                     }
 
@@ -339,64 +351,52 @@ namespace HudCopyPaste
                     HudElementData? parsedData = null;
                     try {
                         parsedData = JsonSerializer.Deserialize<HudElementData>(clipboardText);
-                    }
-                    catch {
-                        this.Log.Warning($"Clipboard data could not be parsed: '{clipboardText}'");
+                    } catch {
+                        this.Log.Warning($"[{this.Name}] Clipboard data could not be parsed: '{clipboardText}'");
                         return;
                     }
                     if (parsedData == null) {
-                        this.Log.Warning($"Clipboard data could not be parsed. '{clipboardText}'");
+                        this.Log.Warning($"[{this.Name}] Clipboard data could not be parsed. '{clipboardText}'");
                         return;
                     }
-                    this.Log.Debug($"Parsed Clipboard: {parsedData}");
+                    this.Debug.Log(this.Log.Debug, $"Parsed Clipboard: {parsedData}");
 
                     // Save the current state of the selected element for undo operations
-                    try {
-                        HudElementData previousState = new HudElementData(selectedNode);
-                        undoHistory.Add(previousState);
-                        if (undoHistory.Count > 50) {
-                            undoHistory.RemoveAt(0);
-                        }
-                    }
-                    catch {
-                        this.Log.Error("Could not save state of selected element for undo operation.");
+                    HudElementData previousState = new HudElementData(selectedNode); 
+                    undoHistory.Add(previousState);
+                    if (undoHistory.Count > 50) {
+                        undoHistory.RemoveAt(0);
                     }
 
                     // Set the position of the currently selected element to the parsed position
                     selectedNode->ParentNode->SetPositionShort(parsedData.PosX, parsedData.PosY);
 
-                    // ======= Simulate Mouse Click =======
+                    // Simulate Mouse Click
                     SimulateMouseClickOnHudElement(selectedNode, 0, parsedData, hudLayoutScreen);
 
-                    // ======= Send Event to HudLayout to inform about a change ======= 
+                    // Send Event to HudLayout to inform about a change 
                     SendChangeEvent(agentHudLayout);
 
-                    // Print a chat message
-                    Dalamud.Game.Text.XivChatEntry chatPasteEntry = new Dalamud.Game.Text.XivChatEntry();
-                    chatPasteEntry.Message = "Pasted position from clipboard to: " + parsedData.ResNodeDisplayName;
-                    //this.ChatGui.Print(chatPasteEntry);
+                    // Print a debug message
+                    this.Log.Debug($"[{this.Name}] Pasted position of '{parsedData.ResNodeDisplayName}' to selected element: {parsedData.ResNodeDisplayName} ({previousState.PosX}, {previousState.PosY}) -> ({parsedData.PosX}, {parsedData.PosY})");
 
-                    PrettyPrintList(undoHistory, "Undo");
-                    PrettyPrintList(redoHistory, "Redo");
+                    this.Debug.PrettyPrintList(undoHistory, "Undo");
+                    this.Debug.PrettyPrintList(redoHistory, "Redo");
                     // maybe todo: Set the position of the element with the same name as the copied element
                     break;
-                /*
-                 * Undo the last operation
-                 */
                 case KeyboardAction.Undo:
-                    this.Log.Debug("======= UNDO =======");
-                    this.Log.Debug("Before Undo: ");
-                    PrettyPrintList(undoHistory, "Undo");
-                    PrettyPrintList(redoHistory, "Redo");
+                    // ===== Undo the last operation and simulate a mouse click on the element =====
+                    this.Debug.Log(this.Log.Debug, "======= UNDO =======");
+                    this.Debug.PrettyPrintList(undoHistory, "Undo");
+                    this.Debug.PrettyPrintList(redoHistory, "Redo");
                     if (undoHistory.Count > 0) {
                         HudElementData lastState = undoHistory[undoHistory.Count - 1];
                         undoHistory.RemoveAt(undoHistory.Count - 1);
-                        this.Log.Debug($"Undoing last operation: {lastState}");
 
                         // Find node with same name as last state
                         (nint lastNodePtr, uint lastNodeId) = FindHudResnodeByName(hudLayoutScreen, lastState.ResNodeDisplayName);
                         if (lastNodePtr == nint.Zero) {
-                            this.Log.Warning($"Could not find node with name '{lastState.ResNodeDisplayName}'");
+                            this.Log.Warning($"[{this.Name}] Could not find node with name '{lastState.ResNodeDisplayName}'");
                             return;
                         }
                         AtkResNode* lastNode = (AtkResNode*) lastNodePtr;
@@ -407,36 +407,34 @@ namespace HudCopyPaste
                         // Set the position of the currently selected element to the parsed position
                         lastNode->ParentNode->SetPositionShort(lastState.PosX, lastState.PosY);
 
-                        // ======= Simulate Mouse Click =======
+                        // Simulate Mouse Click
                         SimulateMouseClickOnHudElement(lastNode, lastNodeId, lastState, hudLayoutScreen);
 
-                        // ======= Send Event to HudLayout to inform about a change ======= 
+                        // Send Event to HudLayout to inform about a change 
                         SendChangeEvent(agentHudLayout);
 
-                        this.Log.Debug("After Undo: ");
-                        PrettyPrintList(undoHistory, "Undo");
-                        PrettyPrintList(redoHistory, "Redo");
+                        // Print a debug message
+                        this.Log.Debug($"[{this.Name}] Undone last operation: Moved '{redoState.ResNodeDisplayName}' from ({redoState.PosX}, {redoState.PosY}) back to ({lastState.PosX}, {lastState.PosY})");
+
+                        this.Debug.PrettyPrintList(undoHistory, "Undo");
+                        this.Debug.PrettyPrintList(redoHistory, "Redo");
                     } else {
-                        this.Log.Debug("No undo history available.");
+                        this.Log.Debug($"[{this.Name}] No undo history available.");
                     }
                     break;
-                /*
-                 * Redo the last operation
-                 */
                 case KeyboardAction.Redo:
-                    this.Log.Debug("======= REDO =======");
-                    this.Log.Debug("Before Redo: ");
-                    PrettyPrintList(undoHistory, "Undo");
-                    PrettyPrintList(redoHistory, "Redo");
+                    // ===== Redo the last operation and simulate a mouse click on the element =====
+                    this.Debug.Log(this.Log.Debug, "======= REDO =======");
+                    this.Debug.PrettyPrintList(undoHistory, "Undo");
+                    this.Debug.PrettyPrintList(redoHistory, "Redo");
                     if (redoHistory.Count > 0) {
                         HudElementData redoState = redoHistory[redoHistory.Count - 1];
                         redoHistory.RemoveAt(redoHistory.Count - 1);
-                        this.Log.Debug($"Redoing last operation: {redoState}");
 
                         // Find node with same name as last state
                         (nint redoNodePtr, uint redoNodeId) = FindHudResnodeByName(hudLayoutScreen, redoState.ResNodeDisplayName);
                         if (redoNodePtr == nint.Zero) {
-                            this.Log.Warning($"Could not find node with name '{redoState.ResNodeDisplayName}'");
+                            this.Log.Warning($"[{this.Name}] Could not find node with name '{redoState.ResNodeDisplayName}'");
                             return;
                         }
                         AtkResNode* redoNode = (AtkResNode*) redoNodePtr;
@@ -446,17 +444,19 @@ namespace HudCopyPaste
                         // Set the position of the currently selected element to the parsed position
                         redoNode->ParentNode->SetPositionShort(redoState.PosX, redoState.PosY);
 
-                        // ======= Simulate Mouse Click =======
+                        // Simulate Mouse Click
                         SimulateMouseClickOnHudElement(redoNode, redoNodeId, redoState, hudLayoutScreen);
 
-                        // ======= Send Event to HudLayout to inform about a change ======= 
+                        // Send Event to HudLayout to inform about a change 
                         SendChangeEvent(agentHudLayout);
 
-                        this.Log.Debug("After Redo: ");
-                        PrettyPrintList(undoHistory, "Undo");
-                        PrettyPrintList(redoHistory, "Redo");
+                        // Print a debug message
+                        this.Log.Debug($"[{this.Name}] Redone last operation: Moved '{redoState.ResNodeDisplayName}' again from ({undoState.PosX}, {undoState.PosY}) to ({redoState.PosX}, {redoState.PosY})");
+
+                        this.Debug.PrettyPrintList(undoHistory, "Undo");
+                        this.Debug.PrettyPrintList(redoHistory, "Redo");
                     } else {
-                        this.Log.Debug("No redo history available.");
+                        this.Log.Debug($"[{this.Name}] No redo history available.");
                     }
                     break;
             }

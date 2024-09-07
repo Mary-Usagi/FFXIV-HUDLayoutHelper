@@ -4,14 +4,14 @@ using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
 using System.Collections.Generic;
 
-namespace HudCopyPaste
-{
+namespace HudCopyPaste {
     /// <summary>
     /// Provides debugging functionality for the HudCopyPaste plugin.
     /// </summary>
-    public sealed class Debug : IDisposable
-    {
+    public sealed class Debug : IDisposable {
         private Plugin Plugin { get; }
+
+        private bool Enabled { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Debug"/> class.
@@ -20,8 +20,9 @@ namespace HudCopyPaste
         /// <param name="enabled">Indicates whether debugging is enabled.</param>
         public Debug(Plugin plugin, bool enabled) {
             Plugin = plugin;
+            Enabled = enabled;
 
-            if (enabled) {
+            if (Enabled) {
                 // Register a listener for the PreReceiveEvent of the "_HudLayoutScreen" addon
                 Plugin.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", HandleHudLayoutScreenEvent);
             }
@@ -137,8 +138,7 @@ namespace HudCopyPaste
                 //     Plugin.Log.Debug($"-> Target ChildCount: {targetCollisionNode->ChildCount}");
                 //     Plugin.Log.Debug($"-> Target Parent: {(uint)targetCollisionNode->ParentNode:X}");
                 // }
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 Plugin.Log.Debug($"AtkEvent Target: {e.Message}");
             }
 
@@ -168,8 +168,27 @@ namespace HudCopyPaste
             }
         }
 
+        /// <summary>
+        /// Pretty prints a list of <see cref="HudElementData"/> to the debug log.
+        /// </summary>
+        /// <param name="list">The list of HUD element data.</param>
+        /// <param name="title">The title for the log entry.</param>
+        internal void PrettyPrintList(List<Plugin.HudElementData> list, string title) {
+            if (!Enabled) return;
+            Plugin.Log.Debug($"'{title}' count: {list.Count}");
+            foreach (var element in list) {
+                Plugin.Log.Debug($"\t{element.ResNodeDisplayName} ({element.PosX}, {element.PosY})");
+            }
+        }
+
         public void Dispose() {
             Plugin.AddonLifecycle.UnregisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", HandleHudLayoutScreenEvent);
+        }
+
+        public unsafe void Log(Action<string, object[]> logFunction, string message) {
+            if (Enabled) {
+                logFunction(message, Array.Empty<object>());
+            }
         }
     }
 }
