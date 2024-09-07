@@ -2,6 +2,7 @@ using Dalamud.Game;
 using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using Dalamud.Interface.Windowing;
+using Dalamud.Game.ClientState.Keys;
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
@@ -10,7 +11,6 @@ using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
-using HudCopyPaste.Windows;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -62,8 +62,20 @@ public sealed class Plugin : IDalamudPlugin
         // Adds another button that is doing the same but for the main ui of the plugin
         PluginInterface.UiBuilder.OpenMainUi += ToggleMainUI;
 
-        this.Framework.Update += OnUpdate;
+
+        //this.Framework.Update += OnUpdate;
         
+        this.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "_HudLayoutScreen", (type, args) => {
+            this.Log.Debug("HudLayoutScreen setup.");
+            this.Framework.Update += HandleKeyboardShortcuts;
+        });
+
+        this.AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, "_HudLayoutScreen", (type, args) => {
+            this.Log.Debug("HudLayoutScreen finalize.");
+            this.Framework.Update -= HandleKeyboardShortcuts;
+        });
+
+
         // For debugging purposes
         this.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", (type, args) => {
             unsafe {
@@ -224,7 +236,7 @@ public sealed class Plugin : IDalamudPlugin
     /*
      * Simulate a mouse click on a HUD element
      */
-    private unsafe void SimulateMouseClickOnHudElement(AtkResNode* resNode, HudElementData hudElementData, AddonHudLayoutScreen* hudLayoutScreen) {
+    private unsafe void SimulateMouseClickOnHudElement(AtkResNode* resNode, uint resNodeID, HudElementData hudElementData, AddonHudLayoutScreen* hudLayoutScreen) {
         if (resNode == null) {
             this.Log.Warning("ResNode is null");
             return;
@@ -248,7 +260,7 @@ public sealed class Plugin : IDalamudPlugin
         AtkEvent mouseDownEvent = *resNode->AtkEventManager.Event;
         mouseDownEvent.Type = AtkEventType.MouseDown;
         mouseDownEvent.Flags = 4;
-        mouseDownEvent.Param = 0;
+        mouseDownEvent.Param = resNodeID;
 
         //printAtkEventData(&eventData);
         // Set the event data with the x and y position of the mouse click
@@ -256,7 +268,7 @@ public sealed class Plugin : IDalamudPlugin
 
         // Call the mouse down event on the HUD layout
         this.Log.Debug("Calling MouseDown event");
-        hudLayoutScreen->ReceiveEvent(AtkEventType.MouseDown, 0, &mouseDownEvent, mouseDownEventData);
+        hudLayoutScreen->ReceiveEvent(AtkEventType.MouseDown, (int)mouseDownEvent.Param, &mouseDownEvent, mouseDownEventData);
 
         // ----> MouseUp Event
         // Create the mouse up event from the selected node's event
@@ -332,7 +344,7 @@ public sealed class Plugin : IDalamudPlugin
         this.Log.Debug($"AtkEvent Type: {atkEvent->Type}");
     }
 
-    private unsafe AtkResNode* FindHudResnodeByName(AddonHudLayoutScreen* hudLayoutScreen, string searchName) {
+    private unsafe (nint, uint) FindHudResnodeByName(AddonHudLayoutScreen* hudLayoutScreen, string searchName) {
         AtkResNode** resNodes = hudLayoutScreen->CollisionNodeList;
         uint resNodeCount = hudLayoutScreen->CollisionNodeListCount;
         for (int i = 0; i < resNodeCount; i++) {
@@ -341,17 +353,17 @@ public sealed class Plugin : IDalamudPlugin
             try {
                 Utf8String resNodeName = resNode->ParentNode->GetComponent()->GetTextNodeById(4)->GetAsAtkTextNode()->NodeText;
                 if (resNodeName.ToString() == searchName) {
-                    return resNode;
+                    return ((nint)resNode, (uint)i);
                 }
             }
             catch (NullReferenceException) {
                 continue;
             }
         }
-        return null;
+        return (nint.Zero, 0);
     }
 
-    private unsafe void OnUpdate(IFramework framework) {
+    private unsafe void HandleKeyboardShortcuts(IFramework framework) {
         // Executes every frame
         if (!ClientState.IsLoggedIn) return;
         if (ClientState.IsPvP) return;
@@ -472,7 +484,7 @@ public sealed class Plugin : IDalamudPlugin
                 selectedNode->ParentNode->SetPositionShort(parsedData.posX, parsedData.posY);
 
                 // ======= Simulate Mouse Click =======
-                SimulateMouseClickOnHudElement(selectedNode, parsedData, hudLayoutScreen);
+                SimulateMouseClickOnHudElement(selectedNode, 0, parsedData, hudLayoutScreen);
 
                 // ======= Send Event to HudLayout to inform about a change ======= 
                 SendChangeEvent(agentHudLayout);
@@ -488,7 +500,6 @@ public sealed class Plugin : IDalamudPlugin
                 break;
             /*
              * Undo the last operation
-             * TODO: Implement for standard element movements? 
              */
             case KeyboardAction.Undo:
                 this.Log.Debug("======= UNDO =======");
@@ -501,7 +512,12 @@ public sealed class Plugin : IDalamudPlugin
                     this.Log.Debug($"Undoing last operation: {lastState}");
 
                     // Find node with same name as last state
-                    AtkResNode* lastNode = FindHudResnodeByName(hudLayoutScreen, lastState.resNodeDisplayName);
+                    (nint lastNodePtr, uint lastNodeId) = FindHudResnodeByName(hudLayoutScreen, lastState.resNodeDisplayName);
+                    if (lastNodePtr == nint.Zero) {
+                        this.Log.Warning($"Could not find node with name '{lastState.resNodeDisplayName}'");
+                        return;
+                    }
+                    AtkResNode* lastNode = (AtkResNode*) lastNodePtr;
 
                     HudElementData redoState = new HudElementData(lastNode);
                     redoHistory.Add(redoState);
@@ -510,7 +526,7 @@ public sealed class Plugin : IDalamudPlugin
                     lastNode->ParentNode->SetPositionShort(lastState.posX, lastState.posY);
 
                     // ======= Simulate Mouse Click =======
-                    SimulateMouseClickOnHudElement(lastNode, lastState, hudLayoutScreen);
+                    SimulateMouseClickOnHudElement(lastNode, lastNodeId, lastState, hudLayoutScreen);
 
                     // ======= Send Event to HudLayout to inform about a change ======= 
                     SendChangeEvent(agentHudLayout);
@@ -536,8 +552,12 @@ public sealed class Plugin : IDalamudPlugin
                     this.Log.Debug($"Redoing last operation: {redoState}");
 
                     // Find node with same name as last state
-                    AtkResNode* redoNode = FindHudResnodeByName(hudLayoutScreen, redoState.resNodeDisplayName);
-
+                    (nint redoNodePtr, uint redoNodeId) = FindHudResnodeByName(hudLayoutScreen, redoState.resNodeDisplayName);
+                    if (redoNodePtr == nint.Zero) {
+                        this.Log.Warning($"Could not find node with name '{redoState.resNodeDisplayName}'");
+                        return;
+                    }
+                    AtkResNode* redoNode = (AtkResNode*) redoNodePtr;
                     HudElementData undoState = new HudElementData(redoNode);
                     undoHistory.Add(undoState);
 
@@ -545,7 +565,7 @@ public sealed class Plugin : IDalamudPlugin
                     redoNode->ParentNode->SetPositionShort(redoState.posX, redoState.posY);
 
                     // ======= Simulate Mouse Click =======
-                    SimulateMouseClickOnHudElement(redoNode, redoState, hudLayoutScreen);
+                    SimulateMouseClickOnHudElement(redoNode, redoNodeId, redoState, hudLayoutScreen);
 
                     // ======= Send Event to HudLayout to inform about a change ======= 
                     SendChangeEvent(agentHudLayout);
@@ -561,6 +581,11 @@ public sealed class Plugin : IDalamudPlugin
     }
 
     public void Dispose() {
+        this.Framework.Update -= HandleKeyboardShortcuts;
+        AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, "_HudLayoutScreen");
+        AddonLifecycle.UnregisterListener(AddonEvent.PreFinalize, "_HudLayoutScreen");
+        AddonLifecycle.UnregisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen");
+
         WindowSystem.RemoveAllWindows();
 
         MainWindow.Dispose();

@@ -7,7 +7,7 @@ using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
 using ImGuiNET;
 
-namespace HudCopyPaste.Windows;
+namespace HudCopyPaste;
 
 public class MainWindow : Window, IDisposable
 {
