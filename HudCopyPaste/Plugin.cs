@@ -15,7 +15,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
-
+using Lumina.Excel.GeneratedSheets2;
 
 namespace HudCopyPaste;
 
@@ -34,6 +34,7 @@ public sealed class Plugin : IDalamudPlugin
     public IAddonLifecycle AddonLifecycle { get; init; }
     public IFramework Framework { get; init; }
     public IChatGui ChatGui { get; init; } = null!;
+    public Debug Debug { get; private set; } = null!;
 
     public Plugin(
         IGameGui gameGui,
@@ -53,6 +54,8 @@ public sealed class Plugin : IDalamudPlugin
         this.Framework = framework;
         this.ChatGui = chatGui;
 
+        this.Debug = new Debug(this, true);
+
         MainWindow = new MainWindow(this);
 
         WindowSystem.AddWindow(MainWindow);
@@ -62,9 +65,6 @@ public sealed class Plugin : IDalamudPlugin
         // Adds another button that is doing the same but for the main ui of the plugin
         PluginInterface.UiBuilder.OpenMainUi += ToggleMainUI;
 
-
-        //this.Framework.Update += OnUpdate;
-        
         this.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "_HudLayoutScreen", (type, args) => {
             this.Log.Debug("HudLayoutScreen setup.");
             this.Framework.Update += HandleKeyboardShortcuts;
@@ -75,87 +75,10 @@ public sealed class Plugin : IDalamudPlugin
             this.Framework.Update -= HandleKeyboardShortcuts;
         });
 
-
-        // For debugging purposes
-        this.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", (type, args) => {
-            unsafe {
-                if (args is not AddonReceiveEventArgs receiveEventArgs) return;
-                var handledTypeList = new List<AtkEventType> {
-                    //AtkEventType.MouseMove,
-                    //AtkEventType.MouseOut,
-                    //AtkEventType.MouseOver,
-                    //AtkEventType.MouseDown,
-                    //AtkEventType.MouseUp
-                };
-                if (!handledTypeList.Contains((AtkEventType) receiveEventArgs.AtkEventType)) return;
-
-                // FINDINGS:
-                // - MouseDown AtkEvent:
-                //   - Param: current index in collisionNodeList
-                //   - eventid: 0
-                //   - NextEvent: selected resnode (collisionnode) -> atkeventmanager->atkevent->nextevent
-                //   - listener: selected resnode (collisionnode) -> atkeventmanager->atkevent->listener
-                //   - target: Pointer to selected resnode (collisionnode) == CollisionNodeList[Param]
-                // - MouseUp AtkEvent:
-                //   - eventid: 99
-                //   - Target: AtkStage.Instance()
-
-                this.Log.Debug("=====================================");
-                this.Log.Debug("AtkEventType: " + (AtkEventType) receiveEventArgs.AtkEventType);
-
-                this.Log.Debug("AddonArgsType: " + receiveEventArgs.Type);
-                this.Log.Debug($"AtkEvent nint: {receiveEventArgs.AtkEvent:X}");
-                if (receiveEventArgs.AtkEvent != nint.Zero) {
-                    AtkEvent* atkEvent = (AtkEvent*) receiveEventArgs.AtkEvent;
-                    this.Log.Debug("---------- AtkEvent ----------");
-                    this.Log.Debug($"AtkEvent: {atkEvent->ToString()}");
-                    PrintAtkEvent(atkEvent);
-                    this.Log.Debug("---------- AtkEvent End ----------");
-                }
-                this.Log.Debug("AddonName: " + receiveEventArgs.AddonName);
-                this.Log.Debug("EventId int: " + receiveEventArgs.EventParam);
-                this.Log.Debug($"Data Ptr: {receiveEventArgs.Data:X}");
-                if (receiveEventArgs.Data != nint.Zero) {
-                    AtkEventData* eventData = (AtkEventData*) receiveEventArgs.Data;
-                    this.Log.Debug($"EventData: {eventData->ToString()}");
-                    this.Log.Debug($"ListItemData: {eventData->ListItemData}");
-                    this.Log.Debug($"SelectedIndex: {eventData->ListItemData.SelectedIndex}");
-
-                    byte* bytePtr = (byte*) receiveEventArgs.Data;
-                    int structSize = sizeof(AtkEventData);
-
-                    // ==> First 2 bytes: Mouse X, Second 2 bytes: Mouse Y
-                    PrintAtkEventData(eventData);
-
-                    if (eventData->ListItemData.ListItemRenderer != null) {
-                    }
-
-                    bytePtr = (byte*) receiveEventArgs.Data;
-                    structSize = sizeof(AtkEventData);
-
-                    // Interpret the first 8 bytes as mouse position values 
-                    uint[] mousePositions = new uint[4];
-                    for (int i = 0; i < 4; i++) {
-                        mousePositions[i] = BitConverter.ToUInt16(new byte[] { bytePtr[i * 2], bytePtr[i * 2 + 1] }, 0);
-                    }
-                    this.Log.Debug($"Mouse Position: X={mousePositions[0]}, Y={mousePositions[1]}, Z={mousePositions[2]}, W={mousePositions[3]}");
-
-
-                    // Print the rest of the bytes in groups of 8
-                    for (int i = 8; i < structSize; i += 8) {
-                        string byteGroup = string.Empty;
-                        for (int j = 0; j < 8 && i + j < structSize; j++) {
-                            byteGroup += $"{bytePtr[i + j]} ";
-                        }
-                        this.Log.Debug($"Bytes {i}-{i + 7}: {byteGroup.Trim()}");
-                    }
-                }
-            }
-        });
         return;
     }
 
-    public class HudElementData
+    private class HudElementData
     {
         public int elementId { get; set; }
         public string resNodeDisplayName { get; set; }
@@ -212,25 +135,6 @@ public sealed class Plugin : IDalamudPlugin
         Paste,
         Undo,
         Redo
-    }
-
-
-    private unsafe void PrintAtkEventData(AtkEventData* atkEventData) {
-        if (atkEventData == null) {
-            this.Log.Debug("AtkEventData is null");
-            return;
-        }
-
-        // Print the byte values of the AtkEventData struct, 8 bytes per line
-        byte* bytePtr = (byte*) atkEventData;
-        int structSize = sizeof(AtkEventData);
-        for (int i = 0; i < structSize; i += 8) {
-            string byteGroup = string.Empty;
-            for (int j = 0; j < 8 && i + j < structSize; j++) {
-                byteGroup += $"{bytePtr[i + j]} ";
-            }
-            this.Log.Debug($"Bytes {i}-{i + 7}: {byteGroup.Trim()}");
-        }
     }
 
     /*
@@ -306,44 +210,6 @@ public sealed class Plugin : IDalamudPlugin
         agentHudLayout->ReceiveEvent(result, command, 1, 0);
     }
 
-    private unsafe void PrintAtkEvent(AtkEvent* atkEvent) {
-        if (atkEvent == null) {
-            this.Log.Debug("AtkEvent is null");
-            return;
-        }
-        this.Log.Debug($"-------- AtkEvent --------");
-        this.Log.Debug($"AtkEvent Flags: {atkEvent->Flags}");
-        this.Log.Debug($"AtkEvent Param: {atkEvent->Param}");
-        this.Log.Debug($"AtkEvent Listener: {(uint) atkEvent->Listener:X}");
-        this.Log.Debug($"AtkEvent Node: {(uint) atkEvent->Node:X}");
-        this.Log.Debug($"AtkEvent Unk29: {atkEvent->Unk29}");
-        this.Log.Debug($"AtkEvent NextEvent: {(uint) atkEvent->NextEvent:X}");
-        // ===> MouseUp Target: 1892F212190 ---> AddonInventory -> AddonControl -> AtkStage (!) (AtkStage.Instance()?)
-        this.Log.Debug($"(AtkStage): {(uint) AtkStage.Instance():X}");
-        this.Log.Debug($"AtkEvent Target: {(uint) atkEvent->Target:X}");
-        try {
-            //AtkCollisionNode* targetCollisionNode = (AtkCollisionNode*) atkEvent->Target;
-            //if (targetCollisionNode == null) {
-            //    this.Log.Debug("AtkEvent Target is null");
-            //} else {
-            //    this.Log.Debug($"-> Target Str: {targetCollisionNode->ToString()}");
-            //    this.Log.Debug($"-> Target ScreenX/ScreenY: {targetCollisionNode->ScreenX}, {targetCollisionNode->ScreenY}");
-            //    this.Log.Debug($"-> Target width/height: {targetCollisionNode->Width}, {targetCollisionNode->Height}");
-            //    this.Log.Debug($"-> Target LinkedComponent: {(uint) targetCollisionNode->LinkedComponent}");
-            //    this.Log.Debug($"-> Target NodeId: {(uint) targetCollisionNode->NodeId}");
-            //    this.Log.Debug($"-> Target NodeId X: {(uint) targetCollisionNode->NodeId:X}");
-            //    this.Log.Debug($"-> Target NodeFlags: {targetCollisionNode->NodeFlags}");
-            //    this.Log.Debug($"-> Target ChildCount: {targetCollisionNode->ChildCount}");
-            //    this.Log.Debug($"-> Target Parent: {(uint) targetCollisionNode->ParentNode:X}");
-            //}
-        }
-        catch (Exception e) {
-            this.Log.Debug($"AtkEvent Target: {e.Message}");
-        }
-        this.Log.Debug($"-------- AtkEvent End --------");
-        this.Log.Debug($"AtkEvent Type: {atkEvent->Type}");
-    }
-
     private unsafe (nint, uint) FindHudResnodeByName(AddonHudLayoutScreen* hudLayoutScreen, string searchName) {
         AtkResNode** resNodes = hudLayoutScreen->CollisionNodeList;
         uint resNodeCount = hudLayoutScreen->CollisionNodeListCount;
@@ -366,7 +232,6 @@ public sealed class Plugin : IDalamudPlugin
     private unsafe void HandleKeyboardShortcuts(IFramework framework) {
         // Executes every frame
         if (!ClientState.IsLoggedIn) return;
-        if (ClientState.IsPvP) return;
         if (ClientState is not { LocalPlayer.ClassJob.Id: var classJobId }) return;
 
         // Get the state of the control key
