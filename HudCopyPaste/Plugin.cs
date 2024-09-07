@@ -114,9 +114,6 @@ namespace HudCopyPaste {
             }
         }
 
-        private List<HudElementData> undoHistory = new List<HudElementData>();
-        private List<HudElementData> redoHistory = new List<HudElementData>();
-
         private HudElementData? currentlyCopied = null;
 
         private enum KeyboardAction {
@@ -258,6 +255,9 @@ namespace HudCopyPaste {
             return (nint.Zero, 0);
         }
 
+        private List<HudElementData> undoHistory = new();
+        private List<HudElementData> redoHistory = new();
+
         /// <summary>
         /// Handles keyboard shortcuts for copy, paste, undo, and redo actions.
         /// </summary>
@@ -315,6 +315,7 @@ namespace HudCopyPaste {
             if (selectedNode->ParentNode == null) return;
 
             // Depending on the keyboard action, execute the corresponding operation
+            // TODO: What should happen if a node in the undo/redo list is moved normally? 
             switch (keyboardAction) {
                 case KeyboardAction.Copy:
                     // ===== Copy the position of the selected element to the clipboard =====
