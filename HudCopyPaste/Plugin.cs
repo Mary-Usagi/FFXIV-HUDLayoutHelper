@@ -72,11 +72,7 @@ namespace HudCopyPaste {
                 this.removeOnUpdateCallback();
             });
 
-            // TODO: Listen for MouseDown and MouseUp to also add manual moves to the undo/redo history
-            // TODO: custom sent events interfer with this one, as they are caught as well! Need to filter them out somehow
-            // ---> When filtering events where the selected node position didn't change, it actually works fine
-            // But I would still like to find a more robust solution 
-            //      TODO: adjust the param of the event and remove it in PreReceiveEvent
+            // Listen for mouse events to track manual element movements for undo/redo
             this.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", HandleMouseDownEvent);
             this.AddonLifecycle.RegisterListener(AddonEvent.PostReceiveEvent, "_HudLayoutScreen", HandleMouseUpEvent);
 
@@ -189,7 +185,8 @@ namespace HudCopyPaste {
 
             // Save the current state of the selected element for undo operations
             this.Log.Debug($"User moved element: {mouseDownTarget.PrettyPrint()} -> ({newState.PosX}, {newState.PosY})");
-            undoHistory.Add(mouseDownTarget);
+            AddToUndoHistory(mouseDownTarget);
+
         }
 
         // END TODO
@@ -286,8 +283,26 @@ namespace HudCopyPaste {
         }
 
         private HudElementData? currentlyCopied = null;
+        // TODO: Or add a history per element? 
         private List<HudElementData> undoHistory = new();
         private List<HudElementData> redoHistory = new();
+
+        // TODO: Expose as variable in settings
+        private int maxHistorySize = 50;
+        private void AddToUndoHistory(HudElementData data, bool clearRedo = true) {
+            undoHistory.Add(data);
+
+            if (undoHistory.Count > maxHistorySize) {
+                undoHistory.RemoveAt(0);
+            }
+
+            if (clearRedo) RemoveElementFromRedoHistory(data);
+        }
+        // TODO: Or completely clear redo history when a new move is made?
+        private void RemoveElementFromRedoHistory(HudElementData data) {
+            redoHistory.RemoveAll(x => x.ResNodeDisplayName == data.ResNodeDisplayName);
+        }
+
 
         /// <summary>
         /// Handles keyboard shortcuts for copy, paste, undo, and redo actions.
@@ -297,6 +312,7 @@ namespace HudCopyPaste {
             // Executes every frame
             if (!ClientState.IsLoggedIn) return;
             if (ClientState is not { LocalPlayer.ClassJob.Id: var classJobId }) return;
+            if (ImGui.GetIO().WantCaptureKeyboard) return; // TODO: Necessary? 
 
             // Get the state of the control key, abort if not pressed 
             KeyStateFlags ctrlKeystate = UIInputData.Instance()->GetKeyState(SeVirtualKey.CONTROL);
@@ -342,7 +358,6 @@ namespace HudCopyPaste {
             AddonHudLayoutScreen* hudLayoutScreen = (AddonHudLayoutScreen*)addonHudLayoutScreenPtr;
 
             // Depending on the keyboard action, execute the corresponding operation
-            // TODO: Handle Undo, Move, Redo chain -> Need to cut redo history at the point of a new move? 
             switch (keyboardAction) {
                 case KeyboardAction.Copy:
                     HandleCopyAction(hudLayoutScreen);
@@ -420,10 +435,7 @@ namespace HudCopyPaste {
 
             // Save the current state of the selected element for undo operations
             HudElementData previousState = new HudElementData(selectedNode);
-            undoHistory.Add(previousState);
-            if (undoHistory.Count > 50) {
-                undoHistory.RemoveAt(0);
-            }
+            this.AddToUndoHistory(previousState);
 
             // Set the position of the currently selected element to the parsed position
             selectedNode->ParentNode->SetPositionShort(parsedData.PosX, parsedData.PosY);
@@ -496,7 +508,7 @@ namespace HudCopyPaste {
             }
             AtkResNode* redoNode = (AtkResNode*)redoNodePtr;
             HudElementData undoState = new HudElementData(redoNode);
-            undoHistory.Add(undoState);
+            this.AddToUndoHistory(undoState, false);
 
             // Set the position of the currently selected element to the parsed position
             redoNode->ParentNode->SetPositionShort(redoState.PosX, redoState.PosY);
