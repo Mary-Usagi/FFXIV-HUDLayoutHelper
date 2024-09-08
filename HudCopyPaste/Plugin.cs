@@ -3,8 +3,6 @@ using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
-using FFXIVClientStructs.FFXIV.Client.Game.UI;
-using FFXIVClientStructs.FFXIV.Client.System.String;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
@@ -160,95 +158,6 @@ namespace HudCopyPaste {
                 }
                 return eventData;
             }
-        }
-
-        /// <summary>
-        /// Simulates a mouse click on a HUD element.
-        /// </summary>
-        /// <param name="resNode">The AtkResNode pointer.</param>
-        /// <param name="resNodeID">The resource node ID.</param>
-        /// <param name="hudElementData">The HUD element data.</param>
-        /// <param name="hudLayoutScreen">The HUD layout screen pointer.</param>
-        private unsafe void SimulateMouseClickOnHudElement(AtkResNode* resNode, uint resNodeID, HudElementData hudElementData, AddonHudLayoutScreen* hudLayoutScreen) {
-            if (resNode == null) {
-                this.Log.Warning("ResNode is null");
-                return;
-            }
-
-            // Create the event data struct with the x and y position of the mouse click
-            MouseEventData mouseEventData = new MouseEventData(hudElementData.PosX, hudElementData.PosY);
-            AtkEventData eventData = mouseEventData.ToAtkEventData();
-
-            // ----> MouseDown Event
-            // Create the mouse down event from the selected node's event
-            AtkEvent mouseDownEvent = *resNode->AtkEventManager.Event;
-            mouseDownEvent.Type = AtkEventType.MouseDown;
-            mouseDownEvent.Flags = 4;
-            mouseDownEvent.Param = resNodeID;
-
-            // Set the event data with the x and y position of the mouse click
-            AtkEventData* mouseDownEventData = &eventData;
-
-            // Call the mouse down event on the HUD layout
-            this.Debug.Log(this.Log.Debug, "Calling MouseDown event");
-            hudLayoutScreen->ReceiveEvent(AtkEventType.MouseDown, (int)mouseDownEvent.Param, &mouseDownEvent, mouseDownEventData);
-
-            // ----> MouseUp Event
-            // Create the mouse up event from the selected node's event
-            uint atkStagePtr = (uint)AtkStage.Instance();
-            AtkEvent mouseUpEvent = *resNode->AtkEventManager.Event;
-            mouseUpEvent.Type = AtkEventType.MouseUp;
-            mouseUpEvent.Flags = 4;
-            mouseUpEvent.Param = 99;
-            mouseUpEvent.NextEvent = null;
-            mouseUpEvent.Target = (AtkEventTarget*)atkStagePtr;
-            mouseUpEvent.Unk29 = 0;
-
-            // Set the event data with the x and y position of the mouse click
-            this.Debug.Log(this.Log.Debug, "Calling MouseUp event");
-            AtkEventData* mouseUpEventData = &eventData;
-
-            // Call the mouse up event on the HUD layout
-            hudLayoutScreen->ReceiveEvent(AtkEventType.MouseUp, 99, &mouseUpEvent, mouseUpEventData);
-
-            // ----> Reset mouse cursor to default image (Arrow) 
-            AddonEventManager.ResetCursor();
-        }
-
-        /// <summary>
-        /// Sends a change event to the HUD layout.
-        /// </summary>
-        /// <param name="agentHudLayout">The agent HUD layout pointer.</param>
-        private unsafe void SendChangeEvent(AgentHUDLayout* agentHudLayout) {
-            AtkValue* result = stackalloc AtkValue[1];
-            AtkValue* command = stackalloc AtkValue[2];
-            command[0].SetInt(22);
-            command[1].SetInt(0);
-            agentHudLayout->ReceiveEvent(result, command, 1, 0);
-        }
-
-        /// <summary>
-        /// Finds a HUD resource node by name.
-        /// </summary>
-        /// <param name="hudLayoutScreen">The HUD layout screen pointer.</param>
-        /// <param name="searchName">The name to search for.</param>
-        /// <returns>A tuple containing the node pointer and its ID.</returns>
-        private unsafe (nint, uint) FindHudResnodeByName(AddonHudLayoutScreen* hudLayoutScreen, string searchName) {
-            AtkResNode** resNodes = hudLayoutScreen->CollisionNodeList;
-            uint resNodeCount = hudLayoutScreen->CollisionNodeListCount;
-            for (int i = 0; i < resNodeCount; i++) {
-                AtkResNode* resNode = resNodes[i];
-                if (resNode == null) continue;
-                try {
-                    Utf8String resNodeName = resNode->ParentNode->GetComponent()->GetTextNodeById(4)->GetAsAtkTextNode()->NodeText;
-                    if (resNodeName.ToString() == searchName) {
-                        return ((nint)resNode, (uint)i);
-                    }
-                } catch (NullReferenceException) {
-                    continue;
-                }
-            }
-            return (nint.Zero, 0);
         }
 
         private List<HudElementData> undoHistory = new();
@@ -430,10 +339,10 @@ namespace HudCopyPaste {
             selectedNode->ParentNode->SetPositionShort(parsedData.PosX, parsedData.PosY);
 
             // Simulate Mouse Click
-            SimulateMouseClickOnHudElement(selectedNode, 0, parsedData, hudLayoutScreen);
+            Utils.SimulateMouseClickOnHudElement(selectedNode, 0, parsedData, hudLayoutScreen, this);
 
             // Send Event to HudLayout to inform about a change 
-            SendChangeEvent(agentHudLayout);
+            Utils.SendChangeEvent(agentHudLayout);
 
             // Print a debug message
             this.Log.Debug($"[{this.Name}] Pasted position of '{parsedData.ResNodeDisplayName}' to selected element: {parsedData.ResNodeDisplayName} ({previousState.PosX}, {previousState.PosY}) -> ({parsedData.PosX}, {parsedData.PosY})");
@@ -454,7 +363,7 @@ namespace HudCopyPaste {
             undoHistory.RemoveAt(undoHistory.Count - 1);
 
             // Find node with same name as last state
-            (nint lastNodePtr, uint lastNodeId) = FindHudResnodeByName(hudLayoutScreen, lastState.ResNodeDisplayName);
+            (nint lastNodePtr, uint lastNodeId) = Utils.FindHudResnodeByName(hudLayoutScreen, lastState.ResNodeDisplayName);
             if (lastNodePtr == nint.Zero) {
                 this.Log.Warning($"[{this.Name}] Could not find node with name '{lastState.ResNodeDisplayName}'");
                 return;
@@ -468,10 +377,10 @@ namespace HudCopyPaste {
             lastNode->ParentNode->SetPositionShort(lastState.PosX, lastState.PosY);
 
             // Simulate Mouse Click
-            SimulateMouseClickOnHudElement(lastNode, lastNodeId, lastState, hudLayoutScreen);
+            Utils.SimulateMouseClickOnHudElement(lastNode, lastNodeId, lastState, hudLayoutScreen, this);
 
             // Send Event to HudLayout to inform about a change 
-            SendChangeEvent(agentHudLayout);
+            Utils.SendChangeEvent(agentHudLayout);
 
             // Print a debug message
             this.Log.Debug($"[{this.Name}] Undone last operation: Moved '{redoState.ResNodeDisplayName}' from ({redoState.PosX}, {redoState.PosY}) back to ({lastState.PosX}, {lastState.PosY})");
@@ -492,7 +401,7 @@ namespace HudCopyPaste {
             redoHistory.RemoveAt(redoHistory.Count - 1);
 
             // Find node with same name as last state
-            (nint redoNodePtr, uint redoNodeId) = FindHudResnodeByName(hudLayoutScreen, redoState.ResNodeDisplayName);
+            (nint redoNodePtr, uint redoNodeId) = Utils.FindHudResnodeByName(hudLayoutScreen, redoState.ResNodeDisplayName);
             if (redoNodePtr == nint.Zero) {
                 this.Log.Warning($"[{this.Name}] Could not find node with name '{redoState.ResNodeDisplayName}'");
                 return;
@@ -505,10 +414,10 @@ namespace HudCopyPaste {
             redoNode->ParentNode->SetPositionShort(redoState.PosX, redoState.PosY);
 
             // Simulate Mouse Click
-            SimulateMouseClickOnHudElement(redoNode, redoNodeId, redoState, hudLayoutScreen);
+            Utils.SimulateMouseClickOnHudElement(redoNode, redoNodeId, redoState, hudLayoutScreen, this);
 
             // Send Event to HudLayout to inform about a change 
-            SendChangeEvent(agentHudLayout);
+            Utils.SendChangeEvent(agentHudLayout);
 
             // Print a debug message
             this.Log.Debug($"[{this.Name}] Redone last operation: Moved '{redoState.ResNodeDisplayName}' again from ({undoState.PosX}, {undoState.PosY}) to ({redoState.PosX}, {redoState.PosY})");
@@ -516,8 +425,8 @@ namespace HudCopyPaste {
 
         public void Dispose() {
             this.Framework.Update -= HandleKeyboardShortcuts;
-            AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, "_HudLayoutScreen");
-            AddonLifecycle.UnregisterListener(AddonEvent.PreFinalize, "_HudLayoutScreen");
+            this.AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, "_HudLayoutScreen");
+            this.AddonLifecycle.UnregisterListener(AddonEvent.PreFinalize, "_HudLayoutScreen");
 
             this.Debug.Dispose();
 
