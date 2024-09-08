@@ -13,7 +13,7 @@ using System.Text.Json;
 
 namespace HudCopyPaste {
     public sealed class Plugin : IDalamudPlugin {
-
+        public bool DEBUG = true;
         public string Name => "HudCopyPaste";
         private const string CommandName = "/hudcp";
 
@@ -49,12 +49,16 @@ namespace HudCopyPaste {
             this.Framework = framework;
             this.ChatGui = chatGui;
 
-            this.Debug = new Debug(this, true);
+            this.Debug = new Debug(this, this.DEBUG);
             MainWindow = new MainWindow(this);
             WindowSystem.AddWindow(MainWindow);
             PluginInterface.UiBuilder.Draw += DrawUI;
             PluginInterface.UiBuilder.OpenMainUi += ToggleMainUI;
 
+            if (this.DEBUG) {
+                this.Framework.Update += HandleKeyboardShortcuts;
+                return; // Skip registering listeners for debug mode
+            }
             this.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "_HudLayoutScreen", (type, args) => {
                 this.Debug.Log(this.Log.Debug, "HudLayoutScreen setup.");
                 this.Framework.Update += HandleKeyboardShortcuts;
@@ -84,7 +88,7 @@ namespace HudCopyPaste {
             /// Initializes a new instance of the <see cref="HudElementData"/> class from an AtkResNode.
             /// </summary>
             /// <param name="resNode">The AtkResNode pointer.</param>
-            public unsafe HudElementData(AtkResNode* resNode) {
+            internal unsafe HudElementData(AtkResNode* resNode) {
                 if (resNode->ParentNode == null) return;
                 try {
                     ResNodeDisplayName = resNode->ParentNode->GetComponent()->GetTextNodeById(4)->GetAsAtkTextNode()->NodeText.ToString();
@@ -196,14 +200,6 @@ namespace HudCopyPaste {
             nint addonHudLayoutScreenPtr = GameGui.GetAddonByName("_HudLayoutScreen", 1);
             if (addonHudLayoutScreenPtr == nint.Zero) return;
             AddonHudLayoutScreen* hudLayoutScreen = (AddonHudLayoutScreen*)addonHudLayoutScreenPtr;
-
-            // Get the currently selected element, abort if none is selected
-            AtkResNode* selectedNode = hudLayoutScreen->CollisionNodeList[0];
-            if (selectedNode == null) {
-                this.Log.Debug($"[{this.Name}] No element selected.");
-                return;
-            }
-            if (selectedNode->ParentNode == null) return;
 
             // Depending on the keyboard action, execute the corresponding operation
             // TODO: What should happen if a node in the undo/redo list is moved normally? 
