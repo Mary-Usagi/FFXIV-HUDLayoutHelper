@@ -1,4 +1,5 @@
 using Dalamud.Game.Addon.Lifecycle;
+using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
@@ -13,7 +14,7 @@ using System.Text.Json;
 
 namespace HudCopyPaste {
     public sealed class Plugin : IDalamudPlugin {
-        public bool DEBUG = false;
+        public bool DEBUG = true;
         public string Name => "HudCopyPaste";
         private const string CommandName = "/hudcp";
 
@@ -70,7 +71,130 @@ namespace HudCopyPaste {
                 this.Debug.Log(this.Log.Debug, "HudLayoutScreen finalize.");
                 this.removeOnUpdateCallback();
             });
+
+            // TODO: Listen for MouseDown and MouseUp to also add manual moves to the undo/redo history
+            // TODO: custom sent events interfer with this one, as they are caught as well! Need to filter them out somehow
+            // ---> When filtering events where the selected node position didn't change, it actually works fine
+            // But I would still like to find a more robust solution 
+            //      TODO: adjust the param of the event and remove it in PreReceiveEvent
+            this.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", HandleMouseDownEvent);
+            this.AddonLifecycle.RegisterListener(AddonEvent.PostReceiveEvent, "_HudLayoutScreen", HandleMouseUpEvent);
+
+            // TODO: add custom debug UI that shows the undo/redo history 
+            // TODO: turn elements of histories into tuples of before and after states
+            // TODO: maybe find a better name for the Plugin, as its functionality is not only copy/paste anymore 
         }
+
+        // TODO: handle mouse events
+        private byte CUSTOM_FLAG = 16;
+        private HudElementData? mouseDownTarget = null;
+
+        private unsafe void HandleMouseDownEvent(AddonEvent type, AddonArgs args) {
+            if (args is not AddonReceiveEventArgs receiveEventArgs) return;
+            if (receiveEventArgs.AtkEventType != (uint)AtkEventType.MouseDown) return;
+            if (receiveEventArgs.AtkEvent == nint.Zero) return;
+
+            // Check if the event has the custom flag set, if so, filter it out
+            AtkEvent* atkEvent = (AtkEvent*)receiveEventArgs.AtkEvent;
+            if ((atkEvent->Flags & CUSTOM_FLAG) == CUSTOM_FLAG) {
+                atkEvent->Flags &= (byte)~CUSTOM_FLAG;
+                return;
+            } 
+
+            // Get the HudLayout agent, abort if not found
+            AgentHUDLayout* agentHudLayout = (AgentHUDLayout*)GameGui.FindAgentInterface("HudLayout");
+            if (agentHudLayout == null) return;
+
+            // Get the HudLayoutScreen, abort if not found
+            nint addonHudLayoutScreenPtr = GameGui.GetAddonByName("_HudLayoutScreen", 1);
+            if (addonHudLayoutScreenPtr == nint.Zero) return;
+
+            AddonHudLayoutScreen* hudLayoutScreen = (AddonHudLayoutScreen*)addonHudLayoutScreenPtr;
+
+            // Get the currently selected element, abort if none is selected
+            // atkEvent->Param == selectedNodeId in list 
+            int selectedNodeId = receiveEventArgs.EventParam;
+            if (selectedNodeId < 0 || selectedNodeId >= hudLayoutScreen->CollisionNodeListCount) {
+                this.Debug.Log(this.Log.Error, $"No valid element selected.");
+            }
+
+            AtkResNode* selectedNode = hudLayoutScreen->CollisionNodeList[selectedNodeId];
+            if (selectedNode == null) {
+                this.Log.Debug($"No element selected.");
+                return;
+            }
+            if (selectedNode->ParentNode == null) return;
+
+            // Temporarily save the current state of the selected element for undo operations
+            HudElementData previousState = new HudElementData(selectedNode);
+            if (previousState.ResNodeDisplayName != string.Empty && previousState.ResNodeDisplayName != "Unknown") {
+                this.Debug.Log(this.Log.Debug, $"Selected Element by Mouse: {previousState}");
+                mouseDownTarget = previousState; 
+            } else {
+                this.Debug.Log(this.Log.Warning, $"Could not get ResNodeDisplayName for selected element.");
+                mouseDownTarget = null;
+            }
+        }
+
+        private unsafe void HandleMouseUpEvent(AddonEvent type, AddonArgs args) {
+            if (args is not AddonReceiveEventArgs receiveEventArgs) return;
+            if (receiveEventArgs.AtkEventType != (uint)AtkEventType.MouseUp) return;
+            if (receiveEventArgs.AtkEvent == nint.Zero) return;
+
+            // Check if the event has the custom flag set, if so, filter it out
+            AtkEvent* atkEvent = (AtkEvent*)receiveEventArgs.AtkEvent;
+            if ((atkEvent->Flags & CUSTOM_FLAG) == CUSTOM_FLAG) {
+                atkEvent->Flags &= (byte)~CUSTOM_FLAG;
+                return;
+            }
+
+            // Get the HudLayout agent, abort if not found
+            AgentHUDLayout* agentHudLayout = (AgentHUDLayout*)GameGui.FindAgentInterface("HudLayout");
+            if (agentHudLayout == null) return;
+
+            // Get the HudLayoutScreen, abort if not found
+            nint addonHudLayoutScreenPtr = GameGui.GetAddonByName("_HudLayoutScreen", 1);
+            if (addonHudLayoutScreenPtr == nint.Zero) return;
+
+            // Get the currently selected element, abort if none is selected
+            AddonHudLayoutScreen* hudLayoutScreen = (AddonHudLayoutScreen*)addonHudLayoutScreenPtr;
+            AtkResNode* selectedNode = hudLayoutScreen->CollisionNodeList[0];
+            if (selectedNode == null) {
+                this.Log.Debug($"No element selected.");
+                return;
+            }
+            if (selectedNode->ParentNode == null) return;
+
+            // Check if the mouse target is the same as the selected element 
+            if (mouseDownTarget == null) { 
+                this.Debug.Log(this.Log.Warning, $"No mouse target found.");
+                return;
+            }
+
+            // Get the current state of the selected element
+            HudElementData newState = new HudElementData(selectedNode);
+
+            // Check if the currently selected element is the same as the last MouseDown target
+            if (newState.ResNodeDisplayName != mouseDownTarget.ResNodeDisplayName) {
+                this.Debug.Log(this.Log.Warning, $"Mouse target does not match selected element: {newState}");
+                return;
+            } else {
+                this.Debug.Log(this.Log.Debug, $"Mouse target matches selected element.");
+            }
+
+            // check if the position has changed, if not, do not add to undo history
+            if (mouseDownTarget.PosX == newState.PosX && mouseDownTarget.PosY == newState.PosY) {
+                return;
+            }
+
+            // Save the current state of the selected element for undo operations
+            this.Log.Debug($"User moved element: {mouseDownTarget.PrettyPrint()} -> ({newState.PosX}, {newState.PosY})");
+            undoHistory.Add(mouseDownTarget);
+        }
+
+        // END TODO
+
+
         private bool callbackAdded = false;
         private void addOnUpdateCallback() {
             if (callbackAdded) return;
@@ -179,6 +303,7 @@ namespace HudCopyPaste {
             if (!ctrlKeystate.HasFlag(KeyStateFlags.Down)) return;
 
             // Set the keyboard action based on the key states
+            // TODO: add strg + shift + z for redo
             KeyboardAction keyboardAction = KeyboardAction.None;
             List<(SeVirtualKey, KeyStateFlags, KeyboardAction)> keybinds = new() {
                 (SeVirtualKey.C, KeyStateFlags.Pressed, KeyboardAction.Copy),
@@ -303,7 +428,7 @@ namespace HudCopyPaste {
             selectedNode->ParentNode->SetPositionShort(parsedData.PosX, parsedData.PosY);
 
             // Simulate Mouse Click
-            Utils.SimulateMouseClickOnHudElement(selectedNode, 0, parsedData, hudLayoutScreen, this);
+            Utils.SimulateMouseClickOnHudElement(selectedNode, 0, parsedData, hudLayoutScreen, this, this.CUSTOM_FLAG);
 
             // Send Event to HudLayout to inform about a change 
             Utils.SendChangeEvent(agentHudLayout);
@@ -340,7 +465,7 @@ namespace HudCopyPaste {
             lastNode->ParentNode->SetPositionShort(lastState.PosX, lastState.PosY);
 
             // Simulate Mouse Click
-            Utils.SimulateMouseClickOnHudElement(lastNode, lastNodeId, lastState, hudLayoutScreen, this);
+            Utils.SimulateMouseClickOnHudElement(lastNode, lastNodeId, lastState, hudLayoutScreen, this, this.CUSTOM_FLAG);
 
             // Send Event to HudLayout to inform about a change 
             Utils.SendChangeEvent(agentHudLayout);
@@ -376,7 +501,7 @@ namespace HudCopyPaste {
             redoNode->ParentNode->SetPositionShort(redoState.PosX, redoState.PosY);
 
             // Simulate Mouse Click
-            Utils.SimulateMouseClickOnHudElement(redoNode, redoNodeId, redoState, hudLayoutScreen, this);
+            Utils.SimulateMouseClickOnHudElement(redoNode, redoNodeId, redoState, hudLayoutScreen, this, this.CUSTOM_FLAG);
 
             // Send Event to HudLayout to inform about a change 
             Utils.SendChangeEvent(agentHudLayout);

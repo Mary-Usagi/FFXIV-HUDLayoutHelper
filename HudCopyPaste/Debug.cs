@@ -49,6 +49,17 @@ namespace HudCopyPaste {
             // Check if the event type is in the handled list
             if (!handledTypeList.Contains((AtkEventType)receiveEventArgs.AtkEventType)) return;
 
+            // FINDINGS:
+            // - MouseDown AtkEvent:
+            //   - Param: current index in collisionNodeList
+            //   - eventid: 0
+            //   - NextEvent: selected resnode (collisionnode) -> atkeventmanager->atkevent->nextevent
+            //   - listener: selected resnode (collisionnode) -> atkeventmanager->atkevent->listener
+            //   - target: Pointer to selected resnode (collisionnode) == CollisionNodeList[Param]
+            // - MouseUp AtkEvent:
+            //   - eventid: 99
+            //   - Target: AtkStage.Instance()
+
             // Log the event details for debugging purposes
             Plugin.Log.Debug("=====================================");
             Plugin.Log.Debug($"AtkEventType: {(AtkEventType)receiveEventArgs.AtkEventType}");

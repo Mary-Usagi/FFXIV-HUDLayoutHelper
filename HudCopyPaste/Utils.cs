@@ -38,7 +38,7 @@ namespace HudCopyPaste {
         /// <param name="resNodeID">The resource node ID.</param>
         /// <param name="hudElementData">The HUD element data.</param>
         /// <param name="hudLayoutScreen">The HUD layout screen pointer.</param>
-        internal static unsafe void SimulateMouseClickOnHudElement(AtkResNode* resNode, uint resNodeID, HudElementData hudElementData, AddonHudLayoutScreen* hudLayoutScreen, Plugin plugin) {
+        internal static unsafe void SimulateMouseClickOnHudElement(AtkResNode* resNode, uint resNodeID, HudElementData hudElementData, AddonHudLayoutScreen* hudLayoutScreen, Plugin plugin, byte customFlag) {
             if (resNode == null) {
                 plugin.Log.Warning("ResNode is null");
                 return;
@@ -52,8 +52,10 @@ namespace HudCopyPaste {
             // Create the mouse down event from the selected node's event
             AtkEvent mouseDownEvent = *resNode->AtkEventManager.Event;
             mouseDownEvent.Type = AtkEventType.MouseDown;
-            mouseDownEvent.Flags = 4;
             mouseDownEvent.Param = resNodeID;
+            mouseDownEvent.Flags = 4;
+            // Add custom Flag to the event to identify it as a custom event
+            mouseDownEvent.Flags |= customFlag;
 
             // Set the event data with the x and y position of the mouse click
             AtkEventData* mouseDownEventData = &eventData;
@@ -67,11 +69,13 @@ namespace HudCopyPaste {
             uint atkStagePtr = (uint)AtkStage.Instance();
             AtkEvent mouseUpEvent = *resNode->AtkEventManager.Event;
             mouseUpEvent.Type = AtkEventType.MouseUp;
-            mouseUpEvent.Flags = 4;
             mouseUpEvent.Param = 99;
             mouseUpEvent.NextEvent = null;
             mouseUpEvent.Target = (AtkEventTarget*)atkStagePtr;
             mouseUpEvent.Unk29 = 0;
+            mouseUpEvent.Flags = 6;
+            // Add custom Flag to the event to identify it as a custom event
+            mouseUpEvent.Flags |= customFlag;
 
             // Set the event data with the x and y position of the mouse click
             plugin.Debug.Log(plugin.Log.Debug, "Calling MouseUp event");
