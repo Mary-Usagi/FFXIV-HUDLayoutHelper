@@ -181,14 +181,20 @@ namespace HudCopyPaste {
             }
         }
 
-        public void Dispose() {
-            Plugin.AddonLifecycle.UnregisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", HandleHudLayoutScreenEvent);
-        }
-
+        /// <summary>
+        /// Logs a message to the provided log function if debugging is enabled.
+        /// </summary>
+        /// <param name="logFunction"></param>
+        /// <param name="message"></param>
         public unsafe void Log(Action<string, object[]> logFunction, string message) {
             if (Enabled) {
                 logFunction(message, Array.Empty<object>());
             }
         }
+
+        public void Dispose() {
+            Plugin.AddonLifecycle.UnregisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", HandleHudLayoutScreenEvent);
+        }
+
     }
 }
