@@ -3,6 +3,7 @@ using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
+using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using FFXIVClientStructs.FFXIV.Client.System.String;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
@@ -274,14 +275,20 @@ namespace HudCopyPaste {
             KeyboardAction keyboardAction = KeyboardAction.None;
             if (ctrlKeystate.HasFlag(KeyStateFlags.Down)) {
                 // Get the state of the C, V, Z and Y keys
-                KeyStateFlags cKeystate = UIInputData.Instance()->GetKeyState(SeVirtualKey.C);
-                KeyStateFlags vKeystate = UIInputData.Instance()->GetKeyState(SeVirtualKey.V);
-                KeyStateFlags zKeystate = UIInputData.Instance()->GetKeyState(SeVirtualKey.Z);
-                KeyStateFlags yKeystate = UIInputData.Instance()->GetKeyState(SeVirtualKey.Y);
-                if (cKeystate.HasFlag(KeyStateFlags.Pressed)) keyboardAction = KeyboardAction.Copy;
-                if (vKeystate.HasFlag(KeyStateFlags.Released)) keyboardAction = KeyboardAction.Paste;
-                if (zKeystate.HasFlag(KeyStateFlags.Pressed)) keyboardAction = KeyboardAction.Undo;
-                if (yKeystate.HasFlag(KeyStateFlags.Pressed)) keyboardAction = KeyboardAction.Redo;
+                List<(SeVirtualKey, KeyStateFlags, KeyboardAction)> keybinds = new() {
+                    (SeVirtualKey.C, KeyStateFlags.Pressed, KeyboardAction.Copy),
+                    (SeVirtualKey.V, KeyStateFlags.Released, KeyboardAction.Paste),
+                    (SeVirtualKey.Z, KeyStateFlags.Pressed, KeyboardAction.Undo),
+                    (SeVirtualKey.Y, KeyStateFlags.Pressed, KeyboardAction.Redo)
+                };
+                for (int i = 0; i < keybinds.Count; i++) {
+                    (SeVirtualKey key, KeyStateFlags state, KeyboardAction action) = keybinds[i];
+                    KeyStateFlags keyState = UIInputData.Instance()->GetKeyState(key);
+                    if (keyState.HasFlag(state)) {
+                        keyboardAction = action;
+                        break;
+                    }
+                }
             } else {
                 return;
             }
