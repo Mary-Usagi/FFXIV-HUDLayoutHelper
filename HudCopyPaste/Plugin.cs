@@ -101,15 +101,7 @@ namespace HudCopyPaste {
             }
         }
 
-        private HudElementData? currentlyCopied = null;
-
-        private enum KeyboardAction {
-            None,
-            Copy,
-            Paste,
-            Undo,
-            Redo
-        }
+        private enum KeyboardAction { None, Copy, Paste, Undo, Redo }
 
         /// <summary>
         /// Represents the data for a mouse event. (AtkEventData) 
@@ -151,6 +143,7 @@ namespace HudCopyPaste {
             }
         }
 
+        private HudElementData? currentlyCopied = null;
         private List<HudElementData> undoHistory = new();
         private List<HudElementData> redoHistory = new();
 
@@ -216,7 +209,7 @@ namespace HudCopyPaste {
             // TODO: What should happen if a node in the undo/redo list is moved normally? 
             switch (keyboardAction) {
                 case KeyboardAction.Copy:
-                    HandleCopyAction(hudLayoutScreen); 
+                    HandleCopyAction(hudLayoutScreen);
                     break;
                 case KeyboardAction.Paste:
                     HandlePasteAction(hudLayoutScreen, agentHudLayout);
