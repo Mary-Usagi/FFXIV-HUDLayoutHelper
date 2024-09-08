@@ -1,4 +1,5 @@
-﻿using FFXIVClientStructs.FFXIV.Client.System.String;
+﻿using Dalamud.Plugin.Services;
+using FFXIVClientStructs.FFXIV.Client.System.String;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
@@ -98,6 +99,34 @@ namespace HudCopyPaste {
             command[0].SetInt(22);
             command[1].SetInt(0);
             agentHudLayout->ReceiveEvent(result, command, 1, 0);
+        }
+
+        /// <summary>
+        /// Checks if the HUD layout editor is opened and ready.
+        /// </summary>
+        /// <param name="agentHudLayoutPtr">The agent HUD layout pointer.</param>
+        /// <param name="hudLayoutScreenPtr">The HUD layout screen pointer.</param>
+        /// <param name="plugin">The plugin instance.</param>
+        /// <returns>True if the HUD layout is ready, false otherwise.</returns>
+        internal static unsafe bool IsHudLayoutReady(out AgentHUDLayout* agentHudLayoutPtr, out AddonHudLayoutScreen* hudLayoutScreenPtr, Plugin plugin) {
+            agentHudLayoutPtr = null;
+            hudLayoutScreenPtr = null;
+            
+            // Get the HudLayout agent, return false if not found
+            AgentHUDLayout* agentHudLayout = (AgentHUDLayout*)plugin.GameGui.FindAgentInterface("HudLayout");
+            if (agentHudLayout == null) return false;
+
+            // Get the HudLayoutScreen, return false if not found
+            nint addonHudLayoutScreenPtr = plugin.GameGui.GetAddonByName("_HudLayoutScreen", 1);
+            if (addonHudLayoutScreenPtr == nint.Zero) return false;
+
+            // Get the HudLayoutScreen pointer
+            AddonHudLayoutScreen* hudLayoutScreen = (AddonHudLayoutScreen*)addonHudLayoutScreenPtr;
+            if (hudLayoutScreen == null) return false;
+
+            agentHudLayoutPtr = agentHudLayout;
+            hudLayoutScreenPtr = hudLayoutScreen;
+            return true;
         }
     }
 }

@@ -95,17 +95,10 @@ namespace HudCopyPaste {
             if ((atkEvent->Flags & CUSTOM_FLAG) == CUSTOM_FLAG) {
                 atkEvent->Flags &= (byte)~CUSTOM_FLAG;
                 return;
-            } 
+            }
 
-            // Get the HudLayout agent, abort if not found
-            AgentHUDLayout* agentHudLayout = (AgentHUDLayout*)GameGui.FindAgentInterface("HudLayout");
-            if (agentHudLayout == null) return;
-
-            // Get the HudLayoutScreen, abort if not found
-            nint addonHudLayoutScreenPtr = GameGui.GetAddonByName("_HudLayoutScreen", 1);
-            if (addonHudLayoutScreenPtr == nint.Zero) return;
-
-            AddonHudLayoutScreen* hudLayoutScreen = (AddonHudLayoutScreen*)addonHudLayoutScreenPtr;
+            // Check if the layout editor is open, abort if not
+            if (!Utils.IsHudLayoutReady(out AgentHUDLayout* agentHudLayout, out AddonHudLayoutScreen* hudLayoutScreen, this)) return;
 
             // Get the currently selected element, abort if none is selected
             // atkEvent->Param == selectedNodeId in list 
@@ -144,16 +137,10 @@ namespace HudCopyPaste {
                 return;
             }
 
-            // Get the HudLayout agent, abort if not found
-            AgentHUDLayout* agentHudLayout = (AgentHUDLayout*)GameGui.FindAgentInterface("HudLayout");
-            if (agentHudLayout == null) return;
-
-            // Get the HudLayoutScreen, abort if not found
-            nint addonHudLayoutScreenPtr = GameGui.GetAddonByName("_HudLayoutScreen", 1);
-            if (addonHudLayoutScreenPtr == nint.Zero) return;
+            // Check if the layout editor is open, abort if not
+            if (!Utils.IsHudLayoutReady(out AgentHUDLayout* agentHudLayout, out AddonHudLayoutScreen* hudLayoutScreen, this)) return;
 
             // Get the currently selected element, abort if none is selected
-            AddonHudLayoutScreen* hudLayoutScreen = (AddonHudLayoutScreen*)addonHudLayoutScreenPtr;
             AtkResNode* selectedNode = hudLayoutScreen->CollisionNodeList[0];
             if (selectedNode == null) {
                 this.Log.Debug($"No element selected.");
@@ -348,14 +335,8 @@ namespace HudCopyPaste {
                 return;
             }
 
-            // Get the HudLayout agent, abort if not found
-            AgentHUDLayout* agentHudLayout = (AgentHUDLayout*)GameGui.FindAgentInterface("HudLayout");
-            if (agentHudLayout == null) return;
-
-            // Get the HudLayoutScreen, abort if not found
-            nint addonHudLayoutScreenPtr = GameGui.GetAddonByName("_HudLayoutScreen", 1);
-            if (addonHudLayoutScreenPtr == nint.Zero) return;
-            AddonHudLayoutScreen* hudLayoutScreen = (AddonHudLayoutScreen*)addonHudLayoutScreenPtr;
+            // Check if the layout editor is open, abort if not
+            if (!Utils.IsHudLayoutReady(out AgentHUDLayout* agentHudLayout, out AddonHudLayoutScreen* hudLayoutScreen, this)) return;
 
             // Depending on the keyboard action, execute the corresponding operation
             switch (keyboardAction) {
