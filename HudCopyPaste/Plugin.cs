@@ -13,7 +13,7 @@ using System.Text.Json;
 
 namespace HudCopyPaste {
     public sealed class Plugin : IDalamudPlugin {
-        public bool DEBUG = true;
+        public bool DEBUG = false;
         public string Name => "HudCopyPaste";
         private const string CommandName = "/hudcp";
 
@@ -55,10 +55,11 @@ namespace HudCopyPaste {
             PluginInterface.UiBuilder.Draw += DrawUI;
             PluginInterface.UiBuilder.OpenMainUi += ToggleMainUI;
 
-            if (this.DEBUG) {
+            if(this.GameGui.GetAddonByName("_HudLayoutScreen", 1) != IntPtr.Zero) {
+                this.Debug.Log(this.Log.Debug, "HudLayoutScreen already loaded.");
                 this.Framework.Update += HandleKeyboardShortcuts;
-                return; // Skip registering listeners for debug mode
             }
+
             this.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "_HudLayoutScreen", (type, args) => {
                 this.Debug.Log(this.Log.Debug, "HudLayoutScreen setup.");
                 this.Framework.Update += HandleKeyboardShortcuts;
@@ -83,6 +84,8 @@ namespace HudCopyPaste {
 
             public override string ToString() => JsonSerializer.Serialize(this);
             public string PrettyPrint() => $"{ResNodeDisplayName} ({PosX}, {PosY})";
+
+            public HudElementData() { }
 
             /// <summary>
             /// Initializes a new instance of the <see cref="HudElementData"/> class from an AtkResNode.
@@ -227,7 +230,7 @@ namespace HudCopyPaste {
             // Get the currently selected element, abort if none is selected
             AtkResNode* selectedNode = hudLayoutScreen->CollisionNodeList[0];
             if (selectedNode == null) {
-                this.Log.Debug($"[{this.Name}] No element selected.");
+                this.Log.Debug($"No element selected.");
                 return;
             }
             if (selectedNode->ParentNode == null) return;
@@ -239,7 +242,7 @@ namespace HudCopyPaste {
             // Copy the data to the clipboard
             ImGui.SetClipboardText(selectedNodeData.ToString());
             this.Debug.Log(this.Log.Debug, $"Copied to Clipboard: {selectedNodeData}");
-            this.Log.Debug($"[{this.Name}] Copied position to clipboard: {selectedNodeData.PrettyPrint()}");
+            this.Log.Debug($"Copied position to clipboard: {selectedNodeData.PrettyPrint()}");
         }
 
         /// <summary>
@@ -252,7 +255,7 @@ namespace HudCopyPaste {
             // Get the currently selected element, abort if none is selected
             AtkResNode* selectedNode = hudLayoutScreen->CollisionNodeList[0];
             if (selectedNode == null) {
-                this.Log.Debug($"[{this.Name}] No element selected.");
+                this.Log.Debug($"No element selected.");
                 return;
             }
             if (selectedNode->ParentNode == null) return;
@@ -260,7 +263,7 @@ namespace HudCopyPaste {
             // Get the clipboard text
             string clipboardText = ImGui.GetClipboardText();
             if (clipboardText == null) {
-                this.Log.Info($"[{this.Name}] Clipboard is empty.");
+                this.Log.Debug($"Clipboard is empty.");
                 return;
             }
 
@@ -268,12 +271,12 @@ namespace HudCopyPaste {
             HudElementData? parsedData = null;
             try {
                 parsedData = JsonSerializer.Deserialize<HudElementData>(clipboardText);
-            } catch {
-                this.Log.Warning($"[{this.Name}] Clipboard data could not be parsed: '{clipboardText}'");
+            } catch (Exception e) {
+                this.Log.Warning($"Clipboard data could not be parsed: '{clipboardText}'");
                 return;
             }
             if (parsedData == null) {
-                this.Log.Warning($"[{this.Name}] Clipboard data could not be parsed. '{clipboardText}'");
+                this.Log.Warning($"Clipboard data could not be parsed. '{clipboardText}'");
                 return;
             }
             this.Debug.Log(this.Log.Debug, $"Parsed Clipboard: {parsedData}");
@@ -294,7 +297,7 @@ namespace HudCopyPaste {
             // Send Event to HudLayout to inform about a change 
             Utils.SendChangeEvent(agentHudLayout);
 
-            this.Log.Debug($"[{this.Name}] Pasted position of '{parsedData.ResNodeDisplayName}' to selected element: {parsedData.ResNodeDisplayName} ({previousState.PosX}, {previousState.PosY}) -> ({parsedData.PosX}, {parsedData.PosY})");
+            this.Log.Debug($"Pasted position to selected element: {previousState.ResNodeDisplayName} ({previousState.PosX}, {previousState.PosY}) -> ({parsedData.PosX}, {parsedData.PosY})");
         }
 
         /// <summary>
@@ -304,7 +307,7 @@ namespace HudCopyPaste {
         /// <param name="agentHudLayout"></param>
         private unsafe void HandleUndoAction(AddonHudLayoutScreen* hudLayoutScreen, AgentHUDLayout* agentHudLayout) {
             if (undoHistory.Count == 0) {
-                this.Log.Debug($"[{this.Name}] Nothing to undo.");
+                this.Log.Debug($"Nothing to undo.");
                 return;
             }
 
@@ -314,7 +317,7 @@ namespace HudCopyPaste {
             // Find node with same name as last state
             (nint lastNodePtr, uint lastNodeId) = Utils.FindHudResnodeByName(hudLayoutScreen, lastState.ResNodeDisplayName);
             if (lastNodePtr == nint.Zero) {
-                this.Log.Warning($"[{this.Name}] Could not find node with name '{lastState.ResNodeDisplayName}'");
+                this.Log.Warning($"Could not find node with name '{lastState.ResNodeDisplayName}'");
                 return;
             }
             AtkResNode* lastNode = (AtkResNode*)lastNodePtr;
@@ -331,7 +334,7 @@ namespace HudCopyPaste {
             // Send Event to HudLayout to inform about a change 
             Utils.SendChangeEvent(agentHudLayout);
 
-            this.Log.Debug($"[{this.Name}] Undone last operation: Moved '{redoState.ResNodeDisplayName}' from ({redoState.PosX}, {redoState.PosY}) back to ({lastState.PosX}, {lastState.PosY})");
+            this.Log.Debug($"Undone last operation: Moved '{redoState.ResNodeDisplayName}' from ({redoState.PosX}, {redoState.PosY}) back to ({lastState.PosX}, {lastState.PosY})");
         }
 
         /// <summary>
@@ -341,7 +344,7 @@ namespace HudCopyPaste {
         /// <param name="agentHudLayout"></param>
         private unsafe void HandleRedoAction(AddonHudLayoutScreen* hudLayoutScreen, AgentHUDLayout* agentHudLayout) {
             if (redoHistory.Count == 0) {
-                this.Log.Debug($"[{this.Name}] Nothing to redo.");
+                this.Log.Debug($"Nothing to redo.");
                 return;
             }
 
@@ -351,7 +354,7 @@ namespace HudCopyPaste {
             // Find node with same name as last state
             (nint redoNodePtr, uint redoNodeId) = Utils.FindHudResnodeByName(hudLayoutScreen, redoState.ResNodeDisplayName);
             if (redoNodePtr == nint.Zero) {
-                this.Log.Warning($"[{this.Name}] Could not find node with name '{redoState.ResNodeDisplayName}'");
+                this.Log.Warning($"Could not find node with name '{redoState.ResNodeDisplayName}'");
                 return;
             }
             AtkResNode* redoNode = (AtkResNode*)redoNodePtr;
@@ -367,7 +370,7 @@ namespace HudCopyPaste {
             // Send Event to HudLayout to inform about a change 
             Utils.SendChangeEvent(agentHudLayout);
 
-            this.Log.Debug($"[{this.Name}] Redone last operation: Moved '{redoState.ResNodeDisplayName}' again from ({undoState.PosX}, {undoState.PosY}) to ({redoState.PosX}, {redoState.PosY})");
+            this.Log.Debug($"Redone last operation: Moved '{redoState.ResNodeDisplayName}' again from ({undoState.PosX}, {undoState.PosY}) to ({redoState.PosX}, {redoState.PosY})");
         }
 
         public void Dispose() {
