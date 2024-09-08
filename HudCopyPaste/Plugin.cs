@@ -57,18 +57,29 @@ namespace HudCopyPaste {
 
             if(this.GameGui.GetAddonByName("_HudLayoutScreen", 1) != IntPtr.Zero) {
                 this.Debug.Log(this.Log.Debug, "HudLayoutScreen already loaded.");
-                this.Framework.Update += HandleKeyboardShortcuts;
+                this.addOnUpdateCallback();
+
             }
 
             this.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "_HudLayoutScreen", (type, args) => {
                 this.Debug.Log(this.Log.Debug, "HudLayoutScreen setup.");
-                this.Framework.Update += HandleKeyboardShortcuts;
+                this.addOnUpdateCallback();
             });
 
             this.AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, "_HudLayoutScreen", (type, args) => {
                 this.Debug.Log(this.Log.Debug, "HudLayoutScreen finalize.");
-                this.Framework.Update -= HandleKeyboardShortcuts;
+                this.removeOnUpdateCallback();
             });
+        }
+        private bool callbackAdded = false;
+        private void addOnUpdateCallback() {
+            if (callbackAdded) return;
+            this.Framework.Update += HandleKeyboardShortcuts;
+            callbackAdded = true;
+        }
+        private void removeOnUpdateCallback() {
+            this.Framework.Update -= HandleKeyboardShortcuts;
+            callbackAdded = false;
         }
 
         /// <summary>
@@ -374,7 +385,7 @@ namespace HudCopyPaste {
         }
 
         public void Dispose() {
-            this.Framework.Update -= HandleKeyboardShortcuts;
+            this.removeOnUpdateCallback();
             this.AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, "_HudLayoutScreen");
             this.AddonLifecycle.UnregisterListener(AddonEvent.PreFinalize, "_HudLayoutScreen");
             this.Debug.Dispose();
