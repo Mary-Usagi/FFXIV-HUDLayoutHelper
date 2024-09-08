@@ -3,7 +3,7 @@
 A Dalamud Plugin for FFXIV. 
 
 - Copy and paste HUD element positions.
-- Supports undo and redo.
+- Undo and redo movement of HUD elements. 
 
 ## How To Use
 1. Open the HUD Layout Editor.

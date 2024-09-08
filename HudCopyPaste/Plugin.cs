@@ -79,6 +79,8 @@ namespace HudCopyPaste {
             // TODO: add custom debug UI that shows the undo/redo history 
             // TODO: turn elements of histories into tuples of before and after states
             // TODO: maybe find a better name for the Plugin, as its functionality is not only copy/paste anymore 
+
+            // TODO: Fix other ways of moving elements, e.g. by using the arrow keys? 
         }
 
         // TODO: handle mouse events
@@ -101,7 +103,6 @@ namespace HudCopyPaste {
             if (!Utils.IsHudLayoutReady(out AgentHUDLayout* agentHudLayout, out AddonHudLayoutScreen* hudLayoutScreen, this)) return;
 
             // Get the currently selected element, abort if none is selected
-            // atkEvent->Param == selectedNodeId in list 
             int selectedNodeId = receiveEventArgs.EventParam;
             if (selectedNodeId < 0 || selectedNodeId >= hudLayoutScreen->CollisionNodeListCount) {
                 this.Debug.Log(this.Log.Error, $"No valid element selected.");
