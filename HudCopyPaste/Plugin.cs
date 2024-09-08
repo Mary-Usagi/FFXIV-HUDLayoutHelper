@@ -50,14 +50,9 @@ namespace HudCopyPaste {
             this.ChatGui = chatGui;
 
             this.Debug = new Debug(this, true);
-
             MainWindow = new MainWindow(this);
-
             WindowSystem.AddWindow(MainWindow);
-
             PluginInterface.UiBuilder.Draw += DrawUI;
-
-            // Adds another button that is doing the same but for the main UI of the plugin
             PluginInterface.UiBuilder.OpenMainUi += ToggleMainUI;
 
             this.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "_HudLayoutScreen", (type, args) => {
@@ -90,9 +85,7 @@ namespace HudCopyPaste {
             /// </summary>
             /// <param name="resNode">The AtkResNode pointer.</param>
             public unsafe HudElementData(AtkResNode* resNode) {
-                if (resNode->ParentNode == null) {
-                    return;
-                }
+                if (resNode->ParentNode == null) return;
                 try {
                     ResNodeDisplayName = resNode->ParentNode->GetComponent()->GetTextNodeById(4)->GetAsAtkTextNode()->NodeText.ToString();
                 } catch (NullReferenceException) {
@@ -119,7 +112,7 @@ namespace HudCopyPaste {
         }
 
         /// <summary>
-        /// Represents the data for a mouse event.
+        /// Represents the data for a mouse event. (AtkEventData) 
         /// </summary>
         public unsafe struct MouseEventData {
             public short PosX;
@@ -143,10 +136,8 @@ namespace HudCopyPaste {
                 byte[] xBytes = BitConverter.GetBytes(PosX + 10);
                 byte[] yBytes = BitConverter.GetBytes(PosY + 10);
 
-                // Copy the xBytes to the beginning of the eventDataBytes array
+                // Copy xBytes to index 0 and yBytes to index 2 of the eventDataBytes array
                 Array.Copy(xBytes, 0, eventDataBytes, 0, 2);
-
-                // Copy the yBytes to the eventDataBytes array starting at index 2
                 Array.Copy(yBytes, 0, eventDataBytes, 2, 2);
 
                 // Create the event data struct from the byte array
@@ -172,29 +163,25 @@ namespace HudCopyPaste {
             if (!ClientState.IsLoggedIn) return;
             if (ClientState is not { LocalPlayer.ClassJob.Id: var classJobId }) return;
 
-            // Get the state of the control key
+            // Get the state of the control key, abort if not pressed 
             KeyStateFlags ctrlKeystate = UIInputData.Instance()->GetKeyState(SeVirtualKey.CONTROL);
+            if (!ctrlKeystate.HasFlag(KeyStateFlags.Down)) return;
 
             // Set the keyboard action based on the key states
             KeyboardAction keyboardAction = KeyboardAction.None;
-            if (ctrlKeystate.HasFlag(KeyStateFlags.Down)) {
-                // Get the state of the C, V, Z and Y keys
-                List<(SeVirtualKey, KeyStateFlags, KeyboardAction)> keybinds = new() {
-                    (SeVirtualKey.C, KeyStateFlags.Pressed, KeyboardAction.Copy),
-                    (SeVirtualKey.V, KeyStateFlags.Released, KeyboardAction.Paste),
-                    (SeVirtualKey.Z, KeyStateFlags.Pressed, KeyboardAction.Undo),
-                    (SeVirtualKey.Y, KeyStateFlags.Pressed, KeyboardAction.Redo)
-                };
-                for (int i = 0; i < keybinds.Count; i++) {
-                    (SeVirtualKey key, KeyStateFlags state, KeyboardAction action) = keybinds[i];
-                    KeyStateFlags keyState = UIInputData.Instance()->GetKeyState(key);
-                    if (keyState.HasFlag(state)) {
-                        keyboardAction = action;
-                        break;
-                    }
+            List<(SeVirtualKey, KeyStateFlags, KeyboardAction)> keybinds = new() {
+                (SeVirtualKey.C, KeyStateFlags.Pressed, KeyboardAction.Copy),
+                (SeVirtualKey.V, KeyStateFlags.Released, KeyboardAction.Paste),
+                (SeVirtualKey.Z, KeyStateFlags.Pressed, KeyboardAction.Undo),
+                (SeVirtualKey.Y, KeyStateFlags.Pressed, KeyboardAction.Redo)
+            };
+            for (int i = 0; i < keybinds.Count; i++) {
+                (SeVirtualKey key, KeyStateFlags state, KeyboardAction action) = keybinds[i];
+                KeyStateFlags keyState = UIInputData.Instance()->GetKeyState(key);
+                if (keyState.HasFlag(state)) {
+                    keyboardAction = action;
+                    break;
                 }
-            } else {
-                return;
             }
 
             if (keyboardAction == KeyboardAction.None) return;
@@ -229,40 +216,16 @@ namespace HudCopyPaste {
             // TODO: What should happen if a node in the undo/redo list is moved normally? 
             switch (keyboardAction) {
                 case KeyboardAction.Copy:
-                    this.Debug.Log(this.Log.Debug, "======= COPY =======");
-
-                    HandleCopyAction(hudLayoutScreen);
-
-                    this.Debug.PrettyPrintList(undoHistory, "Undo");
-                    this.Debug.PrettyPrintList(redoHistory, "Redo");
+                    HandleCopyAction(hudLayoutScreen); 
                     break;
                 case KeyboardAction.Paste:
-                    this.Debug.Log(this.Log.Debug, "======= PASTE =======");
-
                     HandlePasteAction(hudLayoutScreen, agentHudLayout);
-
-                    this.Debug.PrettyPrintList(undoHistory, "Undo");
-                    this.Debug.PrettyPrintList(redoHistory, "Redo");
                     break;
                 case KeyboardAction.Undo:
-                    this.Debug.Log(this.Log.Debug, "======= UNDO =======");
-                    this.Debug.PrettyPrintList(undoHistory, "Undo");
-                    this.Debug.PrettyPrintList(redoHistory, "Redo");
-
                     HandleUndoAction(hudLayoutScreen, agentHudLayout);
-
-                    this.Debug.PrettyPrintList(undoHistory, "Undo");
-                    this.Debug.PrettyPrintList(redoHistory, "Redo");
                     break;
                 case KeyboardAction.Redo:
-                    this.Debug.Log(this.Log.Debug, "======= REDO =======");
-                    this.Debug.PrettyPrintList(undoHistory, "Undo");
-                    this.Debug.PrettyPrintList(redoHistory, "Redo");
-
                     HandleRedoAction(hudLayoutScreen, agentHudLayout);
-
-                    this.Debug.PrettyPrintList(undoHistory, "Undo");
-                    this.Debug.PrettyPrintList(redoHistory, "Redo");
                     break;
             }
         }
@@ -287,8 +250,6 @@ namespace HudCopyPaste {
             // Copy the data to the clipboard
             ImGui.SetClipboardText(selectedNodeData.ToString());
             this.Debug.Log(this.Log.Debug, $"Copied to Clipboard: {selectedNodeData}");
-
-            // Print a debug message
             this.Log.Debug($"[{this.Name}] Copied position to clipboard: {selectedNodeData.PrettyPrint()}");
         }
 
@@ -344,7 +305,6 @@ namespace HudCopyPaste {
             // Send Event to HudLayout to inform about a change 
             Utils.SendChangeEvent(agentHudLayout);
 
-            // Print a debug message
             this.Log.Debug($"[{this.Name}] Pasted position of '{parsedData.ResNodeDisplayName}' to selected element: {parsedData.ResNodeDisplayName} ({previousState.PosX}, {previousState.PosY}) -> ({parsedData.PosX}, {parsedData.PosY})");
         }
 
@@ -382,7 +342,6 @@ namespace HudCopyPaste {
             // Send Event to HudLayout to inform about a change 
             Utils.SendChangeEvent(agentHudLayout);
 
-            // Print a debug message
             this.Log.Debug($"[{this.Name}] Undone last operation: Moved '{redoState.ResNodeDisplayName}' from ({redoState.PosX}, {redoState.PosY}) back to ({lastState.PosX}, {lastState.PosY})");
         }
 
@@ -419,7 +378,6 @@ namespace HudCopyPaste {
             // Send Event to HudLayout to inform about a change 
             Utils.SendChangeEvent(agentHudLayout);
 
-            // Print a debug message
             this.Log.Debug($"[{this.Name}] Redone last operation: Moved '{redoState.ResNodeDisplayName}' again from ({undoState.PosX}, {undoState.PosY}) to ({redoState.PosX}, {redoState.PosY})");
         }
 
@@ -427,11 +385,9 @@ namespace HudCopyPaste {
             this.Framework.Update -= HandleKeyboardShortcuts;
             this.AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, "_HudLayoutScreen");
             this.AddonLifecycle.UnregisterListener(AddonEvent.PreFinalize, "_HudLayoutScreen");
-
             this.Debug.Dispose();
 
             WindowSystem.RemoveAllWindows();
-
             MainWindow.Dispose();
         }
 
