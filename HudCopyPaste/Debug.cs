@@ -47,16 +47,16 @@ namespace HudCopyPaste {
             };
 
             // Check if the event type is in the handled list
-            if (!handledTypeList.Contains((AtkEventType) receiveEventArgs.AtkEventType)) return;
+            if (!handledTypeList.Contains((AtkEventType)receiveEventArgs.AtkEventType)) return;
 
             // Log the event details for debugging purposes
             Plugin.Log.Debug("=====================================");
-            Plugin.Log.Debug($"AtkEventType: {(AtkEventType) receiveEventArgs.AtkEventType}");
+            Plugin.Log.Debug($"AtkEventType: {(AtkEventType)receiveEventArgs.AtkEventType}");
             Plugin.Log.Debug($"AddonArgsType: {receiveEventArgs.Type}");
             Plugin.Log.Debug($"AtkEvent nint: {receiveEventArgs.AtkEvent:X}");
 
             if (receiveEventArgs.AtkEvent != nint.Zero) {
-                AtkEvent* atkEvent = (AtkEvent*) receiveEventArgs.AtkEvent;
+                AtkEvent* atkEvent = (AtkEvent*)receiveEventArgs.AtkEvent;
                 Plugin.Log.Debug("---------- AtkEvent ----------");
                 Plugin.Log.Debug($"AtkEvent: {atkEvent->ToString()}");
                 PrintAtkEvent(atkEvent);
@@ -68,7 +68,7 @@ namespace HudCopyPaste {
             Plugin.Log.Debug($"Data Ptr: {receiveEventArgs.Data:X}");
 
             if (receiveEventArgs.Data != nint.Zero) {
-                AtkEventData* eventData = (AtkEventData*) receiveEventArgs.Data;
+                AtkEventData* eventData = (AtkEventData*)receiveEventArgs.Data;
                 Plugin.Log.Debug($"EventData: {eventData->ToString()}");
                 Plugin.Log.Debug($"ListItemData: {eventData->ListItemData}");
                 Plugin.Log.Debug($"SelectedIndex: {eventData->ListItemData.SelectedIndex}");
@@ -80,7 +80,7 @@ namespace HudCopyPaste {
                 }
 
                 // Interpret the first 8 bytes as mouse position values
-                byte* bytePtr = (byte*) receiveEventArgs.Data;
+                byte* bytePtr = (byte*)receiveEventArgs.Data;
                 uint[] mousePositions = new uint[4];
                 for (int i = 0; i < 4; i++) {
                     mousePositions[i] = BitConverter.ToUInt16(new byte[] { bytePtr[i * 2], bytePtr[i * 2 + 1] }, 0);
@@ -112,12 +112,12 @@ namespace HudCopyPaste {
             Plugin.Log.Debug("-------- AtkEvent --------");
             Plugin.Log.Debug($"AtkEvent Flags: {atkEvent->Flags}");
             Plugin.Log.Debug($"AtkEvent Param: {atkEvent->Param}");
-            Plugin.Log.Debug($"AtkEvent Listener: {(uint) atkEvent->Listener:X}");
-            Plugin.Log.Debug($"AtkEvent Node: {(uint) atkEvent->Node:X}");
+            Plugin.Log.Debug($"AtkEvent Listener: {(uint)atkEvent->Listener:X}");
+            Plugin.Log.Debug($"AtkEvent Node: {(uint)atkEvent->Node:X}");
             Plugin.Log.Debug($"AtkEvent Unk29: {atkEvent->Unk29}");
-            Plugin.Log.Debug($"AtkEvent NextEvent: {(uint) atkEvent->NextEvent:X}");
-            Plugin.Log.Debug($"(AtkStage): {(uint) AtkStage.Instance():X}");
-            Plugin.Log.Debug($"AtkEvent Target: {(uint) atkEvent->Target:X}");
+            Plugin.Log.Debug($"AtkEvent NextEvent: {(uint)atkEvent->NextEvent:X}");
+            Plugin.Log.Debug($"(AtkStage): {(uint)AtkStage.Instance():X}");
+            Plugin.Log.Debug($"AtkEvent Target: {(uint)atkEvent->Target:X}");
 
             try {
                 // Uncomment the following lines to print detailed information about the target collision node
@@ -157,7 +157,7 @@ namespace HudCopyPaste {
             }
 
             // Print the byte values of the AtkEventData struct, 8 bytes per line
-            byte* bytePtr = (byte*) atkEventData;
+            byte* bytePtr = (byte*)atkEventData;
             int structSize = sizeof(AtkEventData);
             for (int i = 0; i < structSize; i += 8) {
                 string byteGroup = string.Empty;

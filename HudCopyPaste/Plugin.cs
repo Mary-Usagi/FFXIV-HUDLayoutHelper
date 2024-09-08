@@ -84,13 +84,8 @@ namespace HudCopyPaste {
             public short PosY { get; set; } = 0;
             public float Scale { get; set; } = 1.0f;
 
-            public override string ToString() {
-                return JsonSerializer.Serialize(this);
-            }
-
-            public string PrettyPrint() {
-                return $"{ResNodeDisplayName} ({PosX}, {PosY})";
-            }
+            public override string ToString() => JsonSerializer.Serialize(this);
+            public string PrettyPrint() => $"{ResNodeDisplayName} ({PosX}, {PosY})";
 
             /// <summary>
             /// Initializes a new instance of the <see cref="HudElementData"/> class from an AtkResNode.
@@ -98,7 +93,7 @@ namespace HudCopyPaste {
             /// <param name="resNode">The AtkResNode pointer.</param>
             public unsafe HudElementData(AtkResNode* resNode) {
                 if (resNode->ParentNode == null) {
-                    return; 
+                    return;
                 }
                 try {
                     ResNodeDisplayName = resNode->ParentNode->GetComponent()->GetTextNodeById(4)->GetAsAtkTextNode()->NodeText.ToString();
@@ -161,7 +156,7 @@ namespace HudCopyPaste {
 
                 // Use a fixed block to pin the byte array in memory and cast it to an AtkEventData pointer
                 fixed (byte* p = eventDataBytes) {
-                    eventData = *(AtkEventData*) p;
+                    eventData = *(AtkEventData*)p;
                 }
                 return eventData;
             }
@@ -196,17 +191,17 @@ namespace HudCopyPaste {
 
             // Call the mouse down event on the HUD layout
             this.Debug.Log(this.Log.Debug, "Calling MouseDown event");
-            hudLayoutScreen->ReceiveEvent(AtkEventType.MouseDown, (int) mouseDownEvent.Param, &mouseDownEvent, mouseDownEventData);
+            hudLayoutScreen->ReceiveEvent(AtkEventType.MouseDown, (int)mouseDownEvent.Param, &mouseDownEvent, mouseDownEventData);
 
             // ----> MouseUp Event
             // Create the mouse up event from the selected node's event
-            uint atkStagePtr = (uint) AtkStage.Instance();
+            uint atkStagePtr = (uint)AtkStage.Instance();
             AtkEvent mouseUpEvent = *resNode->AtkEventManager.Event;
             mouseUpEvent.Type = AtkEventType.MouseUp;
             mouseUpEvent.Flags = 4;
             mouseUpEvent.Param = 99;
             mouseUpEvent.NextEvent = null;
-            mouseUpEvent.Target = (AtkEventTarget*) atkStagePtr;
+            mouseUpEvent.Target = (AtkEventTarget*)atkStagePtr;
             mouseUpEvent.Unk29 = 0;
 
             // Set the event data with the x and y position of the mouse click
@@ -247,7 +242,7 @@ namespace HudCopyPaste {
                 try {
                     Utf8String resNodeName = resNode->ParentNode->GetComponent()->GetTextNodeById(4)->GetAsAtkTextNode()->NodeText;
                     if (resNodeName.ToString() == searchName) {
-                        return ((nint) resNode, (uint) i);
+                        return ((nint)resNode, (uint)i);
                     }
                 } catch (NullReferenceException) {
                     continue;
@@ -296,8 +291,8 @@ namespace HudCopyPaste {
             if (keyboardAction == KeyboardAction.None) return;
             this.Debug.Log(this.Log.Debug, $"KeyboardAction: {keyboardAction}");
 
-            // Check for open popups
-            AddonHudLayoutWindow* hudLayoutWindow = (AddonHudLayoutWindow*) GameGui.GetAddonByName("_HudLayoutWindow", 1);
+            // Abort if a popup is open
+            AddonHudLayoutWindow* hudLayoutWindow = (AddonHudLayoutWindow*)GameGui.GetAddonByName("_HudLayoutWindow", 1);
             if (hudLayoutWindow == null) return;
             if (hudLayoutWindow->NumOpenPopups > 0) {
                 this.Debug.Log(this.Log.Warning, "Popup open, not executing action.");
@@ -305,13 +300,13 @@ namespace HudCopyPaste {
             }
 
             // Get the HudLayout agent, abort if not found
-            AgentHUDLayout* agentHudLayout = (AgentHUDLayout*) GameGui.FindAgentInterface("HudLayout");
+            AgentHUDLayout* agentHudLayout = (AgentHUDLayout*)GameGui.FindAgentInterface("HudLayout");
             if (agentHudLayout == null) return;
 
             // Get the HudLayoutScreen, abort if not found
             nint addonHudLayoutScreenPtr = GameGui.GetAddonByName("_HudLayoutScreen", 1);
             if (addonHudLayoutScreenPtr == nint.Zero) return;
-            AddonHudLayoutScreen* hudLayoutScreen = (AddonHudLayoutScreen*) addonHudLayoutScreenPtr;
+            AddonHudLayoutScreen* hudLayoutScreen = (AddonHudLayoutScreen*)addonHudLayoutScreenPtr;
 
             // Get the currently selected element, abort if none is selected
             AtkResNode* selectedNode = hudLayoutScreen->CollisionNodeList[0];
@@ -325,149 +320,198 @@ namespace HudCopyPaste {
             // TODO: What should happen if a node in the undo/redo list is moved normally? 
             switch (keyboardAction) {
                 case KeyboardAction.Copy:
-                    // ===== Copy the position of the selected element to the clipboard =====
                     this.Debug.Log(this.Log.Debug, "======= COPY =======");
 
-                    // Create a new HudElementData object with the data of the selected element
-                    var selectedNodeData = new HudElementData(selectedNode);
-
-                    currentlyCopied = selectedNodeData;
-
-                    // Copy the data to the clipboard
-                    ImGui.SetClipboardText(selectedNodeData.ToString());
-                    this.Debug.Log(this.Log.Debug, $"Copied to Clipboard: {selectedNodeData}");
-
-                    // Print a debug message
-                    this.Log.Debug($"[{this.Name}] Copied position to clipboard: {selectedNodeData.PrettyPrint()}");
+                    HandleCopyAction(hudLayoutScreen);
 
                     this.Debug.PrettyPrintList(undoHistory, "Undo");
                     this.Debug.PrettyPrintList(redoHistory, "Redo");
                     break;
                 case KeyboardAction.Paste:
-                    // ===== Paste the position from the clipboard to the selected element =====
-                    // ===== and simulate a mouse click on the element =====
                     this.Debug.Log(this.Log.Debug, "======= PASTE =======");
 
-                    // Get the clipboard text
-                    string clipboardText = ImGui.GetClipboardText();
-                    if (clipboardText == null) {
-                        this.Log.Info($"[{this.Name}] Clipboard is empty.");
-                        return;
-                    }
-
-                    // Parse the clipboard text to a HudElementData object
-                    HudElementData? parsedData = null;
-                    try {
-                        parsedData = JsonSerializer.Deserialize<HudElementData>(clipboardText);
-                    } catch {
-                        this.Log.Warning($"[{this.Name}] Clipboard data could not be parsed: '{clipboardText}'");
-                        return;
-                    }
-                    if (parsedData == null) {
-                        this.Log.Warning($"[{this.Name}] Clipboard data could not be parsed. '{clipboardText}'");
-                        return;
-                    }
-                    this.Debug.Log(this.Log.Debug, $"Parsed Clipboard: {parsedData}");
-
-                    // Save the current state of the selected element for undo operations
-                    HudElementData previousState = new HudElementData(selectedNode); 
-                    undoHistory.Add(previousState);
-                    if (undoHistory.Count > 50) {
-                        undoHistory.RemoveAt(0);
-                    }
-
-                    // Set the position of the currently selected element to the parsed position
-                    selectedNode->ParentNode->SetPositionShort(parsedData.PosX, parsedData.PosY);
-
-                    // Simulate Mouse Click
-                    SimulateMouseClickOnHudElement(selectedNode, 0, parsedData, hudLayoutScreen);
-
-                    // Send Event to HudLayout to inform about a change 
-                    SendChangeEvent(agentHudLayout);
-
-                    // Print a debug message
-                    this.Log.Debug($"[{this.Name}] Pasted position of '{parsedData.ResNodeDisplayName}' to selected element: {parsedData.ResNodeDisplayName} ({previousState.PosX}, {previousState.PosY}) -> ({parsedData.PosX}, {parsedData.PosY})");
+                    HandlePasteAction(hudLayoutScreen, agentHudLayout);
 
                     this.Debug.PrettyPrintList(undoHistory, "Undo");
                     this.Debug.PrettyPrintList(redoHistory, "Redo");
-                    // maybe todo: Set the position of the element with the same name as the copied element
                     break;
                 case KeyboardAction.Undo:
-                    // ===== Undo the last operation and simulate a mouse click on the element =====
                     this.Debug.Log(this.Log.Debug, "======= UNDO =======");
                     this.Debug.PrettyPrintList(undoHistory, "Undo");
                     this.Debug.PrettyPrintList(redoHistory, "Redo");
-                    if (undoHistory.Count > 0) {
-                        HudElementData lastState = undoHistory[undoHistory.Count - 1];
-                        undoHistory.RemoveAt(undoHistory.Count - 1);
 
-                        // Find node with same name as last state
-                        (nint lastNodePtr, uint lastNodeId) = FindHudResnodeByName(hudLayoutScreen, lastState.ResNodeDisplayName);
-                        if (lastNodePtr == nint.Zero) {
-                            this.Log.Warning($"[{this.Name}] Could not find node with name '{lastState.ResNodeDisplayName}'");
-                            return;
-                        }
-                        AtkResNode* lastNode = (AtkResNode*) lastNodePtr;
+                    HandleUndoAction(hudLayoutScreen, agentHudLayout);
 
-                        HudElementData redoState = new HudElementData(lastNode);
-                        redoHistory.Add(redoState);
-
-                        // Set the position of the currently selected element to the parsed position
-                        lastNode->ParentNode->SetPositionShort(lastState.PosX, lastState.PosY);
-
-                        // Simulate Mouse Click
-                        SimulateMouseClickOnHudElement(lastNode, lastNodeId, lastState, hudLayoutScreen);
-
-                        // Send Event to HudLayout to inform about a change 
-                        SendChangeEvent(agentHudLayout);
-
-                        // Print a debug message
-                        this.Log.Debug($"[{this.Name}] Undone last operation: Moved '{redoState.ResNodeDisplayName}' from ({redoState.PosX}, {redoState.PosY}) back to ({lastState.PosX}, {lastState.PosY})");
-
-                        this.Debug.PrettyPrintList(undoHistory, "Undo");
-                        this.Debug.PrettyPrintList(redoHistory, "Redo");
-                    } else {
-                        this.Log.Debug($"[{this.Name}] No undo history available.");
-                    }
+                    this.Debug.PrettyPrintList(undoHistory, "Undo");
+                    this.Debug.PrettyPrintList(redoHistory, "Redo");
                     break;
                 case KeyboardAction.Redo:
-                    // ===== Redo the last operation and simulate a mouse click on the element =====
                     this.Debug.Log(this.Log.Debug, "======= REDO =======");
                     this.Debug.PrettyPrintList(undoHistory, "Undo");
                     this.Debug.PrettyPrintList(redoHistory, "Redo");
-                    if (redoHistory.Count > 0) {
-                        HudElementData redoState = redoHistory[redoHistory.Count - 1];
-                        redoHistory.RemoveAt(redoHistory.Count - 1);
 
-                        // Find node with same name as last state
-                        (nint redoNodePtr, uint redoNodeId) = FindHudResnodeByName(hudLayoutScreen, redoState.ResNodeDisplayName);
-                        if (redoNodePtr == nint.Zero) {
-                            this.Log.Warning($"[{this.Name}] Could not find node with name '{redoState.ResNodeDisplayName}'");
-                            return;
-                        }
-                        AtkResNode* redoNode = (AtkResNode*) redoNodePtr;
-                        HudElementData undoState = new HudElementData(redoNode);
-                        undoHistory.Add(undoState);
+                    HandleRedoAction(hudLayoutScreen, agentHudLayout);
 
-                        // Set the position of the currently selected element to the parsed position
-                        redoNode->ParentNode->SetPositionShort(redoState.PosX, redoState.PosY);
-
-                        // Simulate Mouse Click
-                        SimulateMouseClickOnHudElement(redoNode, redoNodeId, redoState, hudLayoutScreen);
-
-                        // Send Event to HudLayout to inform about a change 
-                        SendChangeEvent(agentHudLayout);
-
-                        // Print a debug message
-                        this.Log.Debug($"[{this.Name}] Redone last operation: Moved '{redoState.ResNodeDisplayName}' again from ({undoState.PosX}, {undoState.PosY}) to ({redoState.PosX}, {redoState.PosY})");
-
-                        this.Debug.PrettyPrintList(undoHistory, "Undo");
-                        this.Debug.PrettyPrintList(redoHistory, "Redo");
-                    } else {
-                        this.Log.Debug($"[{this.Name}] No redo history available.");
-                    }
+                    this.Debug.PrettyPrintList(undoHistory, "Undo");
+                    this.Debug.PrettyPrintList(redoHistory, "Redo");
                     break;
             }
+        }
+
+        /// <summary>
+        /// Copy the position of the selected element to the clipboard. 
+        /// </summary>
+        /// <param name="hudLayoutScreen"></param>
+        private unsafe void HandleCopyAction(AddonHudLayoutScreen* hudLayoutScreen) {
+            // Get the currently selected element, abort if none is selected
+            AtkResNode* selectedNode = hudLayoutScreen->CollisionNodeList[0];
+            if (selectedNode == null) {
+                this.Log.Debug($"[{this.Name}] No element selected.");
+                return;
+            }
+            if (selectedNode->ParentNode == null) return;
+
+            // Create a new HudElementData object with the data of the selected element
+            var selectedNodeData = new HudElementData(selectedNode);
+            currentlyCopied = selectedNodeData;
+
+            // Copy the data to the clipboard
+            ImGui.SetClipboardText(selectedNodeData.ToString());
+            this.Debug.Log(this.Log.Debug, $"Copied to Clipboard: {selectedNodeData}");
+
+            // Print a debug message
+            this.Log.Debug($"[{this.Name}] Copied position to clipboard: {selectedNodeData.PrettyPrint()}");
+        }
+
+        /// <summary>
+        /// Paste the position from the clipboard to the selected element 
+        /// and simulate a mouse click on the element.
+        /// </summary>
+        /// <param name="hudLayoutScreen"></param>
+        /// <param name="agentHudLayout"></param>
+        private unsafe void HandlePasteAction(AddonHudLayoutScreen* hudLayoutScreen, AgentHUDLayout* agentHudLayout) {
+            // Get the currently selected element, abort if none is selected
+            AtkResNode* selectedNode = hudLayoutScreen->CollisionNodeList[0];
+            if (selectedNode == null) {
+                this.Log.Debug($"[{this.Name}] No element selected.");
+                return;
+            }
+            if (selectedNode->ParentNode == null) return;
+
+            // Get the clipboard text
+            string clipboardText = ImGui.GetClipboardText();
+            if (clipboardText == null) {
+                this.Log.Info($"[{this.Name}] Clipboard is empty.");
+                return;
+            }
+
+            // Parse the clipboard text to a HudElementData object
+            HudElementData? parsedData = null;
+            try {
+                parsedData = JsonSerializer.Deserialize<HudElementData>(clipboardText);
+            } catch {
+                this.Log.Warning($"[{this.Name}] Clipboard data could not be parsed: '{clipboardText}'");
+                return;
+            }
+            if (parsedData == null) {
+                this.Log.Warning($"[{this.Name}] Clipboard data could not be parsed. '{clipboardText}'");
+                return;
+            }
+            this.Debug.Log(this.Log.Debug, $"Parsed Clipboard: {parsedData}");
+
+            // Save the current state of the selected element for undo operations
+            HudElementData previousState = new HudElementData(selectedNode);
+            undoHistory.Add(previousState);
+            if (undoHistory.Count > 50) {
+                undoHistory.RemoveAt(0);
+            }
+
+            // Set the position of the currently selected element to the parsed position
+            selectedNode->ParentNode->SetPositionShort(parsedData.PosX, parsedData.PosY);
+
+            // Simulate Mouse Click
+            SimulateMouseClickOnHudElement(selectedNode, 0, parsedData, hudLayoutScreen);
+
+            // Send Event to HudLayout to inform about a change 
+            SendChangeEvent(agentHudLayout);
+
+            // Print a debug message
+            this.Log.Debug($"[{this.Name}] Pasted position of '{parsedData.ResNodeDisplayName}' to selected element: {parsedData.ResNodeDisplayName} ({previousState.PosX}, {previousState.PosY}) -> ({parsedData.PosX}, {parsedData.PosY})");
+        }
+
+        /// <summary>
+        /// Undo the last operation and simulate a mouse click on the element.
+        /// </summary>
+        /// <param name="hudLayoutScreen"></param>
+        /// <param name="agentHudLayout"></param>
+        private unsafe void HandleUndoAction(AddonHudLayoutScreen* hudLayoutScreen, AgentHUDLayout* agentHudLayout) {
+            if (undoHistory.Count == 0) {
+                this.Log.Debug($"[{this.Name}] Nothing to undo.");
+                return;
+            }
+
+            HudElementData lastState = undoHistory[undoHistory.Count - 1];
+            undoHistory.RemoveAt(undoHistory.Count - 1);
+
+            // Find node with same name as last state
+            (nint lastNodePtr, uint lastNodeId) = FindHudResnodeByName(hudLayoutScreen, lastState.ResNodeDisplayName);
+            if (lastNodePtr == nint.Zero) {
+                this.Log.Warning($"[{this.Name}] Could not find node with name '{lastState.ResNodeDisplayName}'");
+                return;
+            }
+            AtkResNode* lastNode = (AtkResNode*)lastNodePtr;
+
+            HudElementData redoState = new HudElementData(lastNode);
+            redoHistory.Add(redoState);
+
+            // Set the position of the currently selected element to the parsed position
+            lastNode->ParentNode->SetPositionShort(lastState.PosX, lastState.PosY);
+
+            // Simulate Mouse Click
+            SimulateMouseClickOnHudElement(lastNode, lastNodeId, lastState, hudLayoutScreen);
+
+            // Send Event to HudLayout to inform about a change 
+            SendChangeEvent(agentHudLayout);
+
+            // Print a debug message
+            this.Log.Debug($"[{this.Name}] Undone last operation: Moved '{redoState.ResNodeDisplayName}' from ({redoState.PosX}, {redoState.PosY}) back to ({lastState.PosX}, {lastState.PosY})");
+        }
+
+        /// <summary>
+        /// Redo the last operation and simulate a mouse click on the element.
+        /// </summary>
+        /// <param name="hudLayoutScreen"></param>
+        /// <param name="agentHudLayout"></param>
+        private unsafe void HandleRedoAction(AddonHudLayoutScreen* hudLayoutScreen, AgentHUDLayout* agentHudLayout) {
+            if (redoHistory.Count == 0) {
+                this.Log.Debug($"[{this.Name}] Nothing to redo.");
+                return;
+            }
+
+            HudElementData redoState = redoHistory[redoHistory.Count - 1];
+            redoHistory.RemoveAt(redoHistory.Count - 1);
+
+            // Find node with same name as last state
+            (nint redoNodePtr, uint redoNodeId) = FindHudResnodeByName(hudLayoutScreen, redoState.ResNodeDisplayName);
+            if (redoNodePtr == nint.Zero) {
+                this.Log.Warning($"[{this.Name}] Could not find node with name '{redoState.ResNodeDisplayName}'");
+                return;
+            }
+            AtkResNode* redoNode = (AtkResNode*)redoNodePtr;
+            HudElementData undoState = new HudElementData(redoNode);
+            undoHistory.Add(undoState);
+
+            // Set the position of the currently selected element to the parsed position
+            redoNode->ParentNode->SetPositionShort(redoState.PosX, redoState.PosY);
+
+            // Simulate Mouse Click
+            SimulateMouseClickOnHudElement(redoNode, redoNodeId, redoState, hudLayoutScreen);
+
+            // Send Event to HudLayout to inform about a change 
+            SendChangeEvent(agentHudLayout);
+
+            // Print a debug message
+            this.Log.Debug($"[{this.Name}] Redone last operation: Moved '{redoState.ResNodeDisplayName}' again from ({undoState.PosX}, {undoState.PosY}) to ({redoState.PosX}, {redoState.PosY})");
         }
 
         public void Dispose() {
