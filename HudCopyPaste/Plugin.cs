@@ -108,12 +108,11 @@ namespace HudCopyPaste {
                 this.Debug.Log(this.Log.Error, $"No valid element selected.");
             }
 
-            AtkResNode* selectedNode = hudLayoutScreen->CollisionNodeList[selectedNodeId];
+            AtkResNode* selectedNode = Utils.GetCollisionNodeByIndex(hudLayoutScreen, selectedNodeId);
             if (selectedNode == null) {
                 this.Log.Debug($"No element selected.");
                 return;
             }
-            if (selectedNode->ParentNode == null) return;
 
             // Temporarily save the current state of the selected element for undo operations
             HudElementData previousState = new HudElementData(selectedNode);
@@ -142,12 +141,11 @@ namespace HudCopyPaste {
             if (!Utils.IsHudLayoutReady(out AgentHUDLayout* agentHudLayout, out AddonHudLayoutScreen* hudLayoutScreen, this)) return;
 
             // Get the currently selected element, abort if none is selected
-            AtkResNode* selectedNode = hudLayoutScreen->CollisionNodeList[0];
+            AtkResNode* selectedNode = Utils.GetCollisionNodeByIndex(hudLayoutScreen, 0);
             if (selectedNode == null) {
                 this.Log.Debug($"No element selected.");
                 return;
             }
-            if (selectedNode->ParentNode == null) return;
 
             // Check if the mouse target is the same as the selected element 
             if (mouseDownTarget == null) { 
@@ -362,12 +360,11 @@ namespace HudCopyPaste {
         /// <param name="hudLayoutScreen"></param>
         private unsafe void HandleCopyAction(AddonHudLayoutScreen* hudLayoutScreen) {
             // Get the currently selected element, abort if none is selected
-            AtkResNode* selectedNode = hudLayoutScreen->CollisionNodeList[0];
+            AtkResNode* selectedNode = Utils.GetCollisionNodeByIndex(hudLayoutScreen, 0);
             if (selectedNode == null) {
                 this.Log.Debug($"No element selected.");
                 return;
             }
-            if (selectedNode->ParentNode == null) return;
 
             // Create a new HudElementData object with the data of the selected element
             var selectedNodeData = new HudElementData(selectedNode);
@@ -387,12 +384,11 @@ namespace HudCopyPaste {
         /// <param name="agentHudLayout"></param>
         private unsafe void HandlePasteAction(AddonHudLayoutScreen* hudLayoutScreen, AgentHUDLayout* agentHudLayout) {
             // Get the currently selected element, abort if none is selected
-            AtkResNode* selectedNode = hudLayoutScreen->CollisionNodeList[0];
+            AtkResNode* selectedNode = Utils.GetCollisionNodeByIndex(hudLayoutScreen, 0);
             if (selectedNode == null) {
                 this.Log.Debug($"No element selected.");
                 return;
             }
-            if (selectedNode->ParentNode == null) return;
 
             // Get the clipboard text
             string clipboardText = ImGui.GetClipboardText();

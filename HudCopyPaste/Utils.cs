@@ -128,5 +128,20 @@ namespace HudCopyPaste {
             hudLayoutScreenPtr = hudLayoutScreen;
             return true;
         }
+
+        /// <summary>
+        /// Gets the collision node by index.
+        /// </summary>
+        /// <param name="hudLayoutScreen"></param>
+        /// <param name="index"></param>
+        /// <returns></returns>
+        internal static unsafe AtkResNode* GetCollisionNodeByIndex(AddonHudLayoutScreen* hudLayoutScreen, int index) {
+            if (hudLayoutScreen == null) return null;
+            if (index < 0 || index >= hudLayoutScreen->CollisionNodeListCount) return null;
+            AtkResNode* resNode = hudLayoutScreen->CollisionNodeList[index];
+            if (resNode->ParentNode == null) return null;
+            return resNode;
+        }
     }
+
 }
