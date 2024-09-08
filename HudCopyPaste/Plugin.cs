@@ -303,17 +303,18 @@ namespace HudCopyPaste {
             if (!ctrlKeystate.HasFlag(KeyStateFlags.Down)) return;
 
             // Set the keyboard action based on the key states
-            // TODO: add strg + shift + z for redo
             KeyboardAction keyboardAction = KeyboardAction.None;
-            List<(SeVirtualKey, KeyStateFlags, KeyboardAction)> keybinds = new() {
-                (SeVirtualKey.C, KeyStateFlags.Pressed, KeyboardAction.Copy),
-                (SeVirtualKey.V, KeyStateFlags.Released, KeyboardAction.Paste),
-                (SeVirtualKey.Z, KeyStateFlags.Pressed, KeyboardAction.Undo),
-                (SeVirtualKey.Y, KeyStateFlags.Pressed, KeyboardAction.Redo)
+            List<(SeVirtualKey, KeyStateFlags, KeyboardAction, SeVirtualKey?) > keybinds = new() {
+                (SeVirtualKey.C, KeyStateFlags.Pressed, KeyboardAction.Copy,    null),
+                (SeVirtualKey.V, KeyStateFlags.Released, KeyboardAction.Paste,  null),
+                (SeVirtualKey.Z, KeyStateFlags.Pressed, KeyboardAction.Redo,    SeVirtualKey.SHIFT), 
+                (SeVirtualKey.Z, KeyStateFlags.Pressed, KeyboardAction.Undo,    null),
+                (SeVirtualKey.Y, KeyStateFlags.Pressed, KeyboardAction.Redo,    null),
             };
             for (int i = 0; i < keybinds.Count; i++) {
-                (SeVirtualKey key, KeyStateFlags state, KeyboardAction action) = keybinds[i];
+                (SeVirtualKey key, KeyStateFlags state, KeyboardAction action, SeVirtualKey? extraModifier) = keybinds[i];
                 KeyStateFlags keyState = UIInputData.Instance()->GetKeyState(key);
+                if (extraModifier != null && !UIInputData.Instance()->GetKeyState(extraModifier.Value).HasFlag(KeyStateFlags.Down)) continue;
                 if (keyState.HasFlag(state)) {
                     keyboardAction = action;
                     break;
@@ -341,7 +342,7 @@ namespace HudCopyPaste {
             AddonHudLayoutScreen* hudLayoutScreen = (AddonHudLayoutScreen*)addonHudLayoutScreenPtr;
 
             // Depending on the keyboard action, execute the corresponding operation
-            // TODO: What should happen if a node in the undo/redo list is moved normally? 
+            // TODO: Handle Undo, Move, Redo chain -> Need to cut redo history at the point of a new move? 
             switch (keyboardAction) {
                 case KeyboardAction.Copy:
                     HandleCopyAction(hudLayoutScreen);
