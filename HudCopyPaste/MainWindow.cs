@@ -1,23 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Numerics;
-using Dalamud.Interface.Internal;
-using Dalamud.Interface.Utility;
-using Dalamud.Interface.Windowing;
-using Dalamud.Plugin.Services;
+﻿using Dalamud.Interface.Windowing;
 using ImGuiNET;
+using System;
+using System.Numerics;
 
 namespace HudCopyPaste;
 
-public class MainWindow : Window, IDisposable
-{
+public class MainWindow : Window, IDisposable {
     private Plugin Plugin;
 
     public MainWindow(Plugin plugin)
-        : base("Hud Copy Paste Controls", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.AlwaysAutoResize)
-    {
-        SizeConstraints = new WindowSizeConstraints
-        {
+        : base("Hud Copy Paste Controls", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.AlwaysAutoResize) {
+        SizeConstraints = new WindowSizeConstraints {
             MinimumSize = new Vector2(290, 200),
             MaximumSize = new Vector2(float.MaxValue, float.MaxValue)
         };
@@ -33,8 +26,7 @@ public class MainWindow : Window, IDisposable
         ["Ctrl + Y", "Redo last action"]
     ];
 
-    public override void Draw()
-    {
+    public override void Draw() {
         ImGui.Spacing();
 
         ImGui.Text(" (Only when in HUD Layout Editor)");
@@ -49,10 +41,8 @@ public class MainWindow : Window, IDisposable
         ImGui.TableNextColumn();
         ImGui.TableHeader("Description");
 
-        foreach (var keybind in keybindDescriptions)
-        {
-            for (var i = 0; i < keybind.Length; i++)
-            {
+        foreach (var keybind in keybindDescriptions) {
+            for (var i = 0; i < keybind.Length; i++) {
                 ImGui.TableNextColumn();
                 ImGui.Text(keybind[i]);
             }
