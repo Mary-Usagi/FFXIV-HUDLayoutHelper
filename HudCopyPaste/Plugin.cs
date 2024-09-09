@@ -1,5 +1,6 @@
 using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
+using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
@@ -15,14 +16,17 @@ using System.Text.Json;
 namespace HudCopyPaste {
     public sealed class Plugin : IDalamudPlugin {
         public bool DEBUG = true;
+
         public string Name => "HudCopyPaste";
         private const string CommandName = "/hudcp";
 
+        public readonly WindowSystem WindowSystem = new("HudCopyPaste");
+        public Configuration Configuration { get; init; }
+        private ConfigWindow ConfigWindow { get; init; }
+
         [PluginService] internal static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
         [PluginService] internal static ITextureProvider TextureProvider { get; private set; } = null!;
-
-        public readonly WindowSystem WindowSystem = new("HudCopyPaste");
-        private MainWindow MainWindow { get; init; }
+        [PluginService] internal static ICommandManager CommandManager { get; private set; } = null!;
 
         public IGameGui GameGui { get; init; }
         public IClientState ClientState { get; init; }
@@ -51,12 +55,23 @@ namespace HudCopyPaste {
             this.ChatGui = chatGui;
 
             this.Debug = new Debug(this, this.DEBUG);
-            MainWindow = new MainWindow(this);
-            WindowSystem.AddWindow(MainWindow);
-            PluginInterface.UiBuilder.Draw += DrawUI;
-            PluginInterface.UiBuilder.OpenMainUi += ToggleMainUI;
 
-            if(this.GameGui.GetAddonByName("_HudLayoutScreen", 1) != IntPtr.Zero) {
+            Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+
+            ConfigWindow = new ConfigWindow(this);
+            WindowSystem.AddWindow(ConfigWindow);
+
+            CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand) {
+                HelpMessage = "A useful message to display in /xlhelp"
+            });
+
+            PluginInterface.UiBuilder.Draw += DrawUI;
+
+            // This adds a button to the plugin installer entry of this plugin which allows
+            // to toggle the display status of the configuration ui
+            PluginInterface.UiBuilder.OpenConfigUi += ToggleConfigUI;
+
+            if (this.GameGui.GetAddonByName("_HudLayoutScreen", 1) != IntPtr.Zero) {
                 this.Debug.Log(this.Log.Debug, "HudLayoutScreen already loaded.");
                 this.addOnUpdateCallback();
 
@@ -80,7 +95,12 @@ namespace HudCopyPaste {
             // TODO: turn elements of histories into tuples of before and after states
             // TODO: maybe find a better name for the Plugin, as its functionality is not only copy/paste anymore 
 
-            // TODO: Fix other ways of moving elements, e.g. by using the arrow keys? 
+            // TODO: Create class for history management? 
+            // => Classes: HudElementData, HudElementHistory 
+            // => HudElementHistory: List<HudElementData> undoHistory, List<HudElementData> redoHistory, int maxHistorySize, (UI?)
+            // => HudElementHistory public methods: PushUndoElement, PushRedoElement, PopUndoElement, PopRedoElement, ClearRedoHistoryOfElement
+
+            // TODO: Fix history for other ways of moving elements, e.g. by using the arrow keys? 
         }
 
         // TODO: handle mouse events
@@ -270,16 +290,17 @@ namespace HudCopyPaste {
 
         private HudElementData? currentlyCopied = null;
         // TODO: Or add a history per element? 
-        private List<HudElementData> undoHistory = new();
-        private List<HudElementData> redoHistory = new();
+        internal List<HudElementData> undoHistory = new();
+        internal List<HudElementData> redoHistory = new();
 
-        // TODO: Expose as variable in settings
-        private int maxHistorySize = 50;
         private void AddToUndoHistory(HudElementData data, bool clearRedo = true) {
             undoHistory.Add(data);
 
-            if (undoHistory.Count > maxHistorySize) {
-                undoHistory.RemoveAt(0);
+            if (undoHistory.Count > this.Configuration.MaxUndoHistorySize) {
+                int excess = undoHistory.Count - this.Configuration.MaxUndoHistorySize;
+                for (int i = 0; i < excess; i++) {
+                    undoHistory.RemoveAt(0);
+                }
             }
 
             if (clearRedo) RemoveElementFromRedoHistory(data);
@@ -507,11 +528,16 @@ namespace HudCopyPaste {
             this.Debug.Dispose();
 
             WindowSystem.RemoveAllWindows();
-            MainWindow.Dispose();
+            ConfigWindow.Dispose();
+            CommandManager.RemoveHandler(CommandName);
+        }
+
+        private void OnCommand(string command, string args) {
+            ToggleConfigUI();
         }
 
         private void DrawUI() => WindowSystem.Draw();
 
-        public void ToggleMainUI() => MainWindow.Toggle();
+        public void ToggleConfigUI() => ConfigWindow.Toggle();
     }
 }
