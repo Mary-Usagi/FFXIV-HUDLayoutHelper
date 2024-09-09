@@ -62,7 +62,7 @@ namespace HudCopyPaste {
             WindowSystem.AddWindow(ConfigWindow);
 
             CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand) {
-                HelpMessage = "A useful message to display in /xlhelp"
+                HelpMessage = "Toggle the config and debug window."
             });
 
             PluginInterface.UiBuilder.Draw += DrawUI;
