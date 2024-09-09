@@ -91,7 +91,6 @@ namespace HudCopyPaste {
             this.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", HandleMouseDownEvent);
             this.AddonLifecycle.RegisterListener(AddonEvent.PostReceiveEvent, "_HudLayoutScreen", HandleMouseUpEvent);
 
-            // TODO: add custom debug UI that shows the undo/redo history 
             // TODO: turn elements of histories into tuples of before and after states
             // TODO: maybe find a better name for the Plugin, as its functionality is not only copy/paste anymore 
 
