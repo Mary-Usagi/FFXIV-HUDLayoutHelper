@@ -70,6 +70,7 @@ namespace HudCopyPaste {
             // This adds a button to the plugin installer entry of this plugin which allows
             // to toggle the display status of the configuration ui
             PluginInterface.UiBuilder.OpenConfigUi += ToggleConfigUI;
+            PluginInterface.UiBuilder.OpenMainUi += ToggleConfigUI;
 
             if (this.GameGui.GetAddonByName("_HudLayoutScreen", 1) != IntPtr.Zero) {
                 this.Debug.Log(this.Log.Debug, "HudLayoutScreen already loaded.");
