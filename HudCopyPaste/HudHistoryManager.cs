@@ -39,7 +39,7 @@ namespace HudCopyPaste {
         internal static Dictionary<RedoStrategy, string> RedoStrategyDescriptions = new() {
             { RedoStrategy.ClearOnAction, "Clears the Redo History when any element is moved after an Undo" },
             { RedoStrategy.ClearSameElementOnAction, "Clears only the Redo History for the element that was moved after an Undo" },
-            { RedoStrategy.InsertOnAction, "Just inserts the new action into the History without clearing anything" }
+            { RedoStrategy.InsertOnAction, "Inserts the new action into the History without clearing anything" }
         };
 
         internal RedoStrategy RedoActionStrategy { get; private set; } = RedoStrategy.InsertOnAction;

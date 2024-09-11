@@ -76,7 +76,7 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.BeginTable($"##Table2 {hudLayout}", 3, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.PadOuterX | ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.SizingFixedFit);
         ImGui.TableSetupColumn($"##Column3 {hudLayout}", ImGuiTableColumnFlags.WidthFixed, 25f);
         ImGui.TableSetupColumn($"##Column4 {hudLayout}", ImGuiTableColumnFlags.WidthFixed, 100f);
-        ImGui.TableSetupColumn($"##Column5 {hudLayout}", ImGuiTableColumnFlags.WidthFixed, 90f);
+        ImGui.TableSetupColumn($"##Column5 {hudLayout}", ImGuiTableColumnFlags.WidthFixed, 190f);
 
         ImGui.TableNextColumn();
         ImGui.TableHeader("i");
@@ -92,7 +92,7 @@ public class ConfigWindow : Window, IDisposable {
             ImGui.TableNextColumn();
             ImGui.Text(undoHistory[i].PreviousState.ResNodeDisplayName);
             ImGui.TableNextColumn();
-            ImGui.Text($"({undoHistory[i].PreviousState.PosX}, {undoHistory[i].PreviousState.PosY})");
+            ImGui.Text($"({undoHistory[i].PreviousState.PosX}, {undoHistory[i].PreviousState.PosY}) -> ({undoHistory[i].NewState.PosX}, {undoHistory[i].NewState.PosY})");
         }
         for (var i = undoHistory.Count; i < Plugin.HudHistoryManager.MaxHistorySize; i++) {
             ImGui.TableNextColumn();
@@ -111,7 +111,7 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.BeginTable($"##Table3 {hudLayout}", 3, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.PadOuterX | ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.BordersInnerV);
         ImGui.TableSetupColumn($"##Column6 {hudLayout}", ImGuiTableColumnFlags.WidthFixed, 25f);
         ImGui.TableSetupColumn($"##Column7 {hudLayout}", ImGuiTableColumnFlags.WidthFixed, 100f);
-        ImGui.TableSetupColumn($"##Column8 {hudLayout}", ImGuiTableColumnFlags.WidthFixed, 90f);
+        ImGui.TableSetupColumn($"##Column8 {hudLayout}", ImGuiTableColumnFlags.WidthFixed, 190f);
 
         ImGui.TableNextColumn();
         ImGui.TableHeader("i");
@@ -127,7 +127,7 @@ public class ConfigWindow : Window, IDisposable {
             ImGui.TableNextColumn();
             ImGui.Text(redoHistory[i].NewState.ResNodeDisplayName);
             ImGui.TableNextColumn();
-            ImGui.Text($"({redoHistory[i].NewState.PosX}, {redoHistory[i].NewState.PosY})");
+            ImGui.Text($"({redoHistory[i].PreviousState.PosX}, {redoHistory[i].PreviousState.PosY}) -> ({redoHistory[i].NewState.PosX}, {redoHistory[i].NewState.PosY})");
         }
         for (var i = redoHistory.Count; i < Plugin.HudHistoryManager.MaxHistorySize; i++) {
             ImGui.TableNextColumn();
@@ -176,13 +176,12 @@ public class ConfigWindow : Window, IDisposable {
                 bool is_selected = itemSelectedIndex == n;
                 if (ImGui.Selectable(redoStrategies[n].ToString(), is_selected)) {
                     // TODO: not showing tooltips yet
-                    if (ImGui.IsItemHovered()) {
-                        ImGui.SetTooltip(HudHistoryManager.RedoStrategyDescriptions[redoStrategies[n]]);
-                    }
                     redoActionStrategy = redoStrategies[n];
                     Configuration.RedoActionStrategy = redoActionStrategy;
                     itemSelectedIndex = n;
-
+                }
+                if (ImGui.IsItemHovered()) {
+                    ImGui.SetTooltip(HudHistoryManager.RedoStrategyDescriptions[redoStrategies[n]]);
                 }
                 // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
                 if (is_selected) {
@@ -190,6 +189,9 @@ public class ConfigWindow : Window, IDisposable {
                 }
             }
             ImGui.EndCombo();
+        }
+        if (ImGui.IsItemHovered()) {
+            ImGui.SetTooltip(HudHistoryManager.RedoStrategyDescriptions[redoStrategies[itemSelectedIndex]]);
         }
 
 
