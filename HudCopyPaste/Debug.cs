@@ -184,7 +184,7 @@ namespace HudCopyPaste {
         /// </summary>
         /// <param name="list">The list of HUD element data.</param>
         /// <param name="title">The title for the log entry.</param>
-        internal void PrettyPrintList(List<Plugin.HudElementData> list, string title) {
+        internal void PrettyPrintList(List<HudElementData> list, string title) {
             if (!Enabled) return;
             Plugin.Log.Debug($"'{title}' count: {list.Count}");
             foreach (var element in list) {

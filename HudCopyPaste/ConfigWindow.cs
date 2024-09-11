@@ -12,7 +12,6 @@ public class ConfigWindow : Window, IDisposable {
     public ConfigWindow(Plugin plugin) : base("Hud Copy Paste Controls"){
         Flags = ImGuiWindowFlags.AlwaysUseWindowPadding;
 
-        // TODO: autoamtic min size? + resizable 
         SizeConstraints = new WindowSizeConstraints {
             MinimumSize = new Vector2(290, 200),
             MaximumSize = new Vector2(float.MaxValue, float.MaxValue)
@@ -43,31 +42,41 @@ public class ConfigWindow : Window, IDisposable {
     public override void Draw() {
         // See: https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp
         if (ImGui.BeginTabBar("##TabBar")) {
-            if (ImGui.BeginTabItem("Settings")) {
+            if (ImGui.BeginTabItem("Settings##TabItem1")) {
                 DrawSettings();
                 ImGui.EndTabItem();
             }
-            if (ImGui.BeginTabItem("Keybinds")) {
+            if (ImGui.BeginTabItem("Keybinds##TabItem2")) {
                 DrawKeybinds();
                 ImGui.EndTabItem();
             }
-            if (ImGui.BeginTabItem("Debug Info")) {
-                DrawDebugInfo();
+            if (ImGui.BeginTabItem("Debug Info##TabItem3")) { 
+                if (ImGui.BeginTabBar("##TabBarHudLayouts")) {
+                    for (var i = 0; i < Plugin.HudHistoryManager.HudLayoutCount; i++) {
+                        if (ImGui.BeginTabItem($"HUD {i+1}##TabItemHudLayout{i}")) {
+                            ImGui.BeginChild($"##Child {i}", new Vector2(0, 0), false);
+                            DrawDebugInfo(i);
+                            ImGui.EndChild();
+                            ImGui.EndTabItem();
+                        }
+                    }
+                    ImGui.EndTabBar();
+                }
                 ImGui.EndTabItem();
             }
             ImGui.EndTabBar();
         }
     }
 
-    internal void DrawDebugInfo() {
+    internal void DrawDebugInfo(int hudLayout) {
         ImGui.Spacing();
-        ImGui.Columns(2, "##Columns", true);
+        ImGui.Columns(2, $"##Columns {hudLayout}", true);
         ImGui.Text("Undo History");
         // Table representing the current state of the undo history
-        ImGui.BeginTable("##Table2", 3, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.PadOuterX | ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.SizingFixedFit);
-        ImGui.TableSetupColumn("##Column3", ImGuiTableColumnFlags.WidthFixed, 25f);
-        ImGui.TableSetupColumn("##Column4", ImGuiTableColumnFlags.WidthFixed, 100f);
-        ImGui.TableSetupColumn("##Column5", ImGuiTableColumnFlags.WidthFixed, 90f);
+        ImGui.BeginTable($"##Table2 {hudLayout}", 3, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.PadOuterX | ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.SizingFixedFit);
+        ImGui.TableSetupColumn($"##Column3 {hudLayout}", ImGuiTableColumnFlags.WidthFixed, 25f);
+        ImGui.TableSetupColumn($"##Column4 {hudLayout}", ImGuiTableColumnFlags.WidthFixed, 100f);
+        ImGui.TableSetupColumn($"##Column5 {hudLayout}", ImGuiTableColumnFlags.WidthFixed, 90f);
 
         ImGui.TableNextColumn();
         ImGui.TableHeader("i");
@@ -76,16 +85,16 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.TableNextColumn();
         ImGui.TableHeader("Position");
 
-        var undoHistory = Plugin.undoHistory;
+        var undoHistory = Plugin.HudHistoryManager.undoHistory[hudLayout];
         for (var i = 0; i < undoHistory.Count; i++) {
             ImGui.TableNextColumn();
             ImGui.Text(i.ToString());
             ImGui.TableNextColumn();
-            ImGui.Text(undoHistory[i].ResNodeDisplayName);
+            ImGui.Text(undoHistory[i].PreviousState.ResNodeDisplayName);
             ImGui.TableNextColumn();
-            ImGui.Text($"({undoHistory[i].PosX}, {undoHistory[i].PosY})");
+            ImGui.Text($"({undoHistory[i].PreviousState.PosX}, {undoHistory[i].PreviousState.PosY})");
         }
-        for (var i = undoHistory.Count; i < Configuration.MaxUndoHistorySize; i++) {
+        for (var i = undoHistory.Count; i < Plugin.HudHistoryManager.MaxHistorySize; i++) {
             ImGui.TableNextColumn();
             ImGui.Text(i.ToString());
             ImGui.TableNextColumn();
@@ -99,10 +108,10 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.NextColumn();
         ImGui.Text("Redo History");
         // Table representing the current state of the redo history
-        ImGui.BeginTable("##Table3", 3, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.PadOuterX | ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.BordersInnerV);
-        ImGui.TableSetupColumn("##Column6", ImGuiTableColumnFlags.WidthFixed, 25f);
-        ImGui.TableSetupColumn("##Column7", ImGuiTableColumnFlags.WidthFixed, 100f);
-        ImGui.TableSetupColumn("##Column8", ImGuiTableColumnFlags.WidthFixed, 90f);
+        ImGui.BeginTable($"##Table3 {hudLayout}", 3, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.PadOuterX | ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.BordersInnerV);
+        ImGui.TableSetupColumn($"##Column6 {hudLayout}", ImGuiTableColumnFlags.WidthFixed, 25f);
+        ImGui.TableSetupColumn($"##Column7 {hudLayout}", ImGuiTableColumnFlags.WidthFixed, 100f);
+        ImGui.TableSetupColumn($"##Column8 {hudLayout}", ImGuiTableColumnFlags.WidthFixed, 90f);
 
         ImGui.TableNextColumn();
         ImGui.TableHeader("i");
@@ -111,16 +120,16 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.TableNextColumn();
         ImGui.TableHeader("Position");
 
-        var redoHistory = Plugin.redoHistory;
+        var redoHistory = Plugin.HudHistoryManager.redoHistory[hudLayout];
         for (var i = 0; i < redoHistory.Count; i++) {
             ImGui.TableNextColumn();
             ImGui.Text(i.ToString());
             ImGui.TableNextColumn();
-            ImGui.Text(redoHistory[i].ResNodeDisplayName);
+            ImGui.Text(redoHistory[i].NewState.ResNodeDisplayName);
             ImGui.TableNextColumn();
-            ImGui.Text($"({redoHistory[i].PosX}, {redoHistory[i].PosY})");
+            ImGui.Text($"({redoHistory[i].NewState.PosX}, {redoHistory[i].NewState.PosY})");
         }
-        for (var i = redoHistory.Count; i < Configuration.MaxUndoHistorySize; i++) {
+        for (var i = redoHistory.Count; i < Plugin.HudHistoryManager.MaxHistorySize; i++) {
             ImGui.TableNextColumn();
             ImGui.Text(i.ToString());
             ImGui.TableNextColumn();
@@ -132,18 +141,65 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.Spacing();
     }
 
+
     internal void DrawSettings() {
-        // TODO: add save button
         // can't ref a property, so use a local copy
-        var maxUndoHistorySize = Configuration.MaxUndoHistorySize;
+        int maxUndoHistorySize = Configuration.MaxUndoHistorySize;
+        HudHistoryManager.RedoStrategy redoActionStrategy = Configuration.RedoActionStrategy;
 
         ImGui.Spacing();
-        ImGui.Text("Max Undo History Size");
+        // Max Undo History Size
+        ImGui.Text("Max Size of Undo History:");
+        if (ImGui.IsItemHovered()) {
+            ImGui.SetTooltip("The maximum number of actions that can be undone");
+        }
         if (ImGui.InputInt("", ref maxUndoHistorySize)) {
+            if (maxUndoHistorySize < 1) {
+                maxUndoHistorySize = 1;
+            }
             Configuration.MaxUndoHistorySize = maxUndoHistorySize;
         }
+        ImGui.Spacing();
+        //ImGui.MenuItem("Strategy to apply when an action is performed after undoing");
+        ImGui.Text("Redo Strategy on Action:");
+        if (ImGui.IsItemHovered()) {
+            ImGui.SetTooltip("Strategy to apply when an action is performed after undoing");
+        }
+
+        // Redo Strategy
+        HudHistoryManager.RedoStrategy[] redoStrategies = (HudHistoryManager.RedoStrategy[])Enum.GetValues(typeof(HudHistoryManager.RedoStrategy));
+        int itemSelectedIndex = Array.IndexOf(redoStrategies, redoActionStrategy);
+        string combo_preview_value = Configuration.RedoActionStrategy.ToString();
+
+        if (ImGui.BeginCombo("##RedoStrategy", combo_preview_value)) {
+            for (int n = 0; n < redoStrategies.Length; n++) {
+                bool is_selected = itemSelectedIndex == n;
+                if (ImGui.Selectable(redoStrategies[n].ToString(), is_selected)) {
+                    // TODO: not showing tooltips yet
+                    if (ImGui.IsItemHovered()) {
+                        ImGui.SetTooltip(HudHistoryManager.RedoStrategyDescriptions[redoStrategies[n]]);
+                    }
+                    redoActionStrategy = redoStrategies[n];
+                    Configuration.RedoActionStrategy = redoActionStrategy;
+                    itemSelectedIndex = n;
+
+                }
+                // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+                if (is_selected) {
+                    ImGui.SetItemDefaultFocus();
+                }
+            }
+            ImGui.EndCombo();
+        }
+
+
         if (ImGui.Button("Save")) {
             Plugin.Log.Debug("Saving configuration");
+            if (!Plugin.HudHistoryManager.SetHistorySize(maxUndoHistorySize)) {
+                Configuration.MaxUndoHistorySize = 50;
+                Plugin.Log.Warning("Failed to set history size");
+            }
+            Plugin.HudHistoryManager.SetRedoStrategy(redoActionStrategy);
             Configuration.Save();
         }
 

@@ -13,6 +13,9 @@ namespace HudCopyPaste {
         public bool IsConfigWindowMovable { get; set; } = true;
         public int MaxUndoHistorySize { get; set; } = 50;
 
+        public HudHistoryManager.RedoStrategy RedoActionStrategy { get; set; } = HudHistoryManager.RedoStrategy.InsertOnAction;
+
+
         // the below exist just to make saving less cumbersome
         public void Save() {
             Plugin.PluginInterface.SavePluginConfig(this);
