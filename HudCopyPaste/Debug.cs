@@ -1,5 +1,7 @@
 ﻿using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
+using FFXIVClientStructs.FFXIV.Client.UI;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
 using System.Collections.Generic;
@@ -18,13 +20,18 @@ namespace HudCopyPaste {
         /// </summary>
         /// <param name="plugin">The plugin instance.</param>
         /// <param name="enabled">Indicates whether debugging is enabled.</param>
-        public Debug(Plugin plugin, bool enabled) {
+        public unsafe Debug(Plugin plugin, bool enabled) {
             Plugin = plugin;
             Enabled = enabled;
 
             if (Enabled) {
+                // Log the initialization of the Debug class
+                Plugin.Log.Debug("Debug class initialized");
+
                 // Register a listener for the PreReceiveEvent of the "_HudLayoutScreen" addon
                 Plugin.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", HandleHudLayoutScreenEvent);
+
+                Plugin.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutWindow", HandleHudLayoutScreenEvent);
             }
         }
 
@@ -44,12 +51,59 @@ namespace HudCopyPaste {
                 // AtkEventType.MouseOver,
                 // AtkEventType.MouseDown,
                 // AtkEventType.MouseUp
+                 //AtkEventType.InputReceived
+            };
+
+            var handledByteEventList = new List<byte> {
+                // Uncomment the following lines to handle specific byte events
+                //13, 
+                //15
             };
 
             // Check if the event type is in the handled list
-            if (!handledTypeList.Contains((AtkEventType)receiveEventArgs.AtkEventType)) return;
+            if (!handledTypeList.Contains((AtkEventType)receiveEventArgs.AtkEventType) && !handledByteEventList.Contains((byte)receiveEventArgs.AtkEventType)) {
+                return;
+            }
+
+            if (receiveEventArgs.AtkEventType == 15) { 
+                if (receiveEventArgs.Data != nint.Zero) {
+                    AtkEventData* eventDataTemp = (AtkEventData*)receiveEventArgs.Data;
+                    if (eventDataTemp->ListItemData.SelectedIndex == 256) {
+                        //Plugin.Log.Debug("@@@@@@ Window action");
+                        return;
+                    } else {
+                        Plugin.Log.Debug("@@@@@@ HudElement action");
+                    }
+                } else {
+                    return;
+                }
+            }
 
             // FINDINGS:
+            // _HudLayoutWindow: 
+            // - 15 AtkEvent:
+            //   - Sent when right controller stick is used to move something 
+            //   - EventData: ControllerInput (up/down/left/right)
+            //      - bytes 0-7: all 0 on stop moving
+            //      - SelectedIndex:
+            //          - 256: window action
+            //          - 0: HudElement action
+            // 
+            // _HudLayoutScreen:
+            // - InputReceived AtkEvent:
+            //   - ALL keyboardevents that are pressed, if they do something or not
+            //      - byte nr. 1: indicates which key was pressed 
+            //      - byte nr. 5:
+            //          - 0: start pressing
+            //          - 1: press once
+            //          - 2: press continuous
+            //      - byte nr. 6: indicates modifier keys: 1 = ctrl, 2 = alt, 3 = ctrl + alt, 4 = shift
+            // - '13' AtkEvent:
+            //   - Only sent when something is moved by keyboard or controller arrows, though not with the controller stick
+            //   - EventData: 
+            //     - byte 1: indicates which key was pressed
+            // - 15 AtkEvent:
+            //   - Is sent when the left controller stick is used to move something, after clicking on it
             // - MouseDown AtkEvent:
             //   - Param: current index in collisionNodeList
             //   - eventid: 0
@@ -62,6 +116,7 @@ namespace HudCopyPaste {
 
             // Log the event details for debugging purposes
             Plugin.Log.Debug("=====================================");
+            Plugin.Log.Debug($"AddonEvent: {type}");
             Plugin.Log.Debug($"AtkEventType: {(AtkEventType)receiveEventArgs.AtkEventType}");
             Plugin.Log.Debug($"AddonArgsType: {receiveEventArgs.Type}");
             Plugin.Log.Debug($"AtkEvent nint: {receiveEventArgs.AtkEvent:X}");
@@ -205,6 +260,7 @@ namespace HudCopyPaste {
 
         public void Dispose() {
             Plugin.AddonLifecycle.UnregisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", HandleHudLayoutScreenEvent);
+            Plugin.AddonLifecycle.UnregisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutWindow", HandleHudLayoutScreenEvent);
         }
 
     }

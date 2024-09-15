@@ -10,6 +10,12 @@ namespace HudCopyPaste {
         public HudElementData PreviousState { get; }
         public HudElementData NewState { get; }
 
+        //public HudElementAction(HudElementData previousState, HudElementData newState) {
+        //    PreviousState = previousState;
+        //    NewState = newState;
+        //    Timestamp = Environment.TickCount;
+        //}
+
         public HudElementAction(HudElementData previousState, HudElementData newState) {
             PreviousState = previousState;
             NewState = newState;
@@ -117,6 +123,20 @@ namespace HudCopyPaste {
             AddUndoAction(hudLayoutIndex, new HudElementAction(previousState, newState));
         }
 
+        public bool UpdateUndoAction(int hudLayoutIndex, HudElementData newState) {
+            if (!HudLayoutExists(hudLayoutIndex)) return false;
+            if (HistoryEmpty(hudLayoutIndex, undoHistory)) return false;
+
+            HudElementAction action = undoHistory[hudLayoutIndex].Last();
+            if (action == null) return false;
+
+            // Update the current state
+            action = new HudElementAction(action.PreviousState, newState);
+            undoHistory[hudLayoutIndex][undoHistory[hudLayoutIndex].Count - 1] = action;
+            return true;
+        }
+
+
         public (HudElementData?, HudElementData?) PeekUndoAction(int hudLayoutIndex) {
             if (!HudLayoutExists(hudLayoutIndex)) return (null, null);
             if (HistoryEmpty(hudLayoutIndex, undoHistory)) return (null, null);
@@ -137,6 +157,7 @@ namespace HudCopyPaste {
             undoHistory[hudLayoutIndex].RemoveAt(undoHistory[hudLayoutIndex].Count - 1);
 
             // Update the current state 
+            currentState.Timestamp = action.NewState.Timestamp;
             action = new HudElementAction(action.PreviousState, currentState);
             redoHistory[hudLayoutIndex].Add(action);
             return true;
@@ -162,6 +183,8 @@ namespace HudCopyPaste {
             redoHistory[hudLayoutIndex].RemoveAt(redoHistory[hudLayoutIndex].Count - 1);
 
             // Update the current state
+            // TODO: don't create new one, just update old one (?)
+            currentState.Timestamp = action.PreviousState.Timestamp;
             action = new HudElementAction(currentState, action.NewState);
             undoHistory[hudLayoutIndex].Add(action);
             return true;

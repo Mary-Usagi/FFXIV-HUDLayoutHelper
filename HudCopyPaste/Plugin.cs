@@ -93,6 +93,7 @@ namespace HudCopyPaste {
                 this.removeOnUpdateCallback();
             });
 
+            // TODO: Add/Remove listeners 
             // Listen for mouse events to track manual element movements for undo/redo
             this.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", HandleMouseDownEvent);
             this.AddonLifecycle.RegisterListener(AddonEvent.PostReceiveEvent, "_HudLayoutScreen", HandleMouseUpEvent);
@@ -100,13 +101,160 @@ namespace HudCopyPaste {
             // TODO: maybe find a better name for the Plugin, as its functionality is not only copy/paste anymore 
 
             // TODO: Fix history for other ways of moving elements, e.g. by using the arrow keys? 
+            //     - > Use InputReceived Event to track when things are moved 
+            this.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", HandleKeyboardMoveEvent);
             // TODO: Maybe save all newly moved elements every X seconds? 
- 
+
             // TODO: What should happen when the Hud Layout was closed with unsaved changes? 
         }
 
         private byte CUSTOM_FLAG = 16;
         private HudElementData? mouseDownTarget = null;
+
+
+        // TODO: If any other event is received, the lastKeyboardEventTick is not -1 and the cooldown is over, save the current state of the HUD Layout and reset the lastKeyboardEventTick
+        private int lastKeyboardEventTick = -1;
+        private int keyboardEventCooldown = 1000; // 1 second
+        private HudElementData? keyboardTarget = null;
+        private bool shouldReset = false;
+        private unsafe void HandleKeyboardMoveEvent(AddonEvent type, AddonArgs args) {
+            if (args is not AddonReceiveEventArgs receiveEventArgs) return;
+            if (receiveEventArgs.AtkEventType != 13) // && (AtkEventType)receiveEventArgs.AtkEventType != AtkEventType.InputReceived) 
+                return; 
+            if (receiveEventArgs.AtkEvent == nint.Zero) return;
+
+            // Check if the layout editor is open, abort if not
+            if (!Utils.IsHudLayoutReady(out AgentHUDLayout* agentHudLayout, out AddonHudLayoutScreen* hudLayoutScreen, this)) return;
+
+            // Get the currently selected element, abort if none is selected
+            AtkResNode* selectedNode = Utils.GetCollisionNodeByIndex(hudLayoutScreen, 0);
+            if (selectedNode == null) {
+                this.Log.Debug($"No element selected.");
+                return;
+            }
+
+            // If the event is an InputReceived event and the selected element is not the same as the last keyboard target, update the keyboard target
+            if ((AtkEventType) receiveEventArgs.AtkEventType == AtkEventType.InputReceived) {
+                if (keyboardTarget == null) {
+                    keyboardTarget = new HudElementData(selectedNode);
+                    this.Debug.Log(this.Log.Debug, $"New Keyboard Target: {keyboardTarget.PrettyPrint()}");
+                    return;
+                }
+                if (!HudElementData.HasSameName(selectedNode, keyboardTarget)) {
+                    keyboardTarget = new HudElementData(selectedNode);
+                    this.Debug.Log(this.Log.Debug, $"New Keyboard Target: {keyboardTarget.PrettyPrint()}");
+                    return;
+                }
+
+                // TODO: other times where it's necessary to reset the keyboard target?
+                // TODO: when direction changes
+                // TODO: when something else is clicked
+
+                return;
+            }
+
+            if (keyboardTarget == null) {
+                this.Debug.Log(this.Log.Warning, $"No keyboard target found.");
+                return;
+            }
+
+            // => Continue only with Events of type '13'
+            int last_lastKeyboardEventTick = lastKeyboardEventTick;
+            this.Debug.Log(this.Log.Debug, $"Keyboard Event received: {lastKeyboardEventTick}");
+            lastKeyboardEventTick = Environment.TickCount;
+            // TODO: When to reset keyboardTarget? 
+            if (HudElementData.OnlySameName(selectedNode, keyboardTarget)) {
+                // If the selected element is not the same as the last keyboard target, set the lastKeyboardEventTick and save or update the undo history
+
+                HudElementData currentState = new HudElementData(selectedNode);
+
+                // Get last undo entry for the current HUD Layout
+                (HudElementData? oldState, HudElementData? newState) = this.HudHistoryManager.PeekUndoAction(GetCurrentHudLayoutIndex(false));
+
+                if ((oldState == null || newState == null) || oldState.ResNodeDisplayName != currentState.ResNodeDisplayName) {
+                    // If no entry yet or different last element: Save the current state of the selected element for undo operations
+                    this.Log.Debug($"Different element moved: {keyboardTarget.PrettyPrint()} -> ({currentState.PosX}, {currentState.PosY})");
+                    this.HudHistoryManager.AddUndoAction(GetCurrentHudLayoutIndex(false), keyboardTarget, currentState);
+                    return;
+                }
+
+                // If the same element is moved again, update the undo entry or add a new one depending on the time passed 
+                if (oldState.ResNodeDisplayName == currentState.ResNodeDisplayName) {
+                    //this.Log.Debug($"User moved element: {oldState.PrettyPrint()} -> ({currentState.PosX}, {currentState.PosY})");
+
+                    // TODO: Bei richtungsänderung auch neues undo entry? -> yes 
+                    // Check old and new direction
+                    short oldDeltaX = (short) (oldState.PosX - newState.PosX);
+                    short oldDeltaY = (short) (oldState.PosY - newState.PosY);
+
+                    short newDeltaX = (short) (currentState.PosX - newState.PosX);
+                    short newDeltaY = (short) (currentState.PosY - newState.PosY);
+
+
+
+
+
+                    // TODO: NICHT updaten, wenn davor mit Maus bewegt...
+
+                    if (Environment.TickCount - newState.Timestamp > keyboardEventCooldown || last_lastKeyboardEventTick == -1) {
+                        this.Debug.Log(this.Log.Debug, $"Time passed: {Environment.TickCount - newState.Timestamp}, new element: {currentState.PrettyPrint()}"); 
+                        this.HudHistoryManager.AddUndoAction(GetCurrentHudLayoutIndex(false), newState, currentState);
+                    } else {
+                        this.HudHistoryManager.UpdateUndoAction(GetCurrentHudLayoutIndex(false), currentState);
+                    }
+                    return;
+                } else {
+                    this.Debug.Log(this.Log.Warning, $"Keyboard target does not match selected element: {currentState}");
+                    return;
+                }
+            } 
+
+            // Get the current state of the selected element
+            
+            //this.Debug.Log(this.Log.Debug, $"Keyboard Target: {currentState}");
+
+            // Check if the currently selected element is the same as the last MouseDown target
+            //if (newState.ResNodeDisplayName != mouseDownTarget.ResNodeDisplayName) {
+            //    this.Debug.Log(this.Log.Warning, $"Mouse target does not match selected element: {newState}");
+            //    return;
+            //} else {
+            //    this.Debug.Log(this.Log.Debug, $"Mouse target matches selected element.");
+            //}
+
+            //// check if the position has changed, if not, do not add to undo history
+            //if (mouseDownTarget.PosX == newState.PosX && mouseDownTarget.PosY == newState.PosY) {
+            //    return;
+            //}
+
+            //// Save the current state of the selected element for undo operations
+            //this.Log.Debug($"User moved element: {mouseDownTarget.PrettyPrint()} -> ({newState.PosX}, {newState.PosY})");
+            //this.HudHistoryManager.AddUndoAction(GetCurrentHudLayoutIndex(), mouseDownTarget, newState);
+
+
+
+            // TODO: 
+            // If last undo entry is older than X time or a different element, start a new undo entry
+            // If the same element is moved again, update the undo entry
+
+            // Get last undo entry for the current HUD Layout
+            //(HudElementData? oldState, HudElementData? newState) = this.HudHistoryManager.PeekUndoAction(GetCurrentHudLayoutIndex());
+            //bool newUndoEntry = false;
+            //if (oldState == null || newState == null) {
+            //    newUndoEntry = true;
+            //    oldState = currentState;
+            //    newState = currentState;
+            //}
+
+
+
+            // Simply save the last time a keyboard event was received 
+            // TODO: Check time in update loop to determine if a save should be triggered 
+            //lastKeyboardEventTick = Environment.TickCount;
+            //this.Debug.Log(this.Log.Debug, $"Keyboard Event received: {lastKeyboardEventTick}");
+
+        }
+
+
 
         private unsafe void HandleMouseDownEvent(AddonEvent type, AddonArgs args) {
             if (args is not AddonReceiveEventArgs receiveEventArgs) return;
@@ -194,17 +342,55 @@ namespace HudCopyPaste {
             this.Log.Debug($"User moved element: {mouseDownTarget.PrettyPrint()} -> ({newState.PosX}, {newState.PosY})");
             this.HudHistoryManager.AddUndoAction(GetCurrentHudLayoutIndex(), mouseDownTarget, newState);
 
+            // TODO: ? 
+            lastKeyboardEventTick = -1;
+
             mouseDownTarget = null;
+        }
+
+        // Update loop that sets the keyboardTarget 
+        // TODO: replace with some event listener 
+        private int lastUpdateTick = -1;
+        private unsafe void UpdateKeyboardTarget(IFramework framework) {
+            // Don't check too often: 
+            if (Environment.TickCount - lastUpdateTick < 10) return;
+            lastUpdateTick = Environment.TickCount;
+
+            // Check if the layout editor is open, abort if not
+            if (!Utils.IsHudLayoutReady(out AgentHUDLayout* agentHudLayout, out AddonHudLayoutScreen* hudLayoutScreen, this)) return;
+
+            // Get the currently selected element, abort if none is selected
+            AtkResNode* selectedNode = Utils.GetCollisionNodeByIndex(hudLayoutScreen, 0);
+            if (selectedNode == null) {
+                this.Log.Debug($"No element selected.");
+                return;
+            }
+
+            // If the selected element is not the same as the last keyboard target, update the keyboard target
+            if (keyboardTarget == null) {
+                keyboardTarget = new HudElementData(selectedNode);
+                this.Debug.Log(this.Log.Debug, $"New Keyboard Target: {keyboardTarget.PrettyPrint()}");
+                return;
+            }
+            if (!HudElementData.HasSameName(selectedNode, keyboardTarget)) {
+                keyboardTarget = new HudElementData(selectedNode);
+                this.Debug.Log(this.Log.Debug, $"New Keyboard Target: {keyboardTarget.PrettyPrint()}");
+                return;
+            }
         }
 
         private bool callbackAdded = false;
         private void addOnUpdateCallback() {
             if (callbackAdded) return;
             this.Framework.Update += HandleKeyboardShortcuts;
+            // TODO: update function, die regelmäßig keyboardTarget setzt!! 
+            this.Framework.Update += UpdateKeyboardTarget;
+
             callbackAdded = true;
         }
         private void removeOnUpdateCallback() {
             this.Framework.Update -= HandleKeyboardShortcuts;
+            this.Framework.Update -= UpdateKeyboardTarget;
             callbackAdded = false;
         }
 
@@ -338,9 +524,9 @@ namespace HudCopyPaste {
             this.Log.Debug($"Copied position to clipboard: {selectedNodeData.PrettyPrint()}");
         }
 
-        private unsafe int GetCurrentHudLayoutIndex() {
+        private unsafe int GetCurrentHudLayoutIndex(bool print = true) {
             int index = AddonConfig.Instance()->ModuleData->CurrentHudLayout;
-            this.Debug.Log(this.Log.Debug, $"Current HUD Layout Index: {index}");
+            if (print) this.Debug.Log(this.Log.Debug, $"Current HUD Layout Index: {index}");
             if (index < 0 || index >= 10) {
                 this.Debug.Log(this.Log.Warning, "Invalid HUD Layout index.");
                 throw new Exception("Invalid HUD Layout index.");
