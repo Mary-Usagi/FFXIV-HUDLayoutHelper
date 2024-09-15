@@ -2,6 +2,7 @@
 using FFXIVClientStructs.FFXIV.Client.System.String;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
+using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
 using static HudCopyPaste.Plugin;
@@ -141,6 +142,18 @@ namespace HudCopyPaste {
             AtkResNode* resNode = hudLayoutScreen->CollisionNodeList[index];
             if (resNode->ParentNode == null) return null;
             return resNode;
+        }
+
+
+        internal static unsafe int GetCurrentHudLayoutIndex(Plugin plugin, bool log = true) {  
+            int index = AddonConfig.Instance()->ModuleData->CurrentHudLayout;
+            if (log) plugin.Debug.Log(plugin.Log.Debug, $"Current HUD Layout Index: {index}");
+            if (index < 0 || index >= 10) {
+                plugin.Debug.Log(plugin.Log.Warning, "Invalid HUD Layout index.");
+                throw new Exception("Invalid HUD Layout index.");
+            }
+            return index;
+
         }
     }
 

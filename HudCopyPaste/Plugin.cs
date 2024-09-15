@@ -80,7 +80,6 @@ namespace HudCopyPaste {
             if (this.GameGui.GetAddonByName("_HudLayoutScreen", 1) != IntPtr.Zero) {
                 this.Debug.Log(this.Log.Debug, "HudLayoutScreen already loaded.");
                 this.addOnUpdateCallback();
-
             }
 
             this.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "_HudLayoutScreen", (type, args) => {
@@ -192,12 +191,15 @@ namespace HudCopyPaste {
 
             // Save the current state of the selected element for undo operations
             this.Log.Debug($"User moved element: {mouseDownTarget.PrettyPrint()} -> ({newState.PosX}, {newState.PosY})");
-            this.HudHistoryManager.AddUndoAction(GetCurrentHudLayoutIndex(), mouseDownTarget, newState);
+            this.HudHistoryManager.AddUndoAction(Utils.GetCurrentHudLayoutIndex(this), mouseDownTarget, newState);
 
             mouseDownTarget = null;
         }
 
         private bool callbackAdded = false;
+
+
+
         private void addOnUpdateCallback() {
             if (callbackAdded) return;
             this.Framework.Update += HandleKeyboardShortcuts;
@@ -338,17 +340,6 @@ namespace HudCopyPaste {
             this.Log.Debug($"Copied position to clipboard: {selectedNodeData.PrettyPrint()}");
         }
 
-        private unsafe int GetCurrentHudLayoutIndex() {
-            int index = AddonConfig.Instance()->ModuleData->CurrentHudLayout;
-            this.Debug.Log(this.Log.Debug, $"Current HUD Layout Index: {index}");
-            if (index < 0 || index >= 10) {
-                this.Debug.Log(this.Log.Warning, "Invalid HUD Layout index.");
-                throw new Exception("Invalid HUD Layout index.");
-            }
-            return index;
-
-        }
-
         /// <summary>
         /// Paste the position from the clipboard to the selected element 
         /// and simulate a mouse click on the element.
@@ -392,7 +383,7 @@ namespace HudCopyPaste {
             selectedNode->ParentNode->SetPositionShort(parsedData.PosX, parsedData.PosY);
 
             // Add the previous state and the new state to the undo history
-            int hudLayoutIndex = GetCurrentHudLayoutIndex();
+            int hudLayoutIndex = Utils.GetCurrentHudLayoutIndex(this);
             this.HudHistoryManager.AddUndoAction(hudLayoutIndex, previousState, parsedData); 
 
             // Simulate Mouse Click
@@ -411,7 +402,7 @@ namespace HudCopyPaste {
         /// <param name="agentHudLayout"></param>
         private unsafe void HandleUndoAction(AddonHudLayoutScreen* hudLayoutScreen, AgentHUDLayout* agentHudLayout) {
             // Get the last added action from the undo history
-            (HudElementData? oldState, HudElementData? newState) = this.HudHistoryManager.PeekUndoAction(GetCurrentHudLayoutIndex());
+            (HudElementData? oldState, HudElementData? newState) = this.HudHistoryManager.PeekUndoAction(Utils.GetCurrentHudLayoutIndex(this));
             if (oldState == null || newState == null) {
                 this.Log.Debug($"Nothing to undo.");
                 return;
@@ -432,7 +423,7 @@ namespace HudCopyPaste {
             // Set the position of the currently selected element to the parsed position
             undoNode->ParentNode->SetPositionShort(oldState.PosX, oldState.PosY);
 
-            this.HudHistoryManager.PerformUndo(GetCurrentHudLayoutIndex(), undoNodeState);
+            this.HudHistoryManager.PerformUndo(Utils.GetCurrentHudLayoutIndex(this), undoNodeState);
 
             // Simulate Mouse Click
             Utils.SimulateMouseClickOnHudElement(undoNode, undoNodeId, oldState, hudLayoutScreen, this, this.CUSTOM_FLAG);
@@ -450,7 +441,7 @@ namespace HudCopyPaste {
         /// <param name="agentHudLayout"></param>
         private unsafe void HandleRedoAction(AddonHudLayoutScreen* hudLayoutScreen, AgentHUDLayout* agentHudLayout) {
             // Get the last added action from the redo history
-            (HudElementData? oldState, HudElementData? newState) = this.HudHistoryManager.PeekRedoAction(GetCurrentHudLayoutIndex());  
+            (HudElementData? oldState, HudElementData? newState) = this.HudHistoryManager.PeekRedoAction(Utils.GetCurrentHudLayoutIndex(this));  
             if (oldState == null || newState == null) {
                 this.Log.Debug($"Nothing to redo.");
                 return;
@@ -470,7 +461,7 @@ namespace HudCopyPaste {
             // Set the position of the currently selected element to the parsed position
             redoNode->ParentNode->SetPositionShort(newState.PosX, newState.PosY);
 
-            this.HudHistoryManager.PerformRedo(GetCurrentHudLayoutIndex(), redoNodeState);
+            this.HudHistoryManager.PerformRedo(Utils.GetCurrentHudLayoutIndex(this), redoNodeState);
 
             // Simulate Mouse Click
             Utils.SimulateMouseClickOnHudElement(redoNode, redoNodeId, newState, hudLayoutScreen, this, this.CUSTOM_FLAG);
