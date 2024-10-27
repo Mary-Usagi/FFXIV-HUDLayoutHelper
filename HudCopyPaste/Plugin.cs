@@ -39,6 +39,11 @@ namespace HudCopyPaste {
         public Debug Debug { get; private set; } = null!;
         internal HudHistoryManager HudHistoryManager { get; private set; } = null!;
 
+
+        // HUD Layout Addon Pointers
+        internal unsafe AgentHUDLayout* AgentHudLayout = null;
+        internal unsafe AddonHudLayoutScreen* HudLayoutScreen = null;
+
         public Plugin(
             IGameGui gameGui,
             IClientState clientState,
@@ -100,9 +105,47 @@ namespace HudCopyPaste {
 
             // TODO: Fix history for other ways of moving elements, e.g. by using the arrow keys? 
             // TODO: Maybe save all newly moved elements every X seconds? 
- 
+
             // TODO: What should happen when the Hud Layout was closed with unsaved changes? 
         }
+
+        // SETUP START
+        private bool callbackAdded = false;
+
+
+        /// <summary>
+        /// Initializes the HUD layout addons and sets the AgentHUDLayout and HudLayoutScreen pointers when the HUD layout is opened. 
+        /// </summary>
+        /// <returns></returns>
+        private unsafe bool InitializeHudLayoutAddons() {
+            if (!Utils.IsHudLayoutReady(out AgentHUDLayout* agentHudLayout, out AddonHudLayoutScreen* hudLayoutScreen, this)) {
+                this.Log.Warning("HudLayoutScreen not ready.");
+                return false;
+            }
+
+            AgentHudLayout = agentHudLayout;
+            HudLayoutScreen = hudLayoutScreen;
+            return true;
+        }
+
+        private unsafe void ClearHudLayoutAddons() {
+            AgentHudLayout = null;
+            HudLayoutScreen = null;
+        }
+
+        private void addOnUpdateCallback() {
+            if (callbackAdded) return;
+            this.Framework.Update += HandleKeyboardShortcuts;
+            InitializeHudLayoutAddons();
+            callbackAdded = true;
+        }
+        private void removeOnUpdateCallback() {
+            this.Framework.Update -= HandleKeyboardShortcuts;
+            ClearHudLayoutAddons();
+            callbackAdded = false;
+        }
+        // SETUP END
+
 
         private byte CUSTOM_FLAG = 16;
         private HudElementData? mouseDownTarget = null;
@@ -120,15 +163,15 @@ namespace HudCopyPaste {
             }
 
             // Check if the layout editor is open, abort if not
-            if (!Utils.IsHudLayoutReady(out AgentHUDLayout* agentHudLayout, out AddonHudLayoutScreen* hudLayoutScreen, this)) return;
+            if (this.AgentHudLayout == null || this.HudLayoutScreen == null) return;
 
             // Get the currently selected element, abort if none is selected
             int selectedNodeId = receiveEventArgs.EventParam;
-            if (selectedNodeId < 0 || selectedNodeId >= hudLayoutScreen->CollisionNodeListCount) {
+            if (selectedNodeId < 0 || selectedNodeId >= this.HudLayoutScreen->CollisionNodeListCount) {
                 this.Debug.Log(this.Log.Error, $"No valid element selected.");
             }
 
-            AtkResNode* selectedNode = Utils.GetCollisionNodeByIndex(hudLayoutScreen, selectedNodeId);
+            AtkResNode* selectedNode = Utils.GetCollisionNodeByIndex(this.HudLayoutScreen, selectedNodeId);
             if (selectedNode == null) {
                 this.Log.Debug($"No element selected.");
                 return;
@@ -158,10 +201,10 @@ namespace HudCopyPaste {
             }
 
             // Check if the layout editor is open, abort if not
-            if (!Utils.IsHudLayoutReady(out AgentHUDLayout* agentHudLayout, out AddonHudLayoutScreen* hudLayoutScreen, this)) return;
+            if (this.AgentHudLayout == null || this.HudLayoutScreen == null) return;
 
             // Get the currently selected element, abort if none is selected
-            AtkResNode* selectedNode = Utils.GetCollisionNodeByIndex(hudLayoutScreen, 0);
+            AtkResNode* selectedNode = Utils.GetCollisionNodeByIndex(this.HudLayoutScreen, 0);
             if (selectedNode == null) {
                 this.Log.Debug($"No element selected.");
                 return;
@@ -194,20 +237,6 @@ namespace HudCopyPaste {
             this.HudHistoryManager.AddUndoAction(Utils.GetCurrentHudLayoutIndex(this), mouseDownTarget, newState);
 
             mouseDownTarget = null;
-        }
-
-        private bool callbackAdded = false;
-
-
-
-        private void addOnUpdateCallback() {
-            if (callbackAdded) return;
-            this.Framework.Update += HandleKeyboardShortcuts;
-            callbackAdded = true;
-        }
-        private void removeOnUpdateCallback() {
-            this.Framework.Update -= HandleKeyboardShortcuts;
-            callbackAdded = false;
         }
 
         private enum KeyboardAction { None, Copy, Paste, Undo, Redo }
@@ -299,21 +328,21 @@ namespace HudCopyPaste {
             }
 
             // Check if the layout editor is open, abort if not
-            if (!Utils.IsHudLayoutReady(out AgentHUDLayout* agentHudLayout, out AddonHudLayoutScreen* hudLayoutScreen, this)) return;
+            if (this.AgentHudLayout == null || this.HudLayoutScreen == null) return;
 
             // Depending on the keyboard action, execute the corresponding operation
             switch (keyboardAction) {
                 case KeyboardAction.Copy:
-                    HandleCopyAction(hudLayoutScreen);
+                    HandleCopyAction(this.HudLayoutScreen);
                     break;
                 case KeyboardAction.Paste:
-                    HandlePasteAction(hudLayoutScreen, agentHudLayout);
+                    HandlePasteAction(this.HudLayoutScreen, this.AgentHudLayout);
                     break;
                 case KeyboardAction.Undo:
-                    HandleUndoAction(hudLayoutScreen, agentHudLayout);
+                    HandleUndoAction(this.HudLayoutScreen, this.AgentHudLayout);
                     break;
                 case KeyboardAction.Redo:
-                    HandleRedoAction(hudLayoutScreen, agentHudLayout);
+                    HandleRedoAction(this.HudLayoutScreen, this.AgentHudLayout);
                     break;
             }
         }

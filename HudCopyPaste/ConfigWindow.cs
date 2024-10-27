@@ -175,7 +175,6 @@ public class ConfigWindow : Window, IDisposable {
             for (int n = 0; n < redoStrategies.Length; n++) {
                 bool is_selected = itemSelectedIndex == n;
                 if (ImGui.Selectable(redoStrategies[n].ToString(), is_selected)) {
-                    // TODO: not showing tooltips yet
                     redoActionStrategy = redoStrategies[n];
                     Configuration.RedoActionStrategy = redoActionStrategy;
                     itemSelectedIndex = n;

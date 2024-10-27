@@ -19,7 +19,6 @@ namespace HudCopyPaste {
     public class HudHistoryManager {
         private Plugin Plugin { get; }
 
-        // TODO: Or add a history per element? 
         // The history of undo actions for each element for each HUD Layout
         internal readonly List<List<HudElementAction>> undoHistory = new();
 
