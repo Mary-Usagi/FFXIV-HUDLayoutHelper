@@ -34,11 +34,12 @@ namespace HUDLayoutShortcuts {
             } catch (NullReferenceException) {
                 ResNodeDisplayName = "Unknown";
             }
+
             PosX = resNode->ParentNode->GetXShort();
             PosY = resNode->ParentNode->GetYShort();
 
             // TODO: Maybe get corresponding addon?
-            ElementId = -1;
+            ElementId = ResNodeDisplayName.GetHashCode();
             AddonName = "";
             Scale = -1;
         }
