@@ -140,6 +140,11 @@ namespace HUDLayoutShortcuts {
             InitializeHudLayoutAddons();
 
             // Add a check for element changes to the update loop
+            previousHudLayoutIndexElements.Clear();
+            for (int i = 0; i < this.HudHistoryManager.HudLayoutCount; i++) {
+                previousHudLayoutIndexElements.Add(new Dictionary<int, HudElementData>());
+            }
+            UpdatePreviousElements();
             this.Framework.Update += PerformScheduledElementChangeCheck;
 
             callbackAdded = true;
@@ -147,40 +152,12 @@ namespace HUDLayoutShortcuts {
         private void removeOnUpdateCallback() {
             this.Framework.Update -= HandleKeyboardShortcuts;
             this.Framework.Update -= PerformScheduledElementChangeCheck;
+            previousHudLayoutIndexElements.Clear();
 
             ClearHudLayoutAddons();
             callbackAdded = false;
         }
         // SETUP END
-
-        private int LastKeyboardEvent = 0;
-        private int LastChangeCheck = -1;
-        private const int ChangeCheckInterval = 100; // ms
-
-        private unsafe void HandleKeyboardMoveEvent(AddonEvent type, AddonArgs args) {
-            if (args is not AddonReceiveEventArgs receiveEventArgs) return;
-            if (receiveEventArgs.AtkEventType != 13) // && (AtkEventType)receiveEventArgs.AtkEventType != AtkEventType.InputReceived) 
-                return;
-            if (receiveEventArgs.AtkEvent == nint.Zero) return;
-
-            LastKeyboardEvent = Environment.TickCount;
-
-            // Only check for changes every X ms 
-            //if (Environment.TickCount - LastChangeCheck < ChangeCheckInterval) return;
-            //PerformElementChangeCheck();
-            //LastChangeCheck = Environment.TickCount;
-            //this.Debug.Log(this.Log.Debug, $"Keyboard Event: {receiveEventArgs.AtkEventType}");
-        }
-
-
-        private unsafe void PerformScheduledElementChangeCheck(IFramework framework) {
-            if (LastKeyboardEvent > LastChangeCheck && Environment.TickCount - LastKeyboardEvent > ChangeCheckInterval) {
-                this.Debug.Log(this.Log.Debug, "Keyboard event detected, checking for element changes.");
-                PerformElementChangeCheck();
-                LastChangeCheck = Environment.TickCount;
-            }
-        }
-
 
         private byte CUSTOM_FLAG = 16;
         private HudElementData? mouseDownTarget = null;
@@ -274,6 +251,7 @@ namespace HUDLayoutShortcuts {
             this.HudHistoryManager.AddUndoAction(Utils.GetCurrentHudLayoutIndex(this), mouseDownTarget, newState);
 
             // Update previousElements
+            var previousElements = previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex(this)];
             previousElements[mouseDownTarget.ElementId] = newState;
 
             mouseDownTarget = null;
@@ -391,6 +369,7 @@ namespace HUDLayoutShortcuts {
             if (changedElement != null) {
                 this.Debug.Log(this.Log.Debug, $"Changed Element: {changedElement}");
                 HudElementData? changedPreviousElement = null;
+                var previousElements = previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex(this)];
                 previousElements.TryGetValue(changedElement.ElementId, out changedPreviousElement);
                 previousElements[changedElement.ElementId] = changedElement;
             }
@@ -577,12 +556,49 @@ namespace HUDLayoutShortcuts {
         // ==== Logic for periodically checking for changes
         // TODO: reset when mouse is used to move elements / or rather check if moved, then reset, so treat as elapsed timer
         // TODO: how to not count redo as change? -> Adjust previousElements when any other change is made
+        // TODO: complete
 
-        private Dictionary<int, HudElementData> previousElements = new();
+        private int LastKeyboardEvent = 0;
+        private int LastChangeCheck = 0;
+        private int LastChangeCHeckHudLayoutIndex = -1;
+        private const int ChangeCheckInterval = 100; // ms
+
+        private unsafe void HandleKeyboardMoveEvent(AddonEvent type, AddonArgs args) {
+            if (args is not AddonReceiveEventArgs receiveEventArgs) return;
+            if (receiveEventArgs.AtkEventType != 13) // && (AtkEventType)receiveEventArgs.AtkEventType != AtkEventType.InputReceived) 
+                return;
+            if (receiveEventArgs.AtkEvent == nint.Zero) return;
+
+            if (LastChangeCHeckHudLayoutIndex != Utils.GetCurrentHudLayoutIndex(this, false)) {
+                UpdatePreviousElements();
+                LastChangeCHeckHudLayoutIndex = Utils.GetCurrentHudLayoutIndex(this);
+            }
+
+            LastKeyboardEvent = Environment.TickCount;
+
+            // Only check for changes every X ms 
+            //if (Environment.TickCount - LastChangeCheck < ChangeCheckInterval) return;
+            //PerformElementChangeCheck();
+            //LastChangeCheck = Environment.TickCount;
+            //this.Debug.Log(this.Log.Debug, $"Keyboard Event: {receiveEventArgs.AtkEventType}");
+        }
+
+        private unsafe void PerformScheduledElementChangeCheck(IFramework framework) {
+            if (LastKeyboardEvent > LastChangeCheck && Environment.TickCount - LastKeyboardEvent > ChangeCheckInterval) {
+                this.Debug.Log(this.Log.Debug, "Keyboard event detected, checking for element changes.");
+                PerformElementChangeCheck();
+                LastChangeCheck = Environment.TickCount;
+            }
+        }
+
+
+        private List<Dictionary<int, HudElementData>> previousHudLayoutIndexElements = new();
 
         private unsafe void PerformElementChangeCheck() {
             if (this.AgentHudLayout == null || this.HudLayoutScreen == null) return;
             this.Debug.Log(this.Log.Debug, "Checking for element changes.");
+
+            var previousElements = previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex(this, false)];
 
             var currentElements = GetCurrentElements();
 
@@ -590,7 +606,7 @@ namespace HUDLayoutShortcuts {
             foreach (var elementData in currentElements) {
                 if (previousElements.TryGetValue(elementData.Key, out var previousData)) {
                     if (HasPositionChanged(previousData, elementData.Value)) {
-                        HudHistoryManager.AddUndoAction(Utils.GetCurrentHudLayoutIndex(this), previousData, elementData.Value);
+                        HudHistoryManager.AddUndoAction(Utils.GetCurrentHudLayoutIndex(this, false), previousData, elementData.Value);
                         changedElements.Add(elementData.Value);
                     }
                 }
@@ -598,6 +614,16 @@ namespace HUDLayoutShortcuts {
             }
             if (changedElements.Count > 0)
                 this.Debug.PrettyPrintList(changedElements, "Changed Elements");
+        }
+
+        private unsafe void UpdatePreviousElements() {
+            // TODO
+            this.Debug.Log(this.Log.Debug, "Updating previous elements.");
+            var currentElements = GetCurrentElements();
+            var previousElements = previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex(this, false)];
+            foreach (var elementData in currentElements) {
+                previousElements[elementData.Key] = elementData.Value;
+            }
         }
 
         private unsafe Dictionary<int, HudElementData> GetCurrentElements() {
