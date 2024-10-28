@@ -45,8 +45,6 @@ namespace HUDLayoutShortcuts {
         internal unsafe AgentHUDLayout* AgentHudLayout = null;
         internal unsafe AddonHudLayoutScreen* HudLayoutScreen = null;
 
-        private Timer? elementCheckTimer;
-
         public Plugin(
             IGameGui gameGui,
             IClientState clientState,
@@ -107,6 +105,8 @@ namespace HUDLayoutShortcuts {
             // TODO: Fix history for other ways of moving elements, e.g. by using the arrow keys? 
             // TODO: Maybe save all newly moved elements every X seconds? -> Done 
             //      TODO: Check once at the beginning, afterwards wait for some listener to trigger the check (but still only every X seconds)
+            //      TODO: also do when changing the hudlayout nr. ! 
+            this.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", HandleKeyboardMoveEvent);
             // TODO: What should happen when the Hud Layout was closed with unsaved changes? 
         }
 
@@ -139,25 +139,47 @@ namespace HUDLayoutShortcuts {
             this.Framework.Update += HandleKeyboardShortcuts;
             InitializeHudLayoutAddons();
 
-            // Initialize and start the timer for checking element changes
-            this.elementCheckTimer = new Timer(500); // 500ms interval
-            this.elementCheckTimer.Elapsed += OnElementCheckTimerElapsed;
-            this.elementCheckTimer.AutoReset = true;
-            this.elementCheckTimer.Start();
+            // Add a check for element changes to the update loop
+            this.Framework.Update += PerformScheduledElementChangeCheck;
 
             callbackAdded = true;
         }
         private void removeOnUpdateCallback() {
             this.Framework.Update -= HandleKeyboardShortcuts;
-
-            // Stop and dispose the timer for checking element changes
-            this.elementCheckTimer?.Stop();
-            this.elementCheckTimer?.Dispose();
+            this.Framework.Update -= PerformScheduledElementChangeCheck;
 
             ClearHudLayoutAddons();
             callbackAdded = false;
         }
         // SETUP END
+
+        private int LastKeyboardEvent = 0;
+        private int LastChangeCheck = -1;
+        private const int ChangeCheckInterval = 100; // ms
+
+        private unsafe void HandleKeyboardMoveEvent(AddonEvent type, AddonArgs args) {
+            if (args is not AddonReceiveEventArgs receiveEventArgs) return;
+            if (receiveEventArgs.AtkEventType != 13) // && (AtkEventType)receiveEventArgs.AtkEventType != AtkEventType.InputReceived) 
+                return;
+            if (receiveEventArgs.AtkEvent == nint.Zero) return;
+
+            LastKeyboardEvent = Environment.TickCount;
+
+            // Only check for changes every X ms 
+            //if (Environment.TickCount - LastChangeCheck < ChangeCheckInterval) return;
+            //PerformElementChangeCheck();
+            //LastChangeCheck = Environment.TickCount;
+            //this.Debug.Log(this.Log.Debug, $"Keyboard Event: {receiveEventArgs.AtkEventType}");
+        }
+
+
+        private unsafe void PerformScheduledElementChangeCheck(IFramework framework) {
+            if (LastKeyboardEvent > LastChangeCheck && Environment.TickCount - LastKeyboardEvent > ChangeCheckInterval) {
+                this.Debug.Log(this.Log.Debug, "Keyboard event detected, checking for element changes.");
+                PerformElementChangeCheck();
+                LastChangeCheck = Environment.TickCount;
+            }
+        }
 
 
         private byte CUSTOM_FLAG = 16;
@@ -196,8 +218,6 @@ namespace HUDLayoutShortcuts {
                 this.Debug.Log(this.Log.Debug, $"Selected Element by Mouse: {previousState}");
                 mouseDownTarget = previousState;
 
-                // Pause the timer for checking element changes
-                this.elementCheckTimer?.Stop();
             } else {
                 this.Debug.Log(this.Log.Warning, $"Could not get ResNodeDisplayName for selected element.");
                 mouseDownTarget = null;
@@ -209,8 +229,6 @@ namespace HUDLayoutShortcuts {
             if (receiveEventArgs.AtkEventType != (uint)AtkEventType.MouseUp) return;
             if (receiveEventArgs.AtkEvent == nint.Zero) return;
 
-            // Restart the timer for checking element changes if it was paused
-            this.elementCheckTimer?.Start();
 
             // Check if the event has the custom flag set, if so, filter it out
             AtkEvent* atkEvent = (AtkEvent*)receiveEventArgs.AtkEvent;
@@ -562,7 +580,7 @@ namespace HUDLayoutShortcuts {
 
         private Dictionary<int, HudElementData> previousElements = new();
 
-        private unsafe void OnElementCheckTimerElapsed(object? sender, ElapsedEventArgs e) {
+        private unsafe void PerformElementChangeCheck() {
             if (this.AgentHudLayout == null || this.HudLayoutScreen == null) return;
             this.Debug.Log(this.Log.Debug, "Checking for element changes.");
 
