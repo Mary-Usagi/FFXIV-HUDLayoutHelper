@@ -13,6 +13,7 @@ using ImGuiNET;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Timers;
 
 namespace HUDLayoutShortcuts {
     public sealed class Plugin : IDalamudPlugin {
@@ -43,6 +44,8 @@ namespace HUDLayoutShortcuts {
         // HUD Layout Addon Pointers
         internal unsafe AgentHUDLayout* AgentHudLayout = null;
         internal unsafe AddonHudLayoutScreen* HudLayoutScreen = null;
+
+        private Timer? elementCheckTimer;
 
         public Plugin(
             IGameGui gameGui,
@@ -102,8 +105,8 @@ namespace HUDLayoutShortcuts {
             this.AddonLifecycle.RegisterListener(AddonEvent.PostReceiveEvent, "_HudLayoutScreen", HandleMouseUpEvent);
 
             // TODO: Fix history for other ways of moving elements, e.g. by using the arrow keys? 
-            // TODO: Maybe save all newly moved elements every X seconds? 
-
+            // TODO: Maybe save all newly moved elements every X seconds? -> Done 
+            //      TODO: Check once at the beginning, afterwards wait for some listener to trigger the check (but still only every X seconds)
             // TODO: What should happen when the Hud Layout was closed with unsaved changes? 
         }
 
@@ -135,10 +138,22 @@ namespace HUDLayoutShortcuts {
             if (callbackAdded) return;
             this.Framework.Update += HandleKeyboardShortcuts;
             InitializeHudLayoutAddons();
+
+            // Initialize and start the timer for checking element changes
+            this.elementCheckTimer = new Timer(500); // 500ms interval
+            this.elementCheckTimer.Elapsed += OnElementCheckTimerElapsed;
+            this.elementCheckTimer.AutoReset = true;
+            this.elementCheckTimer.Start();
+
             callbackAdded = true;
         }
         private void removeOnUpdateCallback() {
             this.Framework.Update -= HandleKeyboardShortcuts;
+
+            // Stop and dispose the timer for checking element changes
+            this.elementCheckTimer?.Stop();
+            this.elementCheckTimer?.Dispose();
+
             ClearHudLayoutAddons();
             callbackAdded = false;
         }
@@ -179,7 +194,10 @@ namespace HUDLayoutShortcuts {
             HudElementData previousState = new HudElementData(selectedNode);
             if (previousState.ResNodeDisplayName != string.Empty && previousState.ResNodeDisplayName != "Unknown") {
                 this.Debug.Log(this.Log.Debug, $"Selected Element by Mouse: {previousState}");
-                mouseDownTarget = previousState; 
+                mouseDownTarget = previousState;
+
+                // Pause the timer for checking element changes
+                this.elementCheckTimer?.Stop();
             } else {
                 this.Debug.Log(this.Log.Warning, $"Could not get ResNodeDisplayName for selected element.");
                 mouseDownTarget = null;
@@ -190,6 +208,9 @@ namespace HUDLayoutShortcuts {
             if (args is not AddonReceiveEventArgs receiveEventArgs) return;
             if (receiveEventArgs.AtkEventType != (uint)AtkEventType.MouseUp) return;
             if (receiveEventArgs.AtkEvent == nint.Zero) return;
+
+            // Restart the timer for checking element changes if it was paused
+            this.elementCheckTimer?.Start();
 
             // Check if the event has the custom flag set, if so, filter it out
             AtkEvent* atkEvent = (AtkEvent*)receiveEventArgs.AtkEvent;
@@ -233,6 +254,9 @@ namespace HUDLayoutShortcuts {
             // Save the current state of the selected element for undo operations
             this.Log.Debug($"User moved element: {mouseDownTarget.PrettyPrint()} -> ({newState.PosX}, {newState.PosY})");
             this.HudHistoryManager.AddUndoAction(Utils.GetCurrentHudLayoutIndex(this), mouseDownTarget, newState);
+
+            // Update previousElements
+            previousElements[mouseDownTarget.ElementId] = newState;
 
             mouseDownTarget = null;
         }
@@ -297,10 +321,10 @@ namespace HUDLayoutShortcuts {
 
             // Set the keyboard action based on the key states
             KeyboardAction keyboardAction = KeyboardAction.None;
-            List<(SeVirtualKey, KeyStateFlags, KeyboardAction, SeVirtualKey?) > keybinds = new() {
+            List<(SeVirtualKey, KeyStateFlags, KeyboardAction, SeVirtualKey?)> keybinds = new() {
                 (SeVirtualKey.C, KeyStateFlags.Pressed, KeyboardAction.Copy,    null),
                 (SeVirtualKey.V, KeyStateFlags.Released, KeyboardAction.Paste,  null),
-                (SeVirtualKey.Z, KeyStateFlags.Pressed, KeyboardAction.Redo,    SeVirtualKey.SHIFT), 
+                (SeVirtualKey.Z, KeyStateFlags.Pressed, KeyboardAction.Redo,    SeVirtualKey.SHIFT),
                 (SeVirtualKey.Z, KeyStateFlags.Pressed, KeyboardAction.Undo,    null),
                 (SeVirtualKey.Y, KeyStateFlags.Pressed, KeyboardAction.Redo,    null),
             };
@@ -329,22 +353,30 @@ namespace HUDLayoutShortcuts {
             if (this.AgentHudLayout == null || this.HudLayoutScreen == null) return;
 
             // Depending on the keyboard action, execute the corresponding operation
+            HudElementData? changedElement = null;
             switch (keyboardAction) {
                 case KeyboardAction.Copy:
                     HandleCopyAction(this.HudLayoutScreen);
                     break;
                 case KeyboardAction.Paste:
-                    HandlePasteAction(this.HudLayoutScreen, this.AgentHudLayout);
+                    changedElement = HandlePasteAction(this.HudLayoutScreen, this.AgentHudLayout);
                     break;
                 case KeyboardAction.Undo:
-                    HandleUndoAction(this.HudLayoutScreen, this.AgentHudLayout);
+                    changedElement = HandleUndoAction(this.HudLayoutScreen, this.AgentHudLayout);
                     break;
                 case KeyboardAction.Redo:
-                    HandleRedoAction(this.HudLayoutScreen, this.AgentHudLayout);
+                    changedElement = HandleRedoAction(this.HudLayoutScreen, this.AgentHudLayout);
                     break;
             }
-        }
 
+            // Update previousElements if a change was made
+            if (changedElement != null) {
+                this.Debug.Log(this.Log.Debug, $"Changed Element: {changedElement}");
+                HudElementData? changedPreviousElement = null;
+                previousElements.TryGetValue(changedElement.ElementId, out changedPreviousElement);
+                previousElements[changedElement.ElementId] = changedElement;
+            }
+        }
         /// <summary>
         /// Copy the position of the selected element to the clipboard. 
         /// </summary>
@@ -373,19 +405,19 @@ namespace HUDLayoutShortcuts {
         /// </summary>
         /// <param name="hudLayoutScreen"></param>
         /// <param name="agentHudLayout"></param>
-        private unsafe void HandlePasteAction(AddonHudLayoutScreen* hudLayoutScreen, AgentHUDLayout* agentHudLayout) {
+        private unsafe HudElementData? HandlePasteAction(AddonHudLayoutScreen* hudLayoutScreen, AgentHUDLayout* agentHudLayout) {
             // Get the currently selected element, abort if none is selected
             AtkResNode* selectedNode = Utils.GetCollisionNodeByIndex(hudLayoutScreen, 0);
             if (selectedNode == null) {
                 this.Log.Debug($"No element selected.");
-                return;
+                return null;
             }
 
             // Get the clipboard text
             string clipboardText = ImGui.GetClipboardText();
             if (clipboardText == null) {
                 this.Log.Debug($"Clipboard is empty.");
-                return;
+                return null;
             }
 
             // Parse the clipboard text to a HudElementData object
@@ -394,11 +426,11 @@ namespace HUDLayoutShortcuts {
                 parsedData = JsonSerializer.Deserialize<HudElementData>(clipboardText);
             } catch (Exception e) {
                 this.Log.Warning($"Clipboard data could not be parsed: '{clipboardText}'");
-                return;
+                return null;
             }
             if (parsedData == null) {
                 this.Log.Warning($"Clipboard data could not be parsed. '{clipboardText}'");
-                return;
+                return null;
             }
             this.Debug.Log(this.Log.Debug, $"Parsed Clipboard: {parsedData}");
 
@@ -420,6 +452,7 @@ namespace HUDLayoutShortcuts {
             Utils.SendChangeEvent(agentHudLayout);
 
             this.Log.Debug($"Pasted position to selected element: {previousState.ResNodeDisplayName} ({previousState.PosX}, {previousState.PosY}) -> ({parsedData.PosX}, {parsedData.PosY})");
+            return parsedData;
         }
 
         /// <summary>
@@ -427,12 +460,12 @@ namespace HUDLayoutShortcuts {
         /// </summary>
         /// <param name="hudLayoutScreen"></param>
         /// <param name="agentHudLayout"></param>
-        private unsafe void HandleUndoAction(AddonHudLayoutScreen* hudLayoutScreen, AgentHUDLayout* agentHudLayout) {
+        private unsafe HudElementData? HandleUndoAction(AddonHudLayoutScreen* hudLayoutScreen, AgentHUDLayout* agentHudLayout) {
             // Get the last added action from the undo history
             (HudElementData? oldState, HudElementData? newState) = this.HudHistoryManager.PeekUndoAction(Utils.GetCurrentHudLayoutIndex(this));
             if (oldState == null || newState == null) {
                 this.Log.Debug($"Nothing to undo.");
-                return;
+                return null;
             }
 
             // TODO: Check if newState is the same as the current state of the element? 
@@ -441,7 +474,7 @@ namespace HUDLayoutShortcuts {
             (nint undoNodePtr, uint undoNodeId) = Utils.FindHudResnodeByName(hudLayoutScreen, oldState.ResNodeDisplayName);
             if (undoNodePtr == nint.Zero) {
                 this.Log.Warning($"Could not find node with name '{oldState.ResNodeDisplayName}'");
-                return;
+                return null;
             }
             AtkResNode* undoNode = (AtkResNode*)undoNodePtr;
 
@@ -459,6 +492,8 @@ namespace HUDLayoutShortcuts {
             Utils.SendChangeEvent(agentHudLayout);
 
             this.Log.Debug($"Undone last operation: Moved '{undoNodeState.ResNodeDisplayName}' from ({undoNodeState.PosX}, {undoNodeState.PosY}) back to ({oldState.PosX}, {oldState.PosY})");
+
+            return oldState;
         }
 
         /// <summary>
@@ -466,12 +501,12 @@ namespace HUDLayoutShortcuts {
         /// </summary>
         /// <param name="hudLayoutScreen"></param>
         /// <param name="agentHudLayout"></param>
-        private unsafe void HandleRedoAction(AddonHudLayoutScreen* hudLayoutScreen, AgentHUDLayout* agentHudLayout) {
+        private unsafe HudElementData? HandleRedoAction(AddonHudLayoutScreen* hudLayoutScreen, AgentHUDLayout* agentHudLayout) {
             // Get the last added action from the redo history
             (HudElementData? oldState, HudElementData? newState) = this.HudHistoryManager.PeekRedoAction(Utils.GetCurrentHudLayoutIndex(this));  
             if (oldState == null || newState == null) {
                 this.Log.Debug($"Nothing to redo.");
-                return;
+                return null;
             }
             
             // TODO: Check if oldState is the same as the current state of the element? 
@@ -480,7 +515,7 @@ namespace HUDLayoutShortcuts {
             (nint redoNodePtr, uint redoNodeId) = Utils.FindHudResnodeByName(hudLayoutScreen, newState.ResNodeDisplayName);
             if (redoNodePtr == nint.Zero) {
                 this.Log.Warning($"Could not find node with name '{newState.ResNodeDisplayName}'");
-                return;
+                return null;
             }
             AtkResNode* redoNode = (AtkResNode*)redoNodePtr;
             HudElementData redoNodeState = new HudElementData(redoNode);
@@ -497,6 +532,8 @@ namespace HUDLayoutShortcuts {
             Utils.SendChangeEvent(agentHudLayout);
 
             this.Log.Debug($"Redone last operation: Moved '{redoNodeState.ResNodeDisplayName}' again from ({redoNodeState.PosX}, {redoNodeState.PosY}) to ({newState.PosX}, {newState.PosY})");
+
+            return newState;
         }
 
         public void Dispose() {
@@ -517,5 +554,51 @@ namespace HUDLayoutShortcuts {
         private void DrawUI() => WindowSystem.Draw();
 
         public void ToggleConfigUI() => ConfigWindow.Toggle();
+
+
+        // ==== Logic for periodically checking for changes
+        // TODO: reset when mouse is used to move elements / or rather check if moved, then reset, so treat as elapsed timer
+        // TODO: how to not count redo as change? -> Adjust previousElements when any other change is made
+
+        private Dictionary<int, HudElementData> previousElements = new();
+
+        private unsafe void OnElementCheckTimerElapsed(object? sender, ElapsedEventArgs e) {
+            if (this.AgentHudLayout == null || this.HudLayoutScreen == null) return;
+            this.Debug.Log(this.Log.Debug, "Checking for element changes.");
+
+            var currentElements = GetCurrentElements();
+
+            var changedElements = new List<HudElementData>();
+            foreach (var elementData in currentElements) {
+                if (previousElements.TryGetValue(elementData.Key, out var previousData)) {
+                    if (HasPositionChanged(previousData, elementData.Value)) {
+                        HudHistoryManager.AddUndoAction(Utils.GetCurrentHudLayoutIndex(this), previousData, elementData.Value);
+                        changedElements.Add(elementData.Value);
+                    }
+                }
+                previousElements[elementData.Key] = elementData.Value;
+            }
+            if (changedElements.Count > 0)
+                this.Debug.PrettyPrintList(changedElements, "Changed Elements");
+        }
+
+        private unsafe Dictionary<int, HudElementData> GetCurrentElements() {
+            var elements = new Dictionary<int, HudElementData>();
+
+            for (int i = 0; i < this.HudLayoutScreen->CollisionNodeListCount; i++) {
+                var resNode = this.HudLayoutScreen->CollisionNodeList[i];
+                var elementData = new HudElementData(resNode);
+                elements[elementData.ElementId] = elementData;
+            }
+
+            return elements;
+        }
+
+        private unsafe bool HasPositionChanged(HudElementData previousData, HudElementData currentData) {
+            return previousData.PosX != currentData.PosX || previousData.PosY != currentData.PosY;
+        }
     }
+
+
+
 }
