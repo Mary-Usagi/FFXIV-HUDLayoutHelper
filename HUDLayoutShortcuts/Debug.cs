@@ -6,9 +6,9 @@ using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
 using System.Collections.Generic;
 
-namespace HudCopyPaste {
+namespace HUDLayoutShortcuts {
     /// <summary>
-    /// Provides debugging functionality for the HudCopyPaste plugin.
+    /// Provides debugging functionality for the HUDLayoutShortcuts plugin.
     /// </summary>
     public sealed class Debug : IDisposable {
         private Plugin Plugin { get; }

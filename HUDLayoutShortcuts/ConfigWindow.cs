@@ -3,13 +3,13 @@ using ImGuiNET;
 using System;
 using System.Numerics;
 
-namespace HudCopyPaste;
+namespace HUDLayoutShortcuts;
 
 public class ConfigWindow : Window, IDisposable {
     private Plugin Plugin;
     private Configuration Configuration;
 
-    public ConfigWindow(Plugin plugin) : base("Hud Copy Paste Controls"){
+    public ConfigWindow(Plugin plugin) : base("HUD Layout Shortcuts Settings"){
         Flags = ImGuiWindowFlags.AlwaysUseWindowPadding;
 
         SizeConstraints = new WindowSizeConstraints {

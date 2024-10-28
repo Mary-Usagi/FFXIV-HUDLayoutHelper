@@ -14,14 +14,14 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 
-namespace HudCopyPaste {
+namespace HUDLayoutShortcuts {
     public sealed class Plugin : IDalamudPlugin {
         public bool DEBUG = true;
 
-        public string Name => "HudCopyPaste";
-        private const string CommandName = "/hudcp";
+        public string Name => "HUDLayoutShortcuts";
+        private const string CommandName = "/hudshortcuts";
 
-        public readonly WindowSystem WindowSystem = new("HudCopyPaste");
+        public readonly WindowSystem WindowSystem = new("HUDLayoutShortcuts");
         public Configuration Configuration { get; init; }
         private ConfigWindow ConfigWindow { get; init; }
 
@@ -100,8 +100,6 @@ namespace HudCopyPaste {
             // Listen for mouse events to track manual element movements for undo/redo
             this.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", HandleMouseDownEvent);
             this.AddonLifecycle.RegisterListener(AddonEvent.PostReceiveEvent, "_HudLayoutScreen", HandleMouseUpEvent);
-
-            // TODO: maybe find a better name for the Plugin, as its functionality is not only copy/paste anymore 
 
             // TODO: Fix history for other ways of moving elements, e.g. by using the arrow keys? 
             // TODO: Maybe save all newly moved elements every X seconds? 

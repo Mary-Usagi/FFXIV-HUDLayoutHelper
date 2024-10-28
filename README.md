@@ -1,4 +1,4 @@
-# HudCopyPaste
+# HUDLayoutShortcuts
 
 A Dalamud Plugin for FFXIV. 
 

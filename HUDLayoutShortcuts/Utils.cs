@@ -5,9 +5,9 @@ using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
-using static HudCopyPaste.Plugin;
+using static HUDLayoutShortcuts.Plugin;
 
-namespace HudCopyPaste {
+namespace HUDLayoutShortcuts {
     internal class Utils {
         /// <summary>
         /// Finds a HUD resource node by name.

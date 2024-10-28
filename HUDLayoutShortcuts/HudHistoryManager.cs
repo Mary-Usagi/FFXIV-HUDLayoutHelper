@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HudCopyPaste {
+namespace HUDLayoutShortcuts {
     internal class HudElementAction {
         public HudElementData PreviousState { get; }
         public HudElementData NewState { get; }

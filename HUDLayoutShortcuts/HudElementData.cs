@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Text.Json;
 
-namespace HudCopyPaste {
+namespace HUDLayoutShortcuts {
     /// <summary>
     /// Represents data for a HUD element.
     /// </summary>
