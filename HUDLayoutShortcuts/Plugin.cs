@@ -102,12 +102,13 @@ namespace HUDLayoutShortcuts {
             this.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", HandleMouseDownEvent);
             this.AddonLifecycle.RegisterListener(AddonEvent.PostReceiveEvent, "_HudLayoutScreen", HandleMouseUpEvent);
 
-            // TODO: Fix history for other ways of moving elements, e.g. by using the arrow keys? 
-            // TODO: Maybe save all newly moved elements every X seconds? -> Done 
-            //      TODO: Check once at the beginning, afterwards wait for some listener to trigger the check (but still only every X seconds)
-            //      TODO: also do when changing the hudlayout nr. ! 
+            // For all other changes, track all element positions
+            // TODO: Does it work for controller? 
+            // TODO: add check for hudlayout change and update previousElements ! 
             this.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", HandleKeyboardMoveEvent);
+
             // TODO: What should happen when the Hud Layout was closed with unsaved changes? 
+            //    -> Should probably reset all unsaved changes (history) which needs a way to detect if it was saved 
         }
 
         // SETUP START
