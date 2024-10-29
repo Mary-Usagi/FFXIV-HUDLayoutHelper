@@ -17,7 +17,7 @@ using System.Timers;
 
 namespace HUDLayoutShortcuts {
     public sealed class Plugin : IDalamudPlugin {
-        public bool DEBUG = true;
+        public bool DEBUG = false;
 
         public string Name => "HUDLayoutShortcuts";
         private const string CommandName = "/hudshortcuts";
@@ -97,18 +97,6 @@ namespace HUDLayoutShortcuts {
                 this.Debug.Log(this.Log.Debug, "HudLayoutScreen finalize.");
                 this.removeOnUpdateCallback();
             });
-
-            // Listen for mouse events to track manual element movements for undo/redo
-            this.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", HandleMouseDownEvent);
-            this.AddonLifecycle.RegisterListener(AddonEvent.PostReceiveEvent, "_HudLayoutScreen", HandleMouseUpEvent);
-
-            // For all other changes, track all element positions
-            // TODO: Does it work for controller? 
-            // TODO: add check for hudlayout change and update previousElements ! 
-            this.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", HandleKeyboardMoveEvent);
-
-            // TODO: What should happen when the Hud Layout was closed with unsaved changes? 
-            //    -> Should probably reset all unsaved changes (history) which needs a way to detect if it was saved 
         }
 
         // SETUP START
@@ -137,22 +125,48 @@ namespace HUDLayoutShortcuts {
 
         private void addOnUpdateCallback() {
             if (callbackAdded) return;
-            this.Framework.Update += HandleKeyboardShortcuts;
+            // Gets the needed UI Addons
             InitializeHudLayoutAddons();
+
+            // Listen for mouse events to track manual element movements for undo/redo
+            this.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", HandleMouseDownEvent);
+            this.AddonLifecycle.RegisterListener(AddonEvent.PostReceiveEvent, "_HudLayoutScreen", HandleMouseUpEvent);
+
+            // For all other changes, track all element positions
+            this.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", HandleKeyboardMoveEvent);
+            this.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutWindow", HandleControllerMoveEvent);
+
+            // Add a check for keyboard shortcuts to the update loop
+            this.Framework.Update += HandleKeyboardShortcuts;
 
             // Add a check for element changes to the update loop
             previousHudLayoutIndexElements.Clear();
             for (int i = 0; i < this.HudHistoryManager.HudLayoutCount; i++) {
                 previousHudLayoutIndexElements.Add(new Dictionary<int, HudElementData>());
             }
+
             UpdatePreviousElements();
             this.Framework.Update += PerformScheduledElementChangeCheck;
+
+            this.Framework.Update += OnUpdate;
 
             callbackAdded = true;
         }
         private void removeOnUpdateCallback() {
+            // Remove unsaved history if HUD is closed (instead of layout changed) with unsaved changes
+            this.HudHistoryManager.RewindAndClearHistory(this.currentHudLayoutIndex);
+
+            // Remove all event listeners and callbacks
             this.Framework.Update -= HandleKeyboardShortcuts;
             this.Framework.Update -= PerformScheduledElementChangeCheck;
+            this.Framework.Update -= OnUpdate;
+
+            this.AddonLifecycle.UnregisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen");
+            this.AddonLifecycle.UnregisterListener(AddonEvent.PostReceiveEvent, "_HudLayoutScreen");
+
+            this.AddonLifecycle.UnregisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutWindow");
+            this.AddonLifecycle.UnregisterListener(AddonEvent.PostReceiveEvent, "_HudLayoutWindow");
+
             previousHudLayoutIndexElements.Clear();
 
             ClearHudLayoutAddons();
@@ -248,7 +262,7 @@ namespace HUDLayoutShortcuts {
             }
 
             // Save the current state of the selected element for undo operations
-            this.Log.Debug($"User moved element: {mouseDownTarget.PrettyPrint()} -> ({newState.PosX}, {newState.PosY})");
+            this.Log.Debug($"User moved: {mouseDownTarget.PrettyPrint()} -> ({newState.PosX}, {newState.PosY})");
             this.HudHistoryManager.AddUndoAction(Utils.GetCurrentHudLayoutIndex(this), mouseDownTarget, newState);
 
             // Update previousElements
@@ -489,7 +503,7 @@ namespace HUDLayoutShortcuts {
             // Send Event to HudLayout to inform about a change 
             Utils.SendChangeEvent(agentHudLayout);
 
-            this.Log.Debug($"Undone last operation: Moved '{undoNodeState.ResNodeDisplayName}' from ({undoNodeState.PosX}, {undoNodeState.PosY}) back to ({oldState.PosX}, {oldState.PosY})");
+            this.Log.Debug($"Undo: Moved '{undoNodeState.ResNodeDisplayName}' from ({undoNodeState.PosX}, {undoNodeState.PosY}) back to ({oldState.PosX}, {oldState.PosY})");
 
             return oldState;
         }
@@ -529,7 +543,7 @@ namespace HUDLayoutShortcuts {
             // Send Event to HudLayout to inform about a change 
             Utils.SendChangeEvent(agentHudLayout);
 
-            this.Log.Debug($"Redone last operation: Moved '{redoNodeState.ResNodeDisplayName}' again from ({redoNodeState.PosX}, {redoNodeState.PosY}) to ({newState.PosX}, {newState.PosY})");
+            this.Log.Debug($"Redo: Moved '{redoNodeState.ResNodeDisplayName}' again from ({redoNodeState.PosX}, {redoNodeState.PosY}) to ({newState.PosX}, {newState.PosY})");
 
             return newState;
         }
@@ -555,10 +569,48 @@ namespace HUDLayoutShortcuts {
 
 
         // ==== Logic for periodically checking for changes
-        // TODO: reset when mouse is used to move elements / or rather check if moved, then reset, so treat as elapsed timer
-        // TODO: how to not count redo as change? -> Adjust previousElements when any other change is made
-        // TODO: complete
+        private int currentHudLayoutIndex = -1;
+        private bool currentNeedToSave = false;
+        private unsafe void OnUpdate(IFramework framework) {
+            if (this.AgentHudLayout == null || this.HudLayoutScreen == null) return;
 
+            bool hudLayoutIndex_change = false;
+            bool needToSave_change = false;
+
+            int currentHudLayoutIndex_backup = this.currentHudLayoutIndex;
+            bool needToSave_backup = this.currentNeedToSave;
+
+            // Check if HUD Layout index has changed
+            int hudLayoutIndex = Utils.GetCurrentHudLayoutIndex(this, false);
+            if (hudLayoutIndex != this.currentHudLayoutIndex) {
+                hudLayoutIndex_change = true;
+                this.Debug.Log(this.Log.Debug, $"HUD Layout Index changed: {hudLayoutIndex}");
+                this.currentHudLayoutIndex = hudLayoutIndex;
+                UpdatePreviousElements();
+            }
+
+            // Check flag if HUD Layout needs to be saved
+            bool needToSave = this.AgentHudLayout->NeedToSave;
+            if (needToSave != currentNeedToSave) {
+                needToSave_change = true;
+                this.Debug.Log(this.Log.Debug, $"HUD Layout needs to be saved changed to: {needToSave}");
+                this.currentNeedToSave = needToSave;
+            }
+            // Reset undo and redo history if HUD Layout was closed with unsaved changes
+            // TODO: okay like this? 
+            if (needToSave_change && !needToSave && hudLayoutIndex_change) {
+                this.Debug.Log(this.Log.Debug, $"HUD Layout changed without saving.");
+                this.HudHistoryManager.RewindAndClearHistory(currentHudLayoutIndex_backup);
+            }
+
+            // Mark history as saved when HUD Layout is saved
+            if (needToSave_change && !needToSave && !hudLayoutIndex_change) {
+                this.Debug.Log(this.Log.Debug, $"HUD Layout was saved.");
+                this.HudHistoryManager.MarkHistoryAsSaved(currentHudLayoutIndex_backup);
+            }
+        }
+        
+        // TODO: everything works? 
         private int LastKeyboardEvent = 0;
         private int LastChangeCheck = 0;
         private int LastChangeCHeckHudLayoutIndex = -1;
@@ -576,13 +628,22 @@ namespace HUDLayoutShortcuts {
             }
 
             LastKeyboardEvent = Environment.TickCount;
-
-            // Only check for changes every X ms 
-            //if (Environment.TickCount - LastChangeCheck < ChangeCheckInterval) return;
-            //PerformElementChangeCheck();
-            //LastChangeCheck = Environment.TickCount;
-            //this.Debug.Log(this.Log.Debug, $"Keyboard Event: {receiveEventArgs.AtkEventType}");
         }
+
+        private unsafe void HandleControllerMoveEvent(AddonEvent type, AddonArgs args) {
+            if (args is not AddonReceiveEventArgs receiveEventArgs) return;
+            if (receiveEventArgs.AtkEventType != 15) // && (AtkEventType)receiveEventArgs.AtkEventType != AtkEventType.InputReceived) 
+                return;
+            if (receiveEventArgs.AtkEvent == nint.Zero) return;
+
+            if (LastChangeCHeckHudLayoutIndex != Utils.GetCurrentHudLayoutIndex(this, false)) {
+                UpdatePreviousElements();
+                LastChangeCHeckHudLayoutIndex = Utils.GetCurrentHudLayoutIndex(this);
+            }
+
+            LastKeyboardEvent = Environment.TickCount;
+        }
+
 
         private unsafe void PerformScheduledElementChangeCheck(IFramework framework) {
             if (LastKeyboardEvent > LastChangeCheck && Environment.TickCount - LastKeyboardEvent > ChangeCheckInterval) {
@@ -594,6 +655,7 @@ namespace HUDLayoutShortcuts {
 
 
         private List<Dictionary<int, HudElementData>> previousHudLayoutIndexElements = new();
+        private int switch_on;
 
         private unsafe void PerformElementChangeCheck() {
             if (this.AgentHudLayout == null || this.HudLayoutScreen == null) return;
@@ -609,6 +671,7 @@ namespace HUDLayoutShortcuts {
                     if (HasPositionChanged(previousData, elementData.Value)) {
                         HudHistoryManager.AddUndoAction(Utils.GetCurrentHudLayoutIndex(this, false), previousData, elementData.Value);
                         changedElements.Add(elementData.Value);
+                        this.Log.Debug($"User moved: {previousData.PrettyPrint()} -> ({elementData.Value.PosX}, {elementData.Value.PosY})");
                     }
                 }
                 previousElements[elementData.Key] = elementData.Value;
