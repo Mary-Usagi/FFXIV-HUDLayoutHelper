@@ -207,7 +207,7 @@ namespace HUDLayoutShortcuts {
 
         private bool HudLayoutExists(int hudLayoutIndex) {
             if (hudLayoutIndex < 0 || hudLayoutIndex >= HudLayoutCount) {
-                Plugin.Log.Warning("Invalid HUD Layout index.");
+                Plugin.Log.Warning($"Invalid HUD Layout index: {hudLayoutIndex}");
                 throw new ArgumentOutOfRangeException(nameof(hudLayoutIndex));
             }
             return true;

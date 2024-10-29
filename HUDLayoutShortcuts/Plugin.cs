@@ -95,6 +95,8 @@ namespace HUDLayoutShortcuts {
 
             this.AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, "_HudLayoutScreen", (type, args) => {
                 this.Debug.Log(this.Log.Debug, "HudLayoutScreen finalize.");
+                // Remove unsaved history if HUD is closed (instead of layout changed) with unsaved changes
+                this.HudHistoryManager.RewindAndClearHistory(this.currentHudLayoutIndex);
                 this.removeOnUpdateCallback();
             });
         }
@@ -153,9 +155,6 @@ namespace HUDLayoutShortcuts {
             callbackAdded = true;
         }
         private void removeOnUpdateCallback() {
-            // Remove unsaved history if HUD is closed (instead of layout changed) with unsaved changes
-            this.HudHistoryManager.RewindAndClearHistory(this.currentHudLayoutIndex);
-
             // Remove all event listeners and callbacks
             this.Framework.Update -= HandleKeyboardShortcuts;
             this.Framework.Update -= PerformScheduledElementChangeCheck;
