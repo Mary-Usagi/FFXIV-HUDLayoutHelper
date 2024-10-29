@@ -50,13 +50,13 @@ namespace HUDLayoutShortcuts {
                 // AtkEventType.MouseOut,
                 // AtkEventType.MouseOver,
                 // AtkEventType.MouseDown,
-                // AtkEventType.MouseUp
-                 //AtkEventType.InputReceived
+                // AtkEventType.MouseUp,
+                // AtkEventType.InputReceived
             };
 
             var handledByteEventList = new List<byte> {
                 // Uncomment the following lines to handle specific byte events
-                //13, 
+                //13,
                 //15
             };
 
