@@ -73,10 +73,11 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.Columns(2, $"##Columns {hudLayout}", true);
         ImGui.Text("Undo History");
         // Table representing the current state of the undo history
-        ImGui.BeginTable($"##Table2 {hudLayout}", 3, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.PadOuterX | ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.SizingFixedFit);
+        ImGui.BeginTable($"##Table2 {hudLayout}", 4, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.PadOuterX | ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.SizingFixedFit);
         ImGui.TableSetupColumn($"##Column3 {hudLayout}", ImGuiTableColumnFlags.WidthFixed, 25f);
         ImGui.TableSetupColumn($"##Column4 {hudLayout}", ImGuiTableColumnFlags.WidthFixed, 100f);
         ImGui.TableSetupColumn($"##Column5 {hudLayout}", ImGuiTableColumnFlags.WidthFixed, 190f);
+        ImGui.TableSetupColumn($"##Column5.1 {hudLayout}", ImGuiTableColumnFlags.WidthFixed, 50f);
 
         ImGui.TableNextColumn();
         ImGui.TableHeader("i");
@@ -84,6 +85,8 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.TableHeader("Name");
         ImGui.TableNextColumn();
         ImGui.TableHeader("Position");
+        ImGui.TableNextColumn();
+        ImGui.TableHeader("Saved");
 
         var undoHistory = Plugin.HudHistoryManager.undoHistory[hudLayout];
         for (var i = 0; i < undoHistory.Count; i++) {
@@ -93,10 +96,14 @@ public class ConfigWindow : Window, IDisposable {
             ImGui.Text(undoHistory[i].PreviousState.ResNodeDisplayName);
             ImGui.TableNextColumn();
             ImGui.Text($"({undoHistory[i].PreviousState.PosX}, {undoHistory[i].PreviousState.PosY}) -> ({undoHistory[i].NewState.PosX}, {undoHistory[i].NewState.PosY})");
+            ImGui.TableNextColumn();
+            ImGui.Text(undoHistory[i].Saved ? "x" : "");
         }
         for (var i = undoHistory.Count; i < Plugin.HudHistoryManager.MaxHistorySize; i++) {
             ImGui.TableNextColumn();
             ImGui.Text(i.ToString());
+            ImGui.TableNextColumn();
+            ImGui.Text("");
             ImGui.TableNextColumn();
             ImGui.Text("");
             ImGui.TableNextColumn();
@@ -108,10 +115,11 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.NextColumn();
         ImGui.Text("Redo History");
         // Table representing the current state of the redo history
-        ImGui.BeginTable($"##Table3 {hudLayout}", 3, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.PadOuterX | ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.BordersInnerV);
+        ImGui.BeginTable($"##Table3 {hudLayout}", 4, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.PadOuterX | ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.BordersInnerV);
         ImGui.TableSetupColumn($"##Column6 {hudLayout}", ImGuiTableColumnFlags.WidthFixed, 25f);
         ImGui.TableSetupColumn($"##Column7 {hudLayout}", ImGuiTableColumnFlags.WidthFixed, 100f);
         ImGui.TableSetupColumn($"##Column8 {hudLayout}", ImGuiTableColumnFlags.WidthFixed, 190f);
+        ImGui.TableSetupColumn($"##Column8.1 {hudLayout}", ImGuiTableColumnFlags.WidthFixed, 50f);
 
         ImGui.TableNextColumn();
         ImGui.TableHeader("i");
@@ -119,6 +127,8 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.TableHeader("Name");
         ImGui.TableNextColumn();
         ImGui.TableHeader("Position");
+        ImGui.TableNextColumn();
+        ImGui.TableHeader("Saved");
 
         var redoHistory = Plugin.HudHistoryManager.redoHistory[hudLayout];
         for (var i = 0; i < redoHistory.Count; i++) {
@@ -128,10 +138,14 @@ public class ConfigWindow : Window, IDisposable {
             ImGui.Text(redoHistory[i].NewState.ResNodeDisplayName);
             ImGui.TableNextColumn();
             ImGui.Text($"({redoHistory[i].PreviousState.PosX}, {redoHistory[i].PreviousState.PosY}) -> ({redoHistory[i].NewState.PosX}, {redoHistory[i].NewState.PosY})");
+            ImGui.TableNextColumn();
+            ImGui.Text(redoHistory[i].Saved ? "x" : "");
         }
         for (var i = redoHistory.Count; i < Plugin.HudHistoryManager.MaxHistorySize; i++) {
             ImGui.TableNextColumn();
             ImGui.Text(i.ToString());
+            ImGui.TableNextColumn();
+            ImGui.Text("");
             ImGui.TableNextColumn();
             ImGui.Text("");
             ImGui.TableNextColumn();

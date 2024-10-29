@@ -10,9 +10,20 @@ namespace HUDLayoutShortcuts {
         public HudElementData PreviousState { get; }
         public HudElementData NewState { get; }
 
-        public HudElementAction(HudElementData previousState, HudElementData newState) {
+        public bool Saved { get; private set; } = false;
+
+        public HudElementAction(HudElementData previousState, HudElementData newState, bool saved = false) {
             PreviousState = previousState;
             NewState = newState;
+            Saved = saved;
+        }
+
+        public void SaveAction() {
+            this.Saved = true;
+        }
+
+        public void UnsaveAction() {
+            this.Saved = false;
         }
     }
 
@@ -136,7 +147,7 @@ namespace HUDLayoutShortcuts {
             undoHistory[hudLayoutIndex].RemoveAt(undoHistory[hudLayoutIndex].Count - 1);
 
             // Update the current state 
-            action = new HudElementAction(action.PreviousState, currentState);
+            action = new HudElementAction(action.PreviousState, currentState, saved: action.Saved);
             redoHistory[hudLayoutIndex].Add(action);
             return true;
         }
@@ -161,9 +172,37 @@ namespace HUDLayoutShortcuts {
             redoHistory[hudLayoutIndex].RemoveAt(redoHistory[hudLayoutIndex].Count - 1);
 
             // Update the current state
-            action = new HudElementAction(currentState, action.NewState);
+            action = new HudElementAction(currentState, action.NewState, saved: action.Saved);
             undoHistory[hudLayoutIndex].Add(action);
             return true;
+        }
+
+        public void MarkHistoryAsSaved(int hudLayoutIndex) {
+            if (!HudLayoutExists(hudLayoutIndex)) return;
+            foreach (HudElementAction action in undoHistory[hudLayoutIndex]) {
+                action.SaveAction();
+            }
+            foreach (HudElementAction action in redoHistory[hudLayoutIndex]) {
+                action.UnsaveAction();
+            }
+        }
+
+        private void RewindHistory(int hudLayoutIndex) {
+            if (!HudLayoutExists(hudLayoutIndex)) return;
+            for (int i = redoHistory[hudLayoutIndex].Count-1; i >= 0; i--) {
+                if (!redoHistory[hudLayoutIndex][i].Saved) break;
+                PerformRedo(hudLayoutIndex, redoHistory[hudLayoutIndex][i].NewState);
+            }
+        }
+        public void RewindAndClearHistory(int hudLayoutIndex) {
+            if (!HudLayoutExists(hudLayoutIndex)) return;
+            RewindHistory(hudLayoutIndex);
+            redoHistory[hudLayoutIndex].Clear();
+
+            for (int i = undoHistory[hudLayoutIndex].Count-1; i >= 0; i--) {
+                if (undoHistory[hudLayoutIndex][i].Saved) break;
+                undoHistory[hudLayoutIndex].RemoveAt(i);
+            }
         }
 
         private bool HudLayoutExists(int hudLayoutIndex) {
