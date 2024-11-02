@@ -99,6 +99,8 @@ namespace HUDLayoutShortcuts {
                 this.HudHistoryManager.RewindAndClearHistory(this.currentHudLayoutIndex);
                 this.removeOnUpdateCallback();
             });
+
+            // TODO: Maybe when not saving, put unsaved undos into redo? 
         }
 
         // SETUP START
@@ -435,7 +437,7 @@ namespace HUDLayoutShortcuts {
             HudElementData? parsedData = null;
             try {
                 parsedData = JsonSerializer.Deserialize<HudElementData>(clipboardText);
-            } catch (Exception e) {
+            } catch {
                 this.Log.Warning($"Clipboard data could not be parsed: '{clipboardText}'");
                 return null;
             }
@@ -654,7 +656,6 @@ namespace HUDLayoutShortcuts {
 
 
         private List<Dictionary<int, HudElementData>> previousHudLayoutIndexElements = new();
-        private int switch_on;
 
         private unsafe void PerformElementChangeCheck() {
             if (this.AgentHudLayout == null || this.HudLayoutScreen == null) return;
