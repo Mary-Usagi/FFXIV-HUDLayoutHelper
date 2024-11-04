@@ -23,9 +23,9 @@ public class ConfigWindow : Window, IDisposable {
 
     public void Dispose() { }
 
-    private string[][] keybindDescriptions = [
-        ["Ctrl + C", "Copy selected HUD element"],
-        ["Ctrl + V", "Paste copied HUD element"],
+    private string[][] KeybindDescriptions = [
+        ["Ctrl + C", "Copy position of selected HUD element"],
+        ["Ctrl + V", "Paste copied position to selected HUD element"],
         ["Ctrl + Z", "Undo last action"],
         ["Ctrl + Y", "Redo last action"]
     ];
@@ -235,10 +235,10 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.TableNextColumn();
         ImGui.TableHeader("Description");
 
-        foreach (var keybind in keybindDescriptions) {
+        foreach (var keybind in KeybindDescriptions) {
             for (var i = 0; i < keybind.Length; i++) {
                 ImGui.TableNextColumn();
-                ImGui.Text(keybind[i]);
+                ImGui.TextWrapped(keybind[i]);
             }
         }
         ImGui.EndTable();
