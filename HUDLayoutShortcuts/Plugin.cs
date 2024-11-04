@@ -96,11 +96,12 @@ namespace HUDLayoutShortcuts {
             this.AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, "_HudLayoutScreen", (type, args) => {
                 this.Debug.Log(this.Log.Debug, "HudLayoutScreen finalize.");
                 // Remove unsaved history if HUD is closed (instead of layout changed) with unsaved changes
-                this.HudHistoryManager.RewindAndClearHistory(this.currentHudLayoutIndex);
+                this.HudHistoryManager.RewindHistoryAndAddToRedo(this.currentHudLayoutIndex);
                 this.removeOnUpdateCallback();
             });
 
-            // TODO: Maybe when not saving, put unsaved undos into redo? 
+            // TODO: Maybe when not saving, put unsaved undos into redo? -> Done
+            // TODO: check rewind logic for other redo strategies
         }
 
         // SETUP START
@@ -601,7 +602,7 @@ namespace HUDLayoutShortcuts {
             // TODO: okay like this? 
             if (needToSave_change && !needToSave && hudLayoutIndex_change) {
                 this.Debug.Log(this.Log.Debug, $"HUD Layout changed without saving.");
-                this.HudHistoryManager.RewindAndClearHistory(currentHudLayoutIndex_backup);
+                this.HudHistoryManager.RewindHistoryAndAddToRedo(currentHudLayoutIndex_backup);
             }
 
             // Mark history as saved when HUD Layout is saved

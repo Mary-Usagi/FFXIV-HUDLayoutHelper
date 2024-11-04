@@ -194,13 +194,36 @@ namespace HUDLayoutShortcuts {
                 PerformRedo(hudLayoutIndex, redoHistory[hudLayoutIndex][i].NewState);
             }
         }
+
+        /// <summary>
+        /// Rewinds the history and clears all unsaved actions from the redo and undo history.
+        /// </summary>
+        /// <param name="hudLayoutIndex">The index of the HUD layout.</param>
         public void RewindAndClearHistory(int hudLayoutIndex) {
             if (!HudLayoutExists(hudLayoutIndex)) return;
             RewindHistory(hudLayoutIndex);
             redoHistory[hudLayoutIndex].Clear();
 
+            // Remove all unsaved actions from the undo history
             for (int i = undoHistory[hudLayoutIndex].Count-1; i >= 0; i--) {
                 if (undoHistory[hudLayoutIndex][i].Saved) break;
+                undoHistory[hudLayoutIndex].RemoveAt(i);
+            }
+        }
+
+        /// <summary>
+        /// Rewinds the history and moves all unsaved actions to the redo history.
+        /// </summary>
+        /// <param name="hudLayoutIndex">The index of the HUD layout.</param>
+        public void RewindHistoryAndAddToRedo(int hudLayoutIndex) {
+            // Different to RewindAndClearHistory, this makes sure all unsaved actions are moved to the redo history
+            if (!HudLayoutExists(hudLayoutIndex)) return;
+            RewindHistory(hudLayoutIndex);
+
+            // Move all unsaved actions to the redo history
+            for (int i = undoHistory[hudLayoutIndex].Count - 1; i >= 0; i--) {
+                if (undoHistory[hudLayoutIndex][i].Saved) break;
+                redoHistory[hudLayoutIndex].Add(undoHistory[hudLayoutIndex][i]);
                 undoHistory[hudLayoutIndex].RemoveAt(i);
             }
         }
