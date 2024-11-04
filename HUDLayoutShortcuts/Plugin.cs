@@ -102,6 +102,7 @@ namespace HUDLayoutShortcuts {
 
             // TODO: Maybe when not saving, put unsaved undos into redo? -> Done
             // TODO: check rewind logic for other redo strategies
+            // TODO: for 'Open' for the pluign interface, open to the 'About' Tab of the Settings
         }
 
         // SETUP START
