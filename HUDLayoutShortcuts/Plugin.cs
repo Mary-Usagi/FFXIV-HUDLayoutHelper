@@ -101,8 +101,8 @@ namespace HUDLayoutShortcuts {
             });
 
             // TODO: Maybe when not saving, put unsaved undos into redo? -> Done
+            // TODO: Maybe instead of moving unsaved todos into redo, save another undo that contains all of the changed elements at once? 
             // TODO: check rewind logic for other redo strategies
-            // TODO: for 'Open' for the pluign interface, open to the 'About' Tab of the Settings
         }
 
         // SETUP START
@@ -569,13 +569,13 @@ namespace HUDLayoutShortcuts {
         private void DrawUI() => WindowSystem.Draw();
 
         public void ToggleConfigUI() {
-            ConfigWindow.SetOpenTab("Settings");
+            ConfigWindow.SetSelectedTab(ConfigWindow.windowTabs.Settings);
             if (!ConfigWindow.IsOpen)
                 ConfigWindow.Toggle();
             ConfigWindow.BringToFront();
         }
         public void ToggleMainUI() {
-            ConfigWindow.SetOpenTab("Keybinds");
+            ConfigWindow.SetSelectedTab(ConfigWindow.windowTabs.Keybinds);
             if (!ConfigWindow.IsOpen)
                 ConfigWindow.Toggle();
             ConfigWindow.BringToFront();
