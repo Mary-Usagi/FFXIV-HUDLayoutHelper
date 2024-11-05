@@ -81,7 +81,7 @@ namespace HUDLayoutShortcuts {
             // This adds a button to the plugin installer entry of this plugin which allows
             // to toggle the display status of the configuration ui
             PluginInterface.UiBuilder.OpenConfigUi += ToggleConfigUI;
-            PluginInterface.UiBuilder.OpenMainUi += ToggleConfigUI;
+            PluginInterface.UiBuilder.OpenMainUi += ToggleMainUI;
 
             if (this.GameGui.GetAddonByName("_HudLayoutScreen", 1) != IntPtr.Zero) {
                 this.Debug.Log(this.Log.Debug, "HudLayoutScreen already loaded.");
@@ -568,7 +568,18 @@ namespace HUDLayoutShortcuts {
 
         private void DrawUI() => WindowSystem.Draw();
 
-        public void ToggleConfigUI() => ConfigWindow.Toggle();
+        public void ToggleConfigUI() {
+            ConfigWindow.SetOpenTab("Settings");
+            if (!ConfigWindow.IsOpen)
+                ConfigWindow.Toggle();
+            ConfigWindow.BringToFront();
+        }
+        public void ToggleMainUI() {
+            ConfigWindow.SetOpenTab("Keybinds");
+            if (!ConfigWindow.IsOpen)
+                ConfigWindow.Toggle();
+            ConfigWindow.BringToFront();
+        }
 
 
         // ==== Logic for periodically checking for changes

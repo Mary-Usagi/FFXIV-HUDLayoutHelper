@@ -1,15 +1,30 @@
 ﻿using Dalamud.Interface.Windowing;
+using Dalamud.Utility;
 using ImGuiNET;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
+using System.Runtime.InteropServices;
+using System.Text;
 
 namespace HUDLayoutShortcuts;
 
 public class ConfigWindow : Window, IDisposable {
     private Plugin Plugin;
     private Configuration Configuration;
+    private List<Tuple<string, Action>> TabActions = new List<Tuple<string, Action>>();
+
+    private string? OpenTab; 
 
     public ConfigWindow(Plugin plugin) : base("HUD Layout Shortcuts Settings"){
+        // Initialize the tab actions
+        TabActions.Add(new Tuple<string, Action>("About##TabItemAbout", DrawAbout));
+        TabActions.Add(new Tuple<string, Action>("Keybinds##TabItemKeybinds", DrawKeybinds));
+        TabActions.Add(new Tuple<string, Action>("Settings##TabItemSettings", DrawSettings));
+        TabActions.Add(new Tuple<string, Action>("Debug Info##TabItemDebug", DrawDebugInfoTab));
+        OpenTab = TabActions[0].Item1;
+
         Flags = ImGuiWindowFlags.AlwaysUseWindowPadding;
 
         SizeConstraints = new WindowSizeConstraints {
@@ -39,47 +54,73 @@ public class ConfigWindow : Window, IDisposable {
         }
     }
 
-    public override void Draw() {
-        // See: https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp
-        if (ImGui.BeginTabBar("##TabBar")) {
-            if (ImGui.BeginTabItem("Settings##TabItem1")) {
-                DrawSettings();
-                ImGui.EndTabItem();
-            }
-            if (ImGui.BeginTabItem("Keybinds##TabItem2")) {
-                DrawKeybinds();
-                ImGui.EndTabItem();
-            }
-            if (ImGui.BeginTabItem("Debug Info##TabItem3")) { 
-                if (ImGui.BeginTabBar("##TabBarHudLayouts")) {
-                    for (var i = 0; i < Plugin.HudHistoryManager.HudLayoutCount; i++) {
-                        if (ImGui.BeginTabItem($"HUD {i+1}##TabItemHudLayout{i}")) {
-                            ImGui.BeginChild($"##Child {i}", new Vector2(0, 0), false);
-                            DrawDebugInfo(i);
-                            ImGui.EndChild();
-                            ImGui.EndTabItem();
-                        }
-                    }
-                    ImGui.EndTabBar();
+
+    public unsafe static bool BeginTabItem(string label, ImGuiTabItemFlags flags) {
+        int num = 0;
+        byte* ptr;
+        if (label != null) {
+            num = Encoding.UTF8.GetByteCount(label);
+            Span<byte> span = (num <= 2048) ? stackalloc byte[num + 1] : new byte[num + 1];
+            fixed (byte* spanPtr = span) {
+                fixed (char* labelPtr = label) {
+                    Encoding.UTF8.GetBytes(labelPtr, label.Length, spanPtr, num);
                 }
-                ImGui.EndTabItem();
+                span[num] = 0;
+                ptr = spanPtr;
             }
-            if (ImGui.BeginTabItem("About##TabItem4")) {
-                DrawAbout();
-                ImGui.EndTabItem();
+        } else {
+            ptr = null;
+        }
+
+        byte* p_open2 = null;
+        byte num2 = ImGuiNative.igBeginTabItem(ptr, p_open2, flags);
+        if (num > 2048) {
+            Marshal.FreeHGlobal((IntPtr)ptr);
+        }
+
+        return num2 != 0;
+    }
+
+
+
+    public unsafe override void Draw() {
+        // See: https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp
+        if (ImGui.BeginTabBar("##TabBar", ImGuiTabBarFlags.None)) {
+            foreach (var tab in TabActions) {
+                var flags = ImGuiTabItemFlags.None;
+                if (OpenTab == tab.Item1) {
+                    flags |= ImGuiTabItemFlags.SetSelected;
+                    OpenTab = null;
+                }
+                if (BeginTabItem(tab.Item1, flags)) { 
+                    tab.Item2();
+                    ImGui.EndTabItem();
+                }
             }
             ImGui.EndTabBar();
         }
     }
 
-    internal void DrawDebugInfo(int hudLayout) {
-        ImGui.Text("Debug Information:");
-        ImGui.Separator();
-        ImGui.Text($"Current HUD Layout Index: {hudLayout}");
-        
+    internal void DrawDebugInfoTab() {
+        ImGui.TextWrapped($"Current HUD Layout Index: {Utils.GetCurrentHudLayoutIndex(this.Plugin, false)}");
+        ImGui.Spacing();
+        if (ImGui.BeginTabBar("##TabBarHudLayouts")) {
+            for (var i = 0; i < Plugin.HudHistoryManager.HudLayoutCount; i++) {
+                if (ImGui.BeginTabItem($"HUD {i + 1}##TabItemHudLayout{i}")) {
+                    ImGui.BeginChild($"##Child {i}", new Vector2(0, 0), false);
+                    DrawDebugInfo(i);
+                    ImGui.EndChild();
+                    ImGui.EndTabItem();
+                }
+            }
+            ImGui.EndTabBar();
+        }
+    }
+
+    internal void DrawDebugInfo(int hudLayout) {        
         ImGui.Spacing();
         ImGui.Columns(2, $"##Columns {hudLayout}", true);
-        ImGui.Text("Undo History");
+        ImGui.TextWrapped("Undo History");
         // Table representing the current state of the undo history
         ImGui.BeginTable($"##Table2 {hudLayout}", 4, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.PadOuterX | ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.SizingFixedFit);
         ImGui.TableSetupColumn($"##Column3 {hudLayout}", ImGuiTableColumnFlags.WidthFixed, 25f);
@@ -99,29 +140,29 @@ public class ConfigWindow : Window, IDisposable {
         var undoHistory = Plugin.HudHistoryManager.undoHistory[hudLayout];
         for (var i = 0; i < undoHistory.Count; i++) {
             ImGui.TableNextColumn();
-            ImGui.Text(i.ToString());
+            ImGui.TextWrapped(i.ToString());
             ImGui.TableNextColumn();
-            ImGui.Text(undoHistory[i].PreviousState.ResNodeDisplayName);
+            ImGui.TextWrapped(undoHistory[i].PreviousState.ResNodeDisplayName);
             ImGui.TableNextColumn();
-            ImGui.Text($"({undoHistory[i].PreviousState.PosX}, {undoHistory[i].PreviousState.PosY}) -> ({undoHistory[i].NewState.PosX}, {undoHistory[i].NewState.PosY})");
+            ImGui.TextWrapped($"({undoHistory[i].PreviousState.PosX}, {undoHistory[i].PreviousState.PosY}) -> ({undoHistory[i].NewState.PosX}, {undoHistory[i].NewState.PosY})");
             ImGui.TableNextColumn();
-            ImGui.Text(undoHistory[i].Saved ? "x" : "");
+            ImGui.TextWrapped(undoHistory[i].Saved ? "x" : "");
         }
         for (var i = undoHistory.Count; i < Plugin.HudHistoryManager.MaxHistorySize; i++) {
             ImGui.TableNextColumn();
-            ImGui.Text(i.ToString());
+            ImGui.TextWrapped(i.ToString());
             ImGui.TableNextColumn();
-            ImGui.Text("");
+            ImGui.TextWrapped("");
             ImGui.TableNextColumn();
-            ImGui.Text("");
+            ImGui.TextWrapped("");
             ImGui.TableNextColumn();
-            ImGui.Text("");
+            ImGui.TextWrapped("");
         }
         ImGui.EndTable();
         ImGui.Spacing();
 
         ImGui.NextColumn();
-        ImGui.Text("Redo History");
+        ImGui.TextWrapped("Redo History");
         // Table representing the current state of the redo history
         ImGui.BeginTable($"##Table3 {hudLayout}", 4, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.PadOuterX | ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.BordersInnerV);
         ImGui.TableSetupColumn($"##Column6 {hudLayout}", ImGuiTableColumnFlags.WidthFixed, 25f);
@@ -141,23 +182,23 @@ public class ConfigWindow : Window, IDisposable {
         var redoHistory = Plugin.HudHistoryManager.redoHistory[hudLayout];
         for (var i = 0; i < redoHistory.Count; i++) {
             ImGui.TableNextColumn();
-            ImGui.Text(i.ToString());
+            ImGui.TextWrapped(i.ToString());
             ImGui.TableNextColumn();
-            ImGui.Text(redoHistory[i].NewState.ResNodeDisplayName);
+            ImGui.TextWrapped(redoHistory[i].NewState.ResNodeDisplayName);
             ImGui.TableNextColumn();
-            ImGui.Text($"({redoHistory[i].PreviousState.PosX}, {redoHistory[i].PreviousState.PosY}) -> ({redoHistory[i].NewState.PosX}, {redoHistory[i].NewState.PosY})");
+            ImGui.TextWrapped($"({redoHistory[i].PreviousState.PosX}, {redoHistory[i].PreviousState.PosY}) -> ({redoHistory[i].NewState.PosX}, {redoHistory[i].NewState.PosY})");
             ImGui.TableNextColumn();
-            ImGui.Text(redoHistory[i].Saved ? "x" : "");
+            ImGui.TextWrapped(redoHistory[i].Saved ? "x" : "");
         }
         for (var i = redoHistory.Count; i < Plugin.HudHistoryManager.MaxHistorySize; i++) {
             ImGui.TableNextColumn();
-            ImGui.Text(i.ToString());
+            ImGui.TextWrapped(i.ToString());
             ImGui.TableNextColumn();
-            ImGui.Text("");
+            ImGui.TextWrapped("");
             ImGui.TableNextColumn();
-            ImGui.Text("");
+            ImGui.TextWrapped("");
             ImGui.TableNextColumn();
-            ImGui.Text("");
+            ImGui.TextWrapped("");
         }
         ImGui.EndTable();
         ImGui.Spacing();
@@ -171,7 +212,7 @@ public class ConfigWindow : Window, IDisposable {
 
         ImGui.Spacing();
         // Max Undo History Size
-        ImGui.Text("Max Size of Undo History:");
+        ImGui.TextWrapped("Max Size of Undo History:");
         if (ImGui.IsItemHovered()) {
             ImGui.SetTooltip("The maximum number of actions that can be undone");
         }
@@ -183,7 +224,7 @@ public class ConfigWindow : Window, IDisposable {
         }
         ImGui.Spacing();
         //ImGui.MenuItem("Strategy to apply when an action is performed after undoing");
-        ImGui.Text("Redo Strategy on Action:");
+        ImGui.TextWrapped("Redo Strategy on Action:");
         if (ImGui.IsItemHovered()) {
             ImGui.SetTooltip("Strategy to apply when an action is performed after undoing");
         }
@@ -223,7 +264,7 @@ public class ConfigWindow : Window, IDisposable {
     internal void DrawKeybinds() {
         ImGui.Spacing();
 
-        ImGui.Text(" (Only when in HUD Layout Editor)");
+        ImGui.TextWrapped("Keybinds that are available when in the HUD Layout Editor:");
         ImGui.Spacing();
 
         ImGui.BeginTable("##Table1", 2, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.PadOuterX);
@@ -245,11 +286,11 @@ public class ConfigWindow : Window, IDisposable {
     }
 
     internal void DrawAbout() {
-        ImGui.Text("About HUD Layout Shortcuts:");
+        ImGui.TextWrapped("About HUD Layout Shortcuts:");
         ImGui.Separator();
         ImGui.TextWrapped("This plugin helps manage and customize the HUD layout when being in the native HUD Layout editor of FFXIV. Use the provided keybinds to copy, paste, undo, and redo changes to HUD elements.");
         ImGui.Spacing();
-        ImGui.Text("How to Use:");
+        ImGui.TextWrapped("How to Use:");
         ImGui.BulletText("Open the native HUD Layout Editor.");
 
         ImGui.BulletText("Copy and Paste:");
@@ -274,5 +315,14 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.TextWrapped("All undo and redo histories are saved per HUD layout. You can check the debug info tab to see the current state of the histories.");
 
         ImGui.Spacing();
+    }
+
+    /**
+     * Set the tab that should be opened when the window is drawn
+     */
+    internal void SetOpenTab(string tabSubString) { 
+        var tab = TabActions.FindIndex(t => t.Item1.Contains(tabSubString));
+        if (tab != -1)
+            OpenTab = TabActions[tab].Item1;
     }
 }
