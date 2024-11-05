@@ -628,7 +628,7 @@ namespace HUDLayoutShortcuts {
         private int LastKeyboardEvent = 0;
         private int LastChangeCheck = 0;
         private int LastChangeCHeckHudLayoutIndex = -1;
-        private const int ChangeCheckInterval = 100; // ms
+        private const int ChangeCheckInterval = 200; // ms
 
         private unsafe void HandleKeyboardMoveEvent(AddonEvent type, AddonArgs args) {
             if (args is not AddonReceiveEventArgs receiveEventArgs) return;
