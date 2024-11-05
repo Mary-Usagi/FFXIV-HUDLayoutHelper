@@ -11,7 +11,7 @@ namespace HUDLayoutShortcuts {
         public int Version { get; set; } = 0;
 
         public bool IsConfigWindowMovable { get; set; } = true;
-        public int MaxUndoHistorySize { get; set; } = 50;
+        public int MaxUndoHistorySize { get; set; } = 100;
 
         public HudHistoryManager.RedoStrategy RedoActionStrategy { get; set; } = HudHistoryManager.RedoStrategy.InsertOnAction;
 

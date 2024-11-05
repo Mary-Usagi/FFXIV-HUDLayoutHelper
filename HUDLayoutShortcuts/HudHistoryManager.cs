@@ -37,7 +37,7 @@ namespace HUDLayoutShortcuts {
         internal readonly List<List<HudElementAction>> redoHistory = new();
 
         internal int HudLayoutCount { get; } = 4;
-        internal int MaxHistorySize { get; private set; } = 50;
+        internal int MaxHistorySize { get; private set; }
 
         // How to handle the redo history when a new action is added
         [Serializable]
