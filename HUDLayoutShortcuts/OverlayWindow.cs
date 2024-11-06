@@ -22,6 +22,12 @@ namespace HUDLayoutShortcuts;
 /// https://github.com/ocornut/imgui/issues/3541
 /// https://github.com/ocornut/imgui/issues/2274
 /// https://www.google.com/search?q=rgba+hex+color+picker&client=firefox-b-d&sca_esv=2ee6c9bbd1613675&biw=1920&bih=919&sxsrf=ADLYWIJksTLF2nIWdhZIH29fiqVjNxpHLQ%3A1730862043613&ei=29sqZ7-HJfyJ7NYPtoqIuAQ&ved=0ahUKEwj_4I7K28aJAxX8BNsEHTYFAkcQ4dUDCA8&uact=5&oq=rgba+hex+color+picker&gs_lp=Egxnd3Mtd2l6LXNlcnAiFXJnYmEgaGV4IGNvbG9yIHBpY2tlcjIIEAAYgAQYywEyCxAAGIAEGIYDGIoFMgsQABiABBiGAxiKBTILEAAYgAQYhgMYigUyCxAAGIAEGIYDGIoFMgsQABiABBiGAxiKBTIIEAAYgAQYogRI9QlQ4AVY_whwAXgBkAEAmAFeoAG9AqoBATS4AQPIAQD4AQGYAgSgAu4BwgIKEAAYsAMY1gQYR8ICDRAAGIAEGLADGEMYigXCAgYQABgHGB6YAwCIBgGQBgqSBwE0oAetGA&sclient=gws-wiz-serp
+/// 
+/// TODO: add toggle for guidelines etc. to settings or keybind 
+/// TODO: automatically open when HUD Layout editor is open 
+/// TODO: add setting to always show selected element guidelines 
+/// TODO: add setting to show guidelines for all elements? 
+/// TODO: rename feature. "Alignment helper"? 
 /// </summary>
 public class OverlayWindow : Window, IDisposable {
     private Plugin Plugin;
@@ -67,7 +73,7 @@ public class OverlayWindow : Window, IDisposable {
         var red_color = Color.FromArgb(255, 0, 0);
         var blue_color = Color.FromArgb(0, 0, 255);
         var green_color = Color.FromArgb(0, 255, 0);
-        var black_color = Color.FromArgb(125, 0, 0, 0); // show corners of other elements 
+        var black_color = Color.FromArgb(175, 0, 0, 0); // show corners of other elements 
         var black_color2 = Color.FromArgb(75, 0, 0, 0); 
         //var black_color = Color.FromArgb(0, 0, 0, 0); // don't show corners of other elements except matching ones
 
