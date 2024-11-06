@@ -62,14 +62,6 @@ public class OverlayWindow : Window, IDisposable {
 
 
     private class HudElementNode {
-        internal Anchor TopLeft { get; }
-        internal Anchor TopRight { get; }
-        internal Anchor BottomLeft { get; }
-        internal Anchor BottomRight { get; }
-        internal Anchor Center { get; }
-
-        internal Anchor[] Anchors { get; }
-
         internal class Anchor {
             internal Vector2 position;
             internal Color color;
@@ -82,14 +74,22 @@ public class OverlayWindow : Window, IDisposable {
             }
         }
 
+        internal Anchor TopLeft { get; }
+        internal Anchor TopRight { get; }
+        internal Anchor BottomLeft { get; }
+        internal Anchor BottomRight { get; }
+        internal Anchor Center { get; }
+
+        internal Anchor[] Anchors { get; }
+
         internal HudElementNode(
             short left, short top, 
-            ushort width, ushort height, 
+            int width, int height, 
             Color? centerColor = null, Color? cornerColor = null, 
             float centerSize = 1.5f, float cornerSize = 1.5f
         ) {
             Vector2 topLeft = new Vector2(left, top);
-            Vector2 center = topLeft + new Vector2((int)Math.Round(width / 2f), (int)Math.Round(height / 2f));
+            Vector2 center = topLeft + new Vector2(MathF.Round(width / 2f, MidpointRounding.AwayFromZero), MathF.Round(height / 2f, MidpointRounding.AwayFromZero));
 
             TopLeft = new Anchor(topLeft, cornerColor ?? black_color, cornerSize);
             TopRight = new Anchor(topLeft + new Vector2(width, 0), cornerColor ?? black_color, cornerSize);
@@ -106,6 +106,7 @@ public class OverlayWindow : Window, IDisposable {
     static Color green_color = Color.FromArgb(0, 255, 0);
     static Color black_color = Color.FromArgb(175, 0, 0, 0); 
 
+    const int MAX_DIFF = 10;
 
     /// <summary>
     ///  TODO
@@ -124,76 +125,78 @@ public class OverlayWindow : Window, IDisposable {
         if (selectedResNode == null) return;
 
         // Create a new HudElementData object with the data of the selected element
-        HudElementData selectedHudElement = new HudElementData(selectedResNode);
+        var currentElements = Plugin.previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex(Plugin)];
 
+        HudElementData selectedHudElement = new HudElementData(selectedResNode);
         HudElementNode selectedNode = new HudElementNode(
             selectedHudElement.PosX, selectedHudElement.PosY,
-            selectedHudElement.Width, selectedHudElement.Height,
+            selectedHudElement.Width-1, selectedHudElement.Height-1,
             red_color, green_color,
             2.5f, 2f
         );
 
-        // TODO: use this to compare the selected element with all others
-        var currentElements = Plugin.previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex(Plugin)];
+        // Create guide nodes for all elements except the selected one
+        List<HudElementNode> guideNodes = new List<HudElementNode>();
+        foreach (var element in currentElements) {
+            if (!element.Value.IsVisible) continue;
+            if (element.Value.ElementId == selectedHudElement.ElementId) continue;
+            guideNodes.Add(new HudElementNode(
+                element.Value.PosX, element.Value.PosY,
+                element.Value.Width-1, element.Value.Height-1
+            ));
+        }
+        HudElementNode fullScreenNode = new HudElementNode(
+            -1, -1, 
+            (int)ImGui.GetIO().DisplaySize.X, (int)ImGui.GetIO().DisplaySize.Y
+        );
+        guideNodes.Add(fullScreenNode);
 
         // Guide lines are vectors that either go horizontally or vertically from opposite corners of the window through the matching corners/nodes
-        List<Tuple<Vector2, Color>> guideLines = new List<Tuple<Vector2, Color>>();
+        // full length lines that go through the whole window
+        List<Tuple<Vector2, Color>> guideLines = new List<Tuple<Vector2, Color>>(); 
 
-        // TODO: add center of screen as reference point too! 
-        foreach (var currentHudElement in currentElements) {
-            if (!currentHudElement.Value.IsVisible) continue;
-            HudElementNode currentNode;
+        // Iterate over all guide nodes and create guideLines and modify anchors when close to anchors of the selected node
+        foreach (var currentNode in guideNodes) {
+            foreach (var anchor in currentNode.Anchors) {
+                foreach (var selectedAnchor in selectedNode.Anchors) {
+                    //Vector2 diff = Vector2.Abs(anchor.position - selectedAnchor.position);
+                    int diffX = (int)Math.Abs(anchor.position.X - selectedAnchor.position.X);
+                    int diffY = (int)Math.Abs(anchor.position.Y - selectedAnchor.position.Y);
 
-            if (currentHudElement.Value.ElementId == selectedHudElement.ElementId) {
-                currentNode = selectedNode;
-            } else {
-                currentNode = new HudElementNode(
-                    currentHudElement.Value.PosX, currentHudElement.Value.PosY,
-                    currentHudElement.Value.Width, currentHudElement.Value.Height
-                );
+                    if (diffX >= MAX_DIFF && diffY >= MAX_DIFF) continue;
 
-                foreach (var anchor in currentNode.Anchors) {
-                    foreach (var selectedAnchor in selectedNode.Anchors) {
-                        Color dimmedColor = Color.FromArgb(100, selectedAnchor.color.R, selectedAnchor.color.G, selectedAnchor.color.B);
-                        
-                        float xDiff = Math.Abs(anchor.position.X - selectedAnchor.position.X);
-                        float yDiff = Math.Abs(anchor.position.Y - selectedAnchor.position.Y);
+                    Color dimmedColor = Color.FromArgb(100, selectedAnchor.color.R, selectedAnchor.color.G, selectedAnchor.color.B);
+                    anchor.color = dimmedColor;
+                    anchor.size = selectedAnchor.size;
 
+                    if (diffX == 0 || diffY == 0) {
+                        anchor.color = selectedAnchor.color;
+                        anchor.size = selectedAnchor.size + 1;
+                    }
 
-                        if (xDiff < 10) {
-                            Vector2 horizontalLine = new Vector2(selectedAnchor.position.X, 0);
-                            if (anchor.position.X == selectedAnchor.position.X) {
-                                anchor.color = selectedAnchor.color;
-                                anchor.size = selectedAnchor.size + 1;
-                                guideLines.Add(new Tuple<Vector2, Color>(horizontalLine, selectedAnchor.color));
-                            } else {
-                                anchor.size = selectedAnchor.size;
-                                anchor.color = dimmedColor;
-                                guideLines.Add(new Tuple<Vector2, Color>(horizontalLine, dimmedColor));
-                            }
-                        }
-                        if (yDiff < 10) {
-                            Vector2 verticalLine = new Vector2(0, selectedAnchor.position.Y);
-                            if (anchor.position.Y == selectedAnchor.position.Y) {
-                                anchor.color = selectedAnchor.color;
-                                anchor.size = selectedAnchor.size + 1;
-                                guideLines.Add(new Tuple<Vector2, Color>(verticalLine, selectedAnchor.color));
-                            } else {
-                                anchor.size = selectedAnchor.size;
-                                anchor.color = dimmedColor;
-                                guideLines.Add(new Tuple<Vector2, Color>(verticalLine, dimmedColor));
-                            }
-                        }
+                    if (diffX < MAX_DIFF) {
+                        Vector2 horizontalLine = new Vector2(selectedAnchor.position.X, 0);
+                        guideLines.Add(new Tuple<Vector2, Color>(horizontalLine, anchor.color));
+                    }
+
+                    if (diffY < MAX_DIFF) {
+                        Vector2 verticalLine = new Vector2(0, selectedAnchor.position.Y);
+                        guideLines.Add(new Tuple<Vector2, Color>(verticalLine, anchor.color));
                     }
                 }
             }
-            for (int i = 0; i < currentNode.Anchors.Length; i++) {
-                imDrawListPtr.AddCircleFilled(currentNode.Anchors[i].position, currentNode.Anchors[i].size, ColorToUint(currentNode.Anchors[i].color));
+        }
+        // Draw all anchors of the guide nodes
+        guideNodes.Add(selectedNode);
+        foreach (var currentNode in guideNodes) {
+            foreach (var anchor in currentNode.Anchors) {
+                imDrawListPtr.AddCircleFilled(anchor.position, anchor.size, ColorToUint(anchor.color));
             }
         }
 
-        // Filter out duplicate guide lines
+        // Draw all guide lines
         if (guideLines.Count > 0) {
+            // Filter out duplicate guide lines
             //Plugin.Log.Debug($"Guide lines: {guideLines.Count}");
             guideLines = guideLines.Distinct().ToList();
             //Plugin.Log.Debug($"Guide lines: {guideLines.Count}");
