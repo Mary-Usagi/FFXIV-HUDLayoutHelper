@@ -25,6 +25,8 @@ namespace HUDLayoutShortcuts {
         public readonly WindowSystem WindowSystem = new("HUDLayoutShortcuts");
         public Configuration Configuration { get; init; }
         private ConfigWindow ConfigWindow { get; init; }
+        private OverlayWindow OverlayWindow { get; init; }
+        private const string OverlayCommand = "/hudoverlay";
 
         [PluginService] internal static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
         [PluginService] internal static ITextureProvider TextureProvider { get; private set; } = null!;
@@ -71,10 +73,19 @@ namespace HUDLayoutShortcuts {
 
             ConfigWindow = new ConfigWindow(this);
             WindowSystem.AddWindow(ConfigWindow);
-
             CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand) {
                 HelpMessage = "Toggle the config and debug window."
             });
+
+            // TODO: TESTING
+            OverlayWindow = new OverlayWindow(this);
+            WindowSystem.AddWindow(OverlayWindow);
+            CommandManager.AddHandler(OverlayCommand, new CommandInfo(OnOverlayCommand) {
+                HelpMessage = "Toggle the overlay window."
+            });
+            // TODO
+            OnOverlayCommand("","");
+            // TODO: TESTING END
 
             PluginInterface.UiBuilder.Draw += DrawUI;
 
@@ -559,11 +570,16 @@ namespace HUDLayoutShortcuts {
 
             WindowSystem.RemoveAllWindows();
             ConfigWindow.Dispose();
+            OverlayWindow.Dispose();
             CommandManager.RemoveHandler(CommandName);
         }
 
         private void OnCommand(string command, string args) {
-            ToggleConfigUI();
+            ConfigWindow.Toggle();
+        }
+
+        private void OnOverlayCommand(string command, string args) {
+            OverlayWindow.Toggle();
         }
 
         private void DrawUI() => WindowSystem.Draw();
@@ -668,7 +684,7 @@ namespace HUDLayoutShortcuts {
         }
 
 
-        private List<Dictionary<int, HudElementData>> previousHudLayoutIndexElements = new();
+        internal List<Dictionary<int, HudElementData>> previousHudLayoutIndexElements = new();
 
         private unsafe void PerformElementChangeCheck() {
             if (this.AgentHudLayout == null || this.HudLayoutScreen == null) return;
@@ -703,7 +719,7 @@ namespace HUDLayoutShortcuts {
             }
         }
 
-        private unsafe Dictionary<int, HudElementData> GetCurrentElements() {
+        internal unsafe Dictionary<int, HudElementData> GetCurrentElements() {
             var elements = new Dictionary<int, HudElementData>();
 
             for (int i = 0; i < this.HudLayoutScreen->CollisionNodeListCount; i++) {
