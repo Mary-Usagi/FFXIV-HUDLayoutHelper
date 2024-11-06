@@ -64,10 +64,12 @@ public class OverlayWindow : Window, IDisposable {
         if (Plugin.AgentHudLayout == null || Plugin.HudLayoutScreen == null) return;
 
 
-        var red_color = ColorToUint(Color.FromArgb(255, 0, 0));
-        var blue_color = ColorToUint(Color.FromArgb(0, 0, 255));
-        var green_color = ColorToUint(Color.FromArgb(0, 255, 0));
-        var black_color = ColorToUint(Color.FromArgb(0, 0, 0));
+        var red_color = Color.FromArgb(255, 0, 0);
+        var blue_color = Color.FromArgb(0, 0, 255);
+        var green_color = Color.FromArgb(0, 255, 0);
+        var black_color = Color.FromArgb(125, 0, 0, 0); // show corners of other elements 
+        var black_color2 = Color.FromArgb(75, 0, 0, 0); 
+        //var black_color = Color.FromArgb(0, 0, 0, 0); // don't show corners of other elements except matching ones
 
         ImDrawListPtr imDrawListPtr = ImGui.GetForegroundDrawList(ImGui.GetMainViewport());
 
@@ -78,87 +80,118 @@ public class OverlayWindow : Window, IDisposable {
         // Create a new HudElementData object with the data of the selected element
         HudElementData selectedNode = new HudElementData(selectedResNode);
         Vector2 selectedNodePos = new Vector2(selectedNode.PosX, selectedNode.PosY);
-        Vector2 selectedNodeCenter = selectedNodePos + new Vector2(selectedNode.Width / 2, selectedNode.Height / 2);
-        Vector2[] selectedNodeCorners = new Vector2[] {
+        Vector2 selectedNodeCenter = selectedNodePos + new Vector2((int)Math.Round(selectedNode.Width / 2f), (int)Math.Round(selectedNode.Height / 2f));
+        Vector2[] selectedNodeCorners = {
             selectedNodePos,
             selectedNodePos + new Vector2(selectedNode.Width, 0),
             selectedNodePos + new Vector2(0, selectedNode.Height),
-            selectedNodePos + new Vector2(selectedNode.Width, selectedNode.Height)
+            selectedNodePos + new Vector2(selectedNode.Width, selectedNode.Height),
+            selectedNodeCenter
         };
 
-        uint selectedNodeCenterColor = red_color;
-        uint[] selectedNodeCornerColors = new uint[] { green_color, green_color, green_color, green_color };
+        Color selectedNodeCenterColor = red_color;
+        Color[] selectedNodeCornerColors = { green_color, green_color, green_color, green_color, selectedNodeCenterColor };
+        float[] selectedNodeMarkerSizes = { 2.5f, 2.5f, 2.5f, 2.5f, 2f };
 
         // TODO: use this to compare the selected element with all others
         var currentElements = Plugin.previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex(Plugin)];
+
+        // Guide lines are vectors that either go horizontally or vertically from opposite corners of the window through the matching corners/nodes
+        List<Tuple<Vector2, Color>> guideLines = new List<Tuple<Vector2, Color>>();
+
         foreach (var elementData in currentElements) {
             if (!elementData.Value.IsVisible) continue;
+
             var elementValue = elementData.Value;
-            float markerSize = 2;
-
-            var color_center = black_color;
-            uint[] color_corners = new uint[] { black_color, black_color, black_color, black_color };
-
             Vector2 elementPos = new Vector2(elementValue.PosX, elementValue.PosY);
-            Vector2 elementCenter = elementPos + new Vector2(elementValue.Width / 2, elementValue.Height / 2);
-
-            Vector2[] elementCorners = new Vector2[] {
+            Vector2 elementCenter = elementPos + new Vector2((int)Math.Round(elementValue.Width / 2f), (int)Math.Round(elementValue.Height / 2f));
+            Vector2[] elementCorners = {
                 elementPos,
                 elementPos + new Vector2(elementValue.Width, 0),
                 elementPos + new Vector2(0, elementValue.Height),
-                elementPos + new Vector2(elementValue.Width, elementValue.Height)
+                elementPos + new Vector2(elementValue.Width, elementValue.Height),
+                elementCenter
             };
+
+            float[] elementMarkerSizes = { 1.5f, 1.5f, 1.5f, 1.5f, 1.5f };
+            Color[] elementCornerColors = { black_color, black_color, black_color, black_color, black_color };
 
             // Use selectedNodeData if the element is the selected one
             if (elementData.Value.ElementId == selectedNode.ElementId) {
-                elementPos = selectedNodePos;
-                elementCenter = selectedNodeCenter;
                 elementCorners = selectedNodeCorners;
-                markerSize = 2.5f;
-                color_center = selectedNodeCenterColor;
-                color_corners = selectedNodeCornerColors;
+                elementMarkerSizes = selectedNodeMarkerSizes;
+                elementCornerColors = selectedNodeCornerColors;
             } else {
-                // Color the corners of the element if they have the same position the same as one of the selected node
                 for (int i = 0; i < elementCorners.Length; i++) {
                     for (int j = 0; j < selectedNodeCorners.Length; j++) {
-                        if (elementCorners[i].X == selectedNodeCorners[j].X || elementCorners[i].Y == selectedNodeCorners[j].Y) {
-                            color_corners[i] = selectedNodeCornerColors[j];
+                        // TODO: remove && to enable dimming of near corners
+                        if (Math.Abs(elementCorners[i].X - selectedNodeCorners[j].X) < 3) {
+
+                            //var horizontalLine = new Vector2(elementCorners[i].X, 0); // dimmed line and real line have the same position 
+                            var horizontalLine = new Vector2(selectedNodeCorners[j].X, 0); // dimmed line and real line do not have the same position
+
+                            // If the X coordinate is only similar but not the same, dim the color
+                            if (elementCorners[i].X == selectedNodeCorners[j].X) {
+                                elementCornerColors[i] = selectedNodeCornerColors[j];
+                                elementMarkerSizes[i] = selectedNodeMarkerSizes[j];
+                                guideLines.Add(new Tuple<Vector2, Color>(horizontalLine, elementCornerColors[i]));
+                            } else {
+                                var dimmed_color = Color.FromArgb(100, selectedNodeCornerColors[j].R, selectedNodeCornerColors[j].G, selectedNodeCornerColors[j].B);
+                                elementCornerColors[i] = Color.FromArgb(150, selectedNodeCornerColors[j].R, selectedNodeCornerColors[j].G, selectedNodeCornerColors[j].B);
+                                //guideLines.Add(new Tuple<Vector2, Color>(horizontalLine, dimmed_color));
+                                //guideLines.Add(new Tuple<Vector2, Color>(horizontalLine, black_color2));
+
+                            }
+                        }
+                        if (Math.Abs(elementCorners[i].Y - selectedNodeCorners[j].Y) < 3) {
+
+                            var verticalLine = new Vector2(0, selectedNodeCorners[j].Y);
+                            // If the Y coordinate is only similar but not the same, dim the color
+                            if (elementCorners[i].Y == selectedNodeCorners[j].Y) {
+                                elementCornerColors[i] = selectedNodeCornerColors[j];
+                                elementMarkerSizes[i] = selectedNodeMarkerSizes[j];
+                                guideLines.Add(new Tuple<Vector2, Color>(verticalLine, elementCornerColors[i]));
+                            } else {
+                                var dimmed_color = Color.FromArgb(100, selectedNodeCornerColors[j].R, selectedNodeCornerColors[j].G, selectedNodeCornerColors[j].B);
+                                elementCornerColors[i] = Color.FromArgb(150, selectedNodeCornerColors[j].R, selectedNodeCornerColors[j].G, selectedNodeCornerColors[j].B);
+                                //guideLines.Add(new Tuple<Vector2, Color>(horizontalLine, dimmed_color));
+                                //guideLines.Add(new Tuple<Vector2, Color>(verticalLine, black_color2));
+                            }
                         }
                     }
-                    if (elementCorners[i].X == selectedNodeCenter.X || elementCorners[i].Y == selectedNodeCenter.Y) {
-                        color_corners[i] = selectedNodeCenterColor;
-                    }
                 }
-                // Color the center of the element if it has the same position as one of the selected node
-                if (elementCenter.X == selectedNodeCenter.X || elementCenter.Y == selectedNodeCenter.Y) {
-                    color_center = selectedNodeCenterColor;
-                }
-                for (int i = 0; i < selectedNodeCorners.Length; i++) {
-                    if (elementCenter.X == selectedNodeCorners[i].X || elementCenter.Y == selectedNodeCorners[i].Y) {
-                        color_center = selectedNodeCornerColors[i];
-                    }
-                }
-
-
-                //if (elementCenter.X == selectedNodeCenter.X || elementCenter.Y == selectedNodeCenter.Y) {
-                //    color_center = selectedNodeCenterColor;
-                //}
-                //for (int j = 0; j < selectedNodeCorners.Length; j++) {
-                //    if (elementCenter.X == selectedNodeCorners[j].X || elementCenter.Y == selectedNodeCorners[j].Y) {
-                //        color_center = selectedNodeCornerColors[j];
+                //for (int i = 0; i < selectedNodeCorners.Length; i++) {
+                //    var horizontalLine1 = new Vector2(selectedNodeCorners[i].X, 0);
+                //    var verticalLine1 = new Vector2(0, selectedNodeCorners[i].Y);
+                //    if (!guideLines.Exists(x => x.Item1.X == horizontalLine1.X && x.Item1.Y == horizontalLine1.Y)){
+                //        guideLines.Add(new Tuple<Vector2, Color>(horizontalLine1, black_color2));
+                //    }
+                //    if (!guideLines.Exists(x => x.Item1.X == verticalLine1.X && x.Item1.Y == verticalLine1.Y)){
+                //        guideLines.Add(new Tuple<Vector2, Color>(verticalLine1, black_color2));
                 //    }
                 //}
             }
-
-
-
-            imDrawListPtr.AddCircleFilled(elementCenter, markerSize, color_center);
-
             for (int i = 0; i < elementCorners.Length; i++) {
-                imDrawListPtr.AddCircleFilled(elementCorners[i], markerSize, color_corners[i]);
+                imDrawListPtr.AddCircleFilled(elementCorners[i], elementMarkerSizes[i], ColorToUint(elementCornerColors[i]));
             }
-            //for
+
         }
+
+        // Filter out duplicate guide lines
+        if (guideLines.Count > 0) {
+            //Plugin.Log.Debug($"Guide lines: {guideLines.Count}");
+            guideLines = guideLines.Distinct().ToList();
+            //Plugin.Log.Debug($"Guide lines: {guideLines.Count}");
+            foreach (var guideLine in guideLines) {
+                var thickness = guideLine.Item2 == black_color2 ? 1.0f : 1.0f;
+                if (guideLine.Item1.Y == 0) {
+                    imDrawListPtr.AddLine(guideLine.Item1, guideLine.Item1 + new Vector2(0, ImGui.GetIO().DisplaySize.Y), ColorToUint(guideLine.Item2), thickness);
+                } else if (guideLine.Item1.X == 0) {
+                    imDrawListPtr.AddLine(guideLine.Item1, guideLine.Item1 + new Vector2(ImGui.GetIO().DisplaySize.X, 0), ColorToUint(guideLine.Item2), thickness);
+                }
+            }
+        }
+
 
         //var currentElements = Plugin.GetCurrentElements();
         //foreach (var elementData in currentElements) {
