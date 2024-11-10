@@ -28,7 +28,6 @@ namespace HUDLayoutShortcuts;
 /// [-] add setting to always show selected element guidelines 
 /// [-] add setting to show guidelines for all elements? 
 /// TODO: rename feature. "Alignment helper"? 
-/// TODO:When reopening the hud layout, the lines are not drawn. Maybe somethign to do with previousElements?  
 /// </summary>
 public class AlignmentOverlayWindow : Window, IDisposable {
     private Plugin Plugin;
@@ -48,6 +47,10 @@ public class AlignmentOverlayWindow : Window, IDisposable {
         SizeCondition = ImGuiCond.Always;
         PositionCondition = ImGuiCond.Always;
         Configuration = plugin.Configuration;
+    }
+
+    public override void OnOpen() {
+        Plugin.UpdatePreviousElements();
     }
 
     public void Dispose() { }
@@ -135,7 +138,7 @@ public class AlignmentOverlayWindow : Window, IDisposable {
             redColor, greenColor,
             2.5f, 2f
         );
-
+        //Plugin.Log.Debug($"hudLayoutElements: {hudLayoutElements.Count}");
         // Create guide nodes for all elements except the selected one
         List<HudOverlayNode> otherHudOverlayNodes = new List<HudOverlayNode>();
         foreach (var element in hudLayoutElements) {
@@ -151,6 +154,7 @@ public class AlignmentOverlayWindow : Window, IDisposable {
             (int)ImGui.GetIO().DisplaySize.X, (int)ImGui.GetIO().DisplaySize.Y
         );
         otherHudOverlayNodes.Add(fullScreenHudOverlayNode);
+        //Plugin.Log.Debug($"Other nodes: {otherHudOverlayNodes.Count}");
 
         var alignedAnchors = (
             from selectedNodeAnchor in selectedHudOverlayNode.AnchorMap
@@ -163,6 +167,8 @@ public class AlignmentOverlayWindow : Window, IDisposable {
             where isHorizontal || isVertical
             select new { otherNode, otherNodeAnchor=otherNodeAnchor.Value, otherNodeAnchorName = otherNodeAnchor, selectedNodeAnchor=selectedNodeAnchor.Value, selectedNodeAnchorName=selectedNodeAnchor, diff, dimmedColor, isHorizontal, isVertical }
         ).ToList();
+
+        //Plugin.Log.Debug($"Aligned anchors: {alignedAnchors.Count}");
 
         // Set dimmed anchor colors
         alignedAnchors.ForEach(x => {
@@ -222,9 +228,10 @@ public class AlignmentOverlayWindow : Window, IDisposable {
         }
 
         if (overlayGuideLines.Count > 0) {
+            //Plugin.Debug.Log(Plugin.Log.Debug, $"Guide lines: {overlayGuideLines.Count}");
             overlayGuideLines = overlayGuideLines.Distinct().ToList();
-            //Plugin.Log.Debug($"Guide lines: {guideLines.Count}");
-            //foreach (var guideLine in guideLines) {
+            //Plugin.Debug.Log(Plugin.Log.Debug, $"Guide lines: {overlayGuideLines.Count}");
+            //foreach (var guideLine in overlayGuideLines) {
             //    Plugin.Log.Debug($"Guide line: {guideLine.Item1} -> {guideLine.Item2} ({guideLine.Item3})");
             //}
             foreach (var guideLine in overlayGuideLines) {

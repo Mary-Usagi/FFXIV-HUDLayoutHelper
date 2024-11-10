@@ -17,7 +17,7 @@ using System.Timers;
 
 namespace HUDLayoutShortcuts {
     public sealed class Plugin : IDalamudPlugin {
-        public bool DEBUG = true;
+        public bool DEBUG = false;
 
         public string Name => "HUDLayoutShortcuts";
         private const string CommandName = "/hudshortcuts";
@@ -158,10 +158,10 @@ namespace HUDLayoutShortcuts {
                 previousHudLayoutIndexElements.Add(new Dictionary<int, HudElementData>());
             }
 
+            if (IsOverlayVisible && !AlignmentOverlayWindow.IsOpen) AlignmentOverlayWindow.Toggle();
             UpdatePreviousElements();
             this.Framework.Update += PerformScheduledElementChangeCheck;
             this.Framework.Update += OnUpdate;
-            if (IsOverlayVisible) AlignmentOverlayWindow.IsOpen = true;
 
             callbackAdded = true;
         }
@@ -177,8 +177,12 @@ namespace HUDLayoutShortcuts {
             this.AddonLifecycle.UnregisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutWindow");
             this.AddonLifecycle.UnregisterListener(AddonEvent.PostReceiveEvent, "_HudLayoutWindow");
 
-            if (AlignmentOverlayWindow.IsOpen) IsOverlayVisible = true;
-            else IsOverlayVisible = false;
+            if (AlignmentOverlayWindow.IsOpen) { 
+                AlignmentOverlayWindow.Toggle();
+                IsOverlayVisible = true;
+            } else {
+                IsOverlayVisible = false;
+            }
             AlignmentOverlayWindow.IsOpen = false;
             
             previousHudLayoutIndexElements.Clear();
@@ -713,8 +717,7 @@ namespace HUDLayoutShortcuts {
                 this.Debug.PrettyPrintList(changedElements, "Changed Elements");
         }
 
-        private unsafe void UpdatePreviousElements() {
-            // TODO
+        internal unsafe void UpdatePreviousElements() {
             this.Debug.Log(this.Log.Debug, "Updating previous elements.");
             var currentElements = GetCurrentElements();
             var previousElements = previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex(this, false)];
@@ -729,6 +732,7 @@ namespace HUDLayoutShortcuts {
             for (int i = 0; i < this.HudLayoutScreen->CollisionNodeListCount; i++) {
                 var resNode = this.HudLayoutScreen->CollisionNodeList[i];
                 var elementData = new HudElementData(resNode);
+                if (!elementData.IsVisible) continue; // TODO: works? 
                 elements[elementData.ElementId] = elementData;
             }
 
