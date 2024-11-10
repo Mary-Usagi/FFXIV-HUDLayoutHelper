@@ -27,6 +27,7 @@ namespace HUDLayoutShortcuts;
 /// [-] automatically open when HUD Layout editor is open 
 /// [-] add setting to always show selected element guidelines 
 /// [-] add setting to show guidelines for all elements? 
+/// TODO: do not make color dependent on the anchor color (if horizontal hits, but vertical doesnt, righ tnow, vertical will not be dimmed!)
 /// TODO: rename feature. "Alignment helper"? 
 /// </summary>
 public class AlignmentOverlayWindow : Window, IDisposable {
