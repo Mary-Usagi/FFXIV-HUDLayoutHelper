@@ -29,11 +29,11 @@ namespace HUDLayoutShortcuts;
 /// TODO: add setting to show guidelines for all elements? 
 /// TODO: rename feature. "Alignment helper"? 
 /// </summary>
-public class OverlayWindow : Window, IDisposable {
+public class AlignmentOverlayWindow : Window, IDisposable {
     private Plugin Plugin;
     private Configuration Configuration;
 
-    public OverlayWindow(Plugin plugin) : base("Overlay"){
+    public AlignmentOverlayWindow(Plugin plugin) : base("Overlay"){
         Flags = ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoInputs;
 
         SizeConstraints = new WindowSizeConstraints {
@@ -59,9 +59,7 @@ public class OverlayWindow : Window, IDisposable {
         return (uint)(color.A << 24 | color.B << 16 | color.G << 8 | color.R);
     }
 
-
-
-    private class HudNode {
+    private class HudOverlayNode {
         internal class Anchor {
             internal Vector2 position;
             internal Color color;
@@ -82,7 +80,7 @@ public class OverlayWindow : Window, IDisposable {
         internal Anchor BottomRight => AnchorMap["BottomRight"];
         internal Anchor Center => AnchorMap["Center"];
 
-        internal HudNode(
+        internal HudOverlayNode(
             short left, short top, 
             int width, int height, 
             Color? centerColor = null, Color? cornerColor = null, 
@@ -92,22 +90,22 @@ public class OverlayWindow : Window, IDisposable {
             Vector2 center = topLeft + new Vector2(MathF.Round(width / 2f, MidpointRounding.AwayFromZero), MathF.Round(height / 2f, MidpointRounding.AwayFromZero));
 
             AnchorMap = new SortedDictionary<string, Anchor> {
-                { "TopLeft", new Anchor(topLeft, cornerColor ?? black_color, cornerSize) },
-                { "TopRight", new Anchor(topLeft + new Vector2(width, 0), cornerColor ?? black_color, cornerSize) },
-                { "BottomLeft", new Anchor(topLeft + new Vector2(0, height), cornerColor ?? black_color, cornerSize) },
-                { "BottomRight", new Anchor(topLeft + new Vector2(width, height), cornerColor ?? black_color, cornerSize) },
-                { "Center", new Anchor(center, centerColor ?? black_color, centerSize) }
+                { "TopLeft", new Anchor(topLeft, cornerColor ?? blackColor, cornerSize) },
+                { "TopRight", new Anchor(topLeft + new Vector2(width, 0), cornerColor ?? blackColor, cornerSize) },
+                { "BottomLeft", new Anchor(topLeft + new Vector2(0, height), cornerColor ?? blackColor, cornerSize) },
+                { "BottomRight", new Anchor(topLeft + new Vector2(width, height), cornerColor ?? blackColor, cornerSize) },
+                { "Center", new Anchor(center, centerColor ?? blackColor, centerSize) }
             };
         }
     }
 
-    static Color red_color = Color.FromArgb(255, 0, 0);
-    static Color blue_color = Color.FromArgb(0, 0, 255);
-    static Color green_color = Color.FromArgb(0, 255, 0);
-    static Color black_color = Color.FromArgb(175, 0, 0, 0); 
+    static readonly Color redColor = Color.FromArgb(255, 0, 0);
+    static readonly Color blueColor = Color.FromArgb(0, 0, 255);
+    static readonly Color greenColor = Color.FromArgb(0, 255, 0);
+    static readonly Color blackColor = Color.FromArgb(175, 0, 0, 0); 
 
-    const int MAX_DIFF = 10;
-    const int overhangPixels = 25;
+    const int MAX_ANCHOR_DIFF = 10;
+    const int guideLinePadding = 25;
 
     /// <summary>
     ///  TODO
@@ -126,112 +124,108 @@ public class OverlayWindow : Window, IDisposable {
         if (selectedResNode == null) return;
 
         // Create a new HudElementData object with the data of the selected element
-        var currentElements = Plugin.previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex(Plugin)];
+        var hudLayoutElements = Plugin.previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex(Plugin)];
 
         HudElementData selectedHudElement = new HudElementData(selectedResNode);
-        HudNode selectedNode = new HudNode(
+        HudOverlayNode selectedHudOverlayNode = new HudOverlayNode(
             selectedHudElement.PosX, selectedHudElement.PosY,
             selectedHudElement.Width-1, selectedHudElement.Height-1,
-            red_color, green_color,
+            redColor, greenColor,
             2.5f, 2f
         );
 
         // Create guide nodes for all elements except the selected one
-        List<HudNode> guideNodes = new List<HudNode>();
-        foreach (var element in currentElements) {
+        List<HudOverlayNode> otherHudOverlayNodes = new List<HudOverlayNode>();
+        foreach (var element in hudLayoutElements) {
             if (!element.Value.IsVisible) continue;
             if (element.Value.ElementId == selectedHudElement.ElementId) continue;
-            guideNodes.Add(new HudNode(
+            otherHudOverlayNodes.Add(new HudOverlayNode(
                 element.Value.PosX, element.Value.PosY,
                 element.Value.Width-1, element.Value.Height-1
             ));
         }
-        HudNode fullScreenNode = new HudNode(
+        HudOverlayNode fullScreenHudOverlayNode = new HudOverlayNode(
             -1, -1, 
             (int)ImGui.GetIO().DisplaySize.X, (int)ImGui.GetIO().DisplaySize.Y
         );
-        guideNodes.Add(fullScreenNode);
+        otherHudOverlayNodes.Add(fullScreenHudOverlayNode);
 
-        var matchingAnchors = (
-            from selectedAnchor in selectedNode.AnchorMap
+        var alignedAnchors = (
+            from selectedAnchor in selectedHudOverlayNode.AnchorMap
                 let dimmedColor = Color.FromArgb(100, selectedAnchor.Value.color.R, selectedAnchor.Value.color.G, selectedAnchor.Value.color.B)
-            from currentNode in guideNodes
-                from currentAnchor in currentNode.AnchorMap
-                    let diff = Vector2.Abs(currentAnchor.Value.position - selectedAnchor.Value.position)
-                    let isHorizontal = diff.Y < MAX_DIFF
-                    let isVertical = diff.X < MAX_DIFF
+            from otherNode in otherHudOverlayNodes
+                from otherAnchor in otherNode.AnchorMap
+                    let diff = Vector2.Abs(otherAnchor.Value.position - selectedAnchor.Value.position)
+                    let isHorizontal = diff.Y < MAX_ANCHOR_DIFF
+                    let isVertical = diff.X < MAX_ANCHOR_DIFF
             where isHorizontal || isVertical
-            select new { currentNode, currentAnchor=currentAnchor.Value, currentAnchorName=currentAnchor, selectedAnchor=selectedAnchor.Value, selectedAnchorName=selectedAnchor, diff, dimmedColor, isHorizontal, isVertical }
+            select new { otherNode, otherAnchor=otherAnchor.Value, otherAnchorName=otherAnchor, selectedAnchor=selectedAnchor.Value, selectedAnchorName=selectedAnchor, diff, dimmedColor, isHorizontal, isVertical }
         ).ToList();
 
         // Set dimmed anchor colors
-        matchingAnchors.ForEach(x => {
-            x.currentAnchor.color = x.dimmedColor;
-            x.currentAnchor.size = x.selectedAnchor.size;
+        alignedAnchors.ForEach(x => {
+            x.otherAnchor.color = x.dimmedColor;
+            x.otherAnchor.size = x.selectedAnchor.size;
         });
 
         // Set non-dimmed anchor colors
-        matchingAnchors.Where(x => (int)x.diff.X == 0 || (int)x.diff.Y == 0).ToList().ForEach(x => {
-            x.currentAnchor.color = x.selectedAnchor.color;
-            x.currentAnchor.size = x.selectedAnchor.size + 1;
+        alignedAnchors.Where(x => (int)x.diff.X == 0 || (int)x.diff.Y == 0).ToList().ForEach(x => {
+            x.otherAnchor.color = x.selectedAnchor.color;
+            x.otherAnchor.size = x.selectedAnchor.size + 1;
         });
 
         // Create guide lines
-        List<(Vector2, Vector2, Color)> guideLines = new List<(Vector2, Vector2, Color)>();
-        foreach (var group in matchingAnchors.GroupBy(x => (x.currentNode, x.selectedAnchor))) {
-            var currentNode = group.First().currentNode;
+        List<(Vector2, Vector2, Color)> overlayGuideLines = new List<(Vector2, Vector2, Color)>();
+        foreach (var group in alignedAnchors.GroupBy(x => (x.otherAnchor, x.selectedAnchor))) {
+            var otherNode = group.First().otherNode;
             var selectedAnchor = group.First().selectedAnchor;
             var dimmedColor = group.First().dimmedColor;
 
-            List<HudNode.Anchor> anchorPoints = [
-                currentNode.TopLeft,
-                currentNode.BottomRight,
-                selectedNode.TopLeft,
-                selectedNode.BottomRight
+            List<HudOverlayNode.Anchor> referenceAnchorPoints = [
+                otherNode.TopLeft,
+                otherNode.BottomRight,
+                selectedHudOverlayNode.TopLeft,
+                selectedHudOverlayNode.BottomRight
             ];
-            //Plugin.Log.Debug($"Anchor: {selectedAnchor}");
-            //foreach (var aanchorPoint in anchorPoints) {
-            //    Plugin.Log.Debug($"Anchor: {aanchorPoint.position}");
-            //}
 
-            var allHorizontal = group.Where(x => x.isHorizontal).ToList();
-            var allVertical = group.Where(x => x.isVertical).ToList();
+            var horizontalAlignments = group.Where(x => x.isHorizontal).ToList();
+            var verticalAlignments = group.Where(x => x.isVertical).ToList();
 
-            if (allHorizontal.Count > 0) {
+            if (horizontalAlignments.Count > 0) {
                 var horizontalLine = new {
-                    start = new Vector2(anchorPoints.Min(x => x.position.X) - overhangPixels, selectedAnchor.position.Y),
-                    end = new Vector2(anchorPoints.Max(x => x.position.X) + overhangPixels, selectedAnchor.position.Y),
-                    color = allHorizontal.First().currentAnchor.color
+                    start = new Vector2(referenceAnchorPoints.Min(x => x.position.X) - guideLinePadding, selectedAnchor.position.Y),
+                    end = new Vector2(referenceAnchorPoints.Max(x => x.position.X) + guideLinePadding, selectedAnchor.position.Y),
+                    color = horizontalAlignments.First().otherAnchor.color
                 };
                 //Plugin.Log.Debug($"Horizontal line: {horizontalLine.start} -> {horizontalLine.end}");
-                guideLines.Add((horizontalLine.start, horizontalLine.end, horizontalLine.color));
+                overlayGuideLines.Add((horizontalLine.start, horizontalLine.end, horizontalLine.color));
             }
-            if (allVertical.Count > 0) {
+            if (verticalAlignments.Count > 0) {
                 var verticalLine = new {
-                    start = new Vector2(selectedAnchor.position.X, anchorPoints.Min(x => x.position.Y) - overhangPixels),
-                    end = new Vector2(selectedAnchor.position.X, anchorPoints.Max(x => x.position.Y) + overhangPixels),
-                    color = allVertical.First().currentAnchor.color
+                    start = new Vector2(selectedAnchor.position.X, referenceAnchorPoints.Min(x => x.position.Y) - guideLinePadding),
+                    end = new Vector2(selectedAnchor.position.X, referenceAnchorPoints.Max(x => x.position.Y) + guideLinePadding),
+                    color = verticalAlignments.First().otherAnchor.color
                 };
                 //Plugin.Log.Debug($"Vertical line: {verticalLine.start} -> {verticalLine.end}");
-                guideLines.Add((verticalLine.start, verticalLine.end, verticalLine.color));
+                overlayGuideLines.Add((verticalLine.start, verticalLine.end, verticalLine.color));
             }
         }
 
         // Draw all anchors of the guide nodes
-        guideNodes.Add(selectedNode);
-        foreach (var currentNode in guideNodes) {
-            foreach ((var anchorName, var anchor) in currentNode.AnchorMap) {
-                imDrawListPtr.AddCircleFilled(anchor.position, anchor.size, ColorToUint(anchor.color));
+        otherHudOverlayNodes.Add(selectedHudOverlayNode);
+        foreach (var otherNode in otherHudOverlayNodes) {
+            foreach (var otherAnchor in otherNode.AnchorMap.Values) {
+                imDrawListPtr.AddCircleFilled(otherAnchor.position, otherAnchor.size, ColorToUint(otherAnchor.color));
             }
         }
 
-        if (guideLines.Count > 0) {
-            guideLines = guideLines.Distinct().ToList();
+        if (overlayGuideLines.Count > 0) {
+            overlayGuideLines = overlayGuideLines.Distinct().ToList();
             //Plugin.Log.Debug($"Guide lines: {guideLines.Count}");
             //foreach (var guideLine in guideLines) {
             //    Plugin.Log.Debug($"Guide line: {guideLine.Item1} -> {guideLine.Item2} ({guideLine.Item3})");
             //}
-            foreach (var guideLine in guideLines) {
+            foreach (var guideLine in overlayGuideLines) {
                 imDrawListPtr.AddLine(guideLine.Item1, guideLine.Item2, ColorToUint(guideLine.Item3), 1.0f);
             }
         }

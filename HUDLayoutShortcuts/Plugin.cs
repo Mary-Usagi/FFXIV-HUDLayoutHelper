@@ -25,7 +25,7 @@ namespace HUDLayoutShortcuts {
         public readonly WindowSystem WindowSystem = new("HUDLayoutShortcuts");
         public Configuration Configuration { get; init; }
         private ConfigWindow ConfigWindow { get; init; }
-        private OverlayWindow OverlayWindow { get; init; }
+        private AlignmentOverlayWindow AlignmentOverlayWindow { get; init; }
         private const string OverlayCommand = "/hudoverlay";
 
         [PluginService] internal static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
@@ -78,8 +78,8 @@ namespace HUDLayoutShortcuts {
             });
 
             // TODO: TESTING
-            OverlayWindow = new OverlayWindow(this);
-            WindowSystem.AddWindow(OverlayWindow);
+            AlignmentOverlayWindow = new AlignmentOverlayWindow(this);
+            WindowSystem.AddWindow(AlignmentOverlayWindow);
             CommandManager.AddHandler(OverlayCommand, new CommandInfo(OnOverlayCommand) {
                 HelpMessage = "Toggle the overlay window."
             });
@@ -572,7 +572,7 @@ namespace HUDLayoutShortcuts {
 
             WindowSystem.RemoveAllWindows();
             ConfigWindow.Dispose();
-            OverlayWindow.Dispose();
+            AlignmentOverlayWindow.Dispose();
             CommandManager.RemoveHandler(CommandName);
         }
 
@@ -581,7 +581,7 @@ namespace HUDLayoutShortcuts {
         }
 
         private void OnOverlayCommand(string command, string args) {
-            OverlayWindow.Toggle();
+            AlignmentOverlayWindow.Toggle();
         }
 
         private void DrawUI() => WindowSystem.Draw();
