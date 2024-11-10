@@ -151,34 +151,34 @@ public class AlignmentOverlayWindow : Window, IDisposable {
         otherHudOverlayNodes.Add(fullScreenHudOverlayNode);
 
         var alignedAnchors = (
-            from selectedAnchor in selectedHudOverlayNode.AnchorMap
-                let dimmedColor = Color.FromArgb(100, selectedAnchor.Value.color.R, selectedAnchor.Value.color.G, selectedAnchor.Value.color.B)
+            from selectedNodeAnchor in selectedHudOverlayNode.AnchorMap
+                let dimmedColor = Color.FromArgb(100, selectedNodeAnchor.Value.color.R, selectedNodeAnchor.Value.color.G, selectedNodeAnchor.Value.color.B)
             from otherNode in otherHudOverlayNodes
-                from otherAnchor in otherNode.AnchorMap
-                    let diff = Vector2.Abs(otherAnchor.Value.position - selectedAnchor.Value.position)
+                from otherNodeAnchor in otherNode.AnchorMap
+                    let diff = Vector2.Abs(otherNodeAnchor.Value.position - selectedNodeAnchor.Value.position)
                     let isHorizontal = diff.Y < MAX_ANCHOR_DIFF
                     let isVertical = diff.X < MAX_ANCHOR_DIFF
             where isHorizontal || isVertical
-            select new { otherNode, otherAnchor=otherAnchor.Value, otherAnchorName=otherAnchor, selectedAnchor=selectedAnchor.Value, selectedAnchorName=selectedAnchor, diff, dimmedColor, isHorizontal, isVertical }
+            select new { otherNode, otherNodeAnchor=otherNodeAnchor.Value, otherNodeAnchorName = otherNodeAnchor, selectedNodeAnchor=selectedNodeAnchor.Value, selectedNodeAnchorName=selectedNodeAnchor, diff, dimmedColor, isHorizontal, isVertical }
         ).ToList();
 
         // Set dimmed anchor colors
         alignedAnchors.ForEach(x => {
-            x.otherAnchor.color = x.dimmedColor;
-            x.otherAnchor.size = x.selectedAnchor.size;
+            x.otherNodeAnchor.color = x.dimmedColor;
+            x.otherNodeAnchor.size = x.selectedNodeAnchor.size;
         });
 
         // Set non-dimmed anchor colors
         alignedAnchors.Where(x => (int)x.diff.X == 0 || (int)x.diff.Y == 0).ToList().ForEach(x => {
-            x.otherAnchor.color = x.selectedAnchor.color;
-            x.otherAnchor.size = x.selectedAnchor.size + 1;
+            x.otherNodeAnchor.color = x.selectedNodeAnchor.color;
+            x.otherNodeAnchor.size = x.selectedNodeAnchor.size + 1;
         });
 
         // Create guide lines
         List<(Vector2, Vector2, Color)> overlayGuideLines = new List<(Vector2, Vector2, Color)>();
-        foreach (var group in alignedAnchors.GroupBy(x => (x.otherAnchor, x.selectedAnchor))) {
+        foreach (var group in alignedAnchors.GroupBy(x => (x.otherNodeAnchor, x.selectedNodeAnchor))) {
             var otherNode = group.First().otherNode;
-            var selectedAnchor = group.First().selectedAnchor;
+            var selectedNodeAnchor = group.First().selectedNodeAnchor;
             var dimmedColor = group.First().dimmedColor;
 
             List<HudOverlayNode.Anchor> referenceAnchorPoints = [
@@ -193,18 +193,18 @@ public class AlignmentOverlayWindow : Window, IDisposable {
 
             if (horizontalAlignments.Count > 0) {
                 var horizontalLine = new {
-                    start = new Vector2(referenceAnchorPoints.Min(x => x.position.X) - guideLinePadding, selectedAnchor.position.Y),
-                    end = new Vector2(referenceAnchorPoints.Max(x => x.position.X) + guideLinePadding, selectedAnchor.position.Y),
-                    color = horizontalAlignments.First().otherAnchor.color
+                    start = new Vector2(referenceAnchorPoints.Min(x => x.position.X) - guideLinePadding, selectedNodeAnchor.position.Y),
+                    end = new Vector2(referenceAnchorPoints.Max(x => x.position.X) + guideLinePadding, selectedNodeAnchor.position.Y),
+                    color = horizontalAlignments.First().otherNodeAnchor.color
                 };
                 //Plugin.Log.Debug($"Horizontal line: {horizontalLine.start} -> {horizontalLine.end}");
                 overlayGuideLines.Add((horizontalLine.start, horizontalLine.end, horizontalLine.color));
             }
             if (verticalAlignments.Count > 0) {
                 var verticalLine = new {
-                    start = new Vector2(selectedAnchor.position.X, referenceAnchorPoints.Min(x => x.position.Y) - guideLinePadding),
-                    end = new Vector2(selectedAnchor.position.X, referenceAnchorPoints.Max(x => x.position.Y) + guideLinePadding),
-                    color = verticalAlignments.First().otherAnchor.color
+                    start = new Vector2(selectedNodeAnchor.position.X, referenceAnchorPoints.Min(x => x.position.Y) - guideLinePadding),
+                    end = new Vector2(selectedNodeAnchor.position.X, referenceAnchorPoints.Max(x => x.position.Y) + guideLinePadding),
+                    color = verticalAlignments.First().otherNodeAnchor.color
                 };
                 //Plugin.Log.Debug($"Vertical line: {verticalLine.start} -> {verticalLine.end}");
                 overlayGuideLines.Add((verticalLine.start, verticalLine.end, verticalLine.color));
@@ -214,8 +214,8 @@ public class AlignmentOverlayWindow : Window, IDisposable {
         // Draw all anchors of the guide nodes
         otherHudOverlayNodes.Add(selectedHudOverlayNode);
         foreach (var otherNode in otherHudOverlayNodes) {
-            foreach (var otherAnchor in otherNode.AnchorMap.Values) {
-                imDrawListPtr.AddCircleFilled(otherAnchor.position, otherAnchor.size, ColorToUint(otherAnchor.color));
+            foreach (var otherNodeAnchor in otherNode.AnchorMap.Values) {
+                imDrawListPtr.AddCircleFilled(otherNodeAnchor.position, otherNodeAnchor.size, ColorToUint(otherNodeAnchor.color));
             }
         }
 
