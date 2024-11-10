@@ -107,6 +107,7 @@ public class OverlayWindow : Window, IDisposable {
     static Color black_color = Color.FromArgb(175, 0, 0, 0); 
 
     const int MAX_DIFF = 10;
+    const int overhangPixels = 25;
 
     /// <summary>
     ///  TODO
@@ -198,8 +199,8 @@ public class OverlayWindow : Window, IDisposable {
 
             if (allHorizontal.Count > 0) {
                 var horizontalLine = new {
-                    start = new Vector2(anchorPoints.Min(x => x.position.X), selectedAnchor.position.Y),
-                    end = new Vector2(anchorPoints.Max(x => x.position.X), selectedAnchor.position.Y),
+                    start = new Vector2(anchorPoints.Min(x => x.position.X) - overhangPixels, selectedAnchor.position.Y),
+                    end = new Vector2(anchorPoints.Max(x => x.position.X) + overhangPixels, selectedAnchor.position.Y),
                     color = allHorizontal.First().currentAnchor.color
                 };
                 //Plugin.Log.Debug($"Horizontal line: {horizontalLine.start} -> {horizontalLine.end}");
@@ -207,8 +208,8 @@ public class OverlayWindow : Window, IDisposable {
             }
             if (allVertical.Count > 0) {
                 var verticalLine = new {
-                    start = new Vector2(selectedAnchor.position.X, anchorPoints.Min(x => x.position.Y)),
-                    end = new Vector2(selectedAnchor.position.X, anchorPoints.Max(x => x.position.Y)),
+                    start = new Vector2(selectedAnchor.position.X, anchorPoints.Min(x => x.position.Y) - overhangPixels),
+                    end = new Vector2(selectedAnchor.position.X, anchorPoints.Max(x => x.position.Y) + overhangPixels),
                     color = allVertical.First().currentAnchor.color
                 };
                 //Plugin.Log.Debug($"Vertical line: {verticalLine.start} -> {verticalLine.end}");
