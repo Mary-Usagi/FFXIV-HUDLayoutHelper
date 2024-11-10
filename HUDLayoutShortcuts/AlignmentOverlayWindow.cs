@@ -23,11 +23,12 @@ namespace HUDLayoutShortcuts;
 /// https://github.com/ocornut/imgui/issues/2274
 /// https://www.google.com/search?q=rgba+hex+color+picker&client=firefox-b-d&sca_esv=2ee6c9bbd1613675&biw=1920&bih=919&sxsrf=ADLYWIJksTLF2nIWdhZIH29fiqVjNxpHLQ%3A1730862043613&ei=29sqZ7-HJfyJ7NYPtoqIuAQ&ved=0ahUKEwj_4I7K28aJAxX8BNsEHTYFAkcQ4dUDCA8&uact=5&oq=rgba+hex+color+picker&gs_lp=Egxnd3Mtd2l6LXNlcnAiFXJnYmEgaGV4IGNvbG9yIHBpY2tlcjIIEAAYgAQYywEyCxAAGIAEGIYDGIoFMgsQABiABBiGAxiKBTILEAAYgAQYhgMYigUyCxAAGIAEGIYDGIoFMgsQABiABBiGAxiKBTIIEAAYgAQYogRI9QlQ4AVY_whwAXgBkAEAmAFeoAG9AqoBATS4AQPIAQD4AQGYAgSgAu4BwgIKEAAYsAMY1gQYR8ICDRAAGIAEGLADGEMYigXCAgYQABgHGB6YAwCIBgGQBgqSBwE0oAetGA&sclient=gws-wiz-serp
 /// 
-/// TODO: add toggle for guidelines etc. to settings or keybind 
-/// TODO: automatically open when HUD Layout editor is open 
-/// TODO: add setting to always show selected element guidelines 
-/// TODO: add setting to show guidelines for all elements? 
+/// [x] add toggle for guidelines etc. to settings or keybind 
+/// [-] automatically open when HUD Layout editor is open 
+/// [-] add setting to always show selected element guidelines 
+/// [-] add setting to show guidelines for all elements? 
 /// TODO: rename feature. "Alignment helper"? 
+/// TODO:When reopening the hud layout, the lines are not drawn. Maybe somethign to do with previousElements?  
 /// </summary>
 public class AlignmentOverlayWindow : Window, IDisposable {
     private Plugin Plugin;
@@ -35,6 +36,7 @@ public class AlignmentOverlayWindow : Window, IDisposable {
 
     public AlignmentOverlayWindow(Plugin plugin) : base("Overlay"){
         Flags = ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoInputs;
+        //Flags = ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoInputs;
 
         SizeConstraints = new WindowSizeConstraints {
             MinimumSize = ImGui.GetIO().DisplaySize,
@@ -124,7 +126,7 @@ public class AlignmentOverlayWindow : Window, IDisposable {
         if (selectedResNode == null) return;
 
         // Create a new HudElementData object with the data of the selected element
-        var hudLayoutElements = Plugin.previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex(Plugin)];
+        var hudLayoutElements = Plugin.previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex(Plugin, false)];
 
         HudElementData selectedHudElement = new HudElementData(selectedResNode);
         HudOverlayNode selectedHudOverlayNode = new HudOverlayNode(

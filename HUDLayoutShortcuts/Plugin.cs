@@ -17,7 +17,7 @@ using System.Timers;
 
 namespace HUDLayoutShortcuts {
     public sealed class Plugin : IDalamudPlugin {
-        public bool DEBUG = false;
+        public bool DEBUG = true;
 
         public string Name => "HUDLayoutShortcuts";
         private const string CommandName = "/hudshortcuts";
@@ -26,7 +26,7 @@ namespace HUDLayoutShortcuts {
         public Configuration Configuration { get; init; }
         private ConfigWindow ConfigWindow { get; init; }
         private AlignmentOverlayWindow AlignmentOverlayWindow { get; init; }
-        private const string OverlayCommand = "/hudoverlay";
+        private bool IsOverlayVisible = false;
 
         [PluginService] internal static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
         [PluginService] internal static ITextureProvider TextureProvider { get; private set; } = null!;
@@ -77,15 +77,9 @@ namespace HUDLayoutShortcuts {
                 HelpMessage = "Toggle the config and debug window."
             });
 
-            // TODO: TESTING
+            // Add the alignment overlay window
             AlignmentOverlayWindow = new AlignmentOverlayWindow(this);
             WindowSystem.AddWindow(AlignmentOverlayWindow);
-            CommandManager.AddHandler(OverlayCommand, new CommandInfo(OnOverlayCommand) {
-                HelpMessage = "Toggle the overlay window."
-            });
-            // TODO
-            OnOverlayCommand("","");
-            // TODO: TESTING END
 
             PluginInterface.UiBuilder.Draw += DrawUI;
 
@@ -96,19 +90,19 @@ namespace HUDLayoutShortcuts {
 
             if (this.GameGui.GetAddonByName("_HudLayoutScreen", 1) != IntPtr.Zero) {
                 this.Debug.Log(this.Log.Debug, "HudLayoutScreen already loaded.");
-                this.addOnUpdateCallback();
+                this.RegisterCallbacks();
             }
 
             this.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "_HudLayoutScreen", (type, args) => {
                 this.Debug.Log(this.Log.Debug, "HudLayoutScreen setup.");
-                this.addOnUpdateCallback();
+                this.RegisterCallbacks();
             });
 
             this.AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, "_HudLayoutScreen", (type, args) => {
                 this.Debug.Log(this.Log.Debug, "HudLayoutScreen finalize.");
                 // Remove unsaved history if HUD is closed (instead of layout changed) with unsaved changes
                 this.HudHistoryManager.RewindHistoryAndAddToRedo(this.currentHudLayoutIndex);
-                this.removeOnUpdateCallback();
+                this.RemoveCallbacks();
             });
 
             // TODO: Maybe when not saving, put unsaved undos into redo? -> Done
@@ -142,7 +136,7 @@ namespace HUDLayoutShortcuts {
             HudLayoutScreen = null;
         }
 
-        private void addOnUpdateCallback() {
+        private void RegisterCallbacks() {
             if (callbackAdded) return;
             // Gets the needed UI Addons
             InitializeHudLayoutAddons();
@@ -166,12 +160,12 @@ namespace HUDLayoutShortcuts {
 
             UpdatePreviousElements();
             this.Framework.Update += PerformScheduledElementChangeCheck;
-
             this.Framework.Update += OnUpdate;
+            if (IsOverlayVisible) AlignmentOverlayWindow.IsOpen = true;
 
             callbackAdded = true;
         }
-        private void removeOnUpdateCallback() {
+        private void RemoveCallbacks() {
             // Remove all event listeners and callbacks
             this.Framework.Update -= HandleKeyboardShortcuts;
             this.Framework.Update -= PerformScheduledElementChangeCheck;
@@ -183,6 +177,10 @@ namespace HUDLayoutShortcuts {
             this.AddonLifecycle.UnregisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutWindow");
             this.AddonLifecycle.UnregisterListener(AddonEvent.PostReceiveEvent, "_HudLayoutWindow");
 
+            if (AlignmentOverlayWindow.IsOpen) IsOverlayVisible = true;
+            else IsOverlayVisible = false;
+            AlignmentOverlayWindow.IsOpen = false;
+            
             previousHudLayoutIndexElements.Clear();
 
             ClearHudLayoutAddons();
@@ -288,7 +286,7 @@ namespace HUDLayoutShortcuts {
             mouseDownTarget = null;
         }
 
-        private enum KeyboardAction { None, Copy, Paste, Undo, Redo }
+        private enum KeyboardAction { None, Copy, Paste, Undo, Redo, ToggleAlignmentOverlay }
 
         /// <summary>
         /// Represents the data for a mouse event. (AtkEventData) 
@@ -354,6 +352,7 @@ namespace HUDLayoutShortcuts {
                 (SeVirtualKey.Z, KeyStateFlags.Pressed, KeyboardAction.Redo,    SeVirtualKey.SHIFT),
                 (SeVirtualKey.Z, KeyStateFlags.Pressed, KeyboardAction.Undo,    null),
                 (SeVirtualKey.Y, KeyStateFlags.Pressed, KeyboardAction.Redo,    null),
+                (SeVirtualKey.R, KeyStateFlags.Pressed, KeyboardAction.ToggleAlignmentOverlay,  null)
             };
             for (int i = 0; i < keybinds.Count; i++) {
                 (SeVirtualKey key, KeyStateFlags state, KeyboardAction action, SeVirtualKey? extraModifier) = keybinds[i];
@@ -393,6 +392,9 @@ namespace HUDLayoutShortcuts {
                     break;
                 case KeyboardAction.Redo:
                     changedElement = HandleRedoAction(this.HudLayoutScreen, this.AgentHudLayout);
+                    break;
+                case KeyboardAction.ToggleAlignmentOverlay:
+                    this.ToggleAlignmentOverlay();
                     break;
             }
 
@@ -565,7 +567,7 @@ namespace HUDLayoutShortcuts {
         }
 
         public void Dispose() {
-            this.removeOnUpdateCallback();
+            this.RemoveCallbacks();
             this.AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, "_HudLayoutScreen");
             this.AddonLifecycle.UnregisterListener(AddonEvent.PreFinalize, "_HudLayoutScreen");
             this.Debug.Dispose();
@@ -578,10 +580,6 @@ namespace HUDLayoutShortcuts {
 
         private void OnCommand(string command, string args) {
             ConfigWindow.Toggle();
-        }
-
-        private void OnOverlayCommand(string command, string args) {
-            AlignmentOverlayWindow.Toggle();
         }
 
         private void DrawUI() => WindowSystem.Draw();
@@ -597,6 +595,11 @@ namespace HUDLayoutShortcuts {
             if (!ConfigWindow.IsOpen)
                 ConfigWindow.Toggle();
             ConfigWindow.BringToFront();
+        }
+
+        public void ToggleAlignmentOverlay() {
+            AlignmentOverlayWindow.Toggle();
+            this.Log.Info($"Toggled Alignment Overlay {(AlignmentOverlayWindow.IsOpen ? "on" : "off")}");
         }
 
 
@@ -642,7 +645,6 @@ namespace HUDLayoutShortcuts {
             }
         }
         
-        // TODO: everything works? 
         private int LastKeyboardEvent = 0;
         private int LastChangeCheck = 0;
         private int LastChangeCHeckHudLayoutIndex = -1;
