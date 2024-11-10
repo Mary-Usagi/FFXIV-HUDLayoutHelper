@@ -27,7 +27,7 @@ namespace HUDLayoutShortcuts;
 /// [-] automatically open when HUD Layout editor is open 
 /// [-] add setting to always show selected element guidelines 
 /// [-] add setting to show guidelines for all elements? 
-/// TODO: do not make color dependent on the anchor color (if horizontal hits, but vertical doesnt, righ tnow, vertical will not be dimmed!)
+/// [x] do not make color dependent on the anchor color (if horizontal hits, but vertical doesnt, righ tnow, vertical will not be dimmed!)
 /// TODO: rename feature. "Alignment helper"? 
 /// </summary>
 public class AlignmentOverlayWindow : Window, IDisposable {
@@ -185,6 +185,7 @@ public class AlignmentOverlayWindow : Window, IDisposable {
 
         // Create guide lines
         List<(Vector2, Vector2, Color)> overlayGuideLines = new List<(Vector2, Vector2, Color)>();
+
         foreach (var group in alignedAnchors.GroupBy(x => (x.otherNodeAnchor, x.selectedNodeAnchor))) {
             var otherNode = group.First().otherNode;
             var selectedNodeAnchor = group.First().selectedNodeAnchor;
@@ -204,7 +205,7 @@ public class AlignmentOverlayWindow : Window, IDisposable {
                 var horizontalLine = new {
                     start = new Vector2(referenceAnchorPoints.Min(x => x.position.X) - guideLinePadding, selectedNodeAnchor.position.Y),
                     end = new Vector2(referenceAnchorPoints.Max(x => x.position.X) + guideLinePadding, selectedNodeAnchor.position.Y),
-                    color = horizontalAlignments.First().otherNodeAnchor.color
+                    color = horizontalAlignments.Any(x => (int)x.diff.Y == 0) ? selectedNodeAnchor.color : dimmedColor
                 };
                 //Plugin.Log.Debug($"Horizontal line: {horizontalLine.start} -> {horizontalLine.end}");
                 overlayGuideLines.Add((horizontalLine.start, horizontalLine.end, horizontalLine.color));
@@ -213,7 +214,7 @@ public class AlignmentOverlayWindow : Window, IDisposable {
                 var verticalLine = new {
                     start = new Vector2(selectedNodeAnchor.position.X, referenceAnchorPoints.Min(x => x.position.Y) - guideLinePadding),
                     end = new Vector2(selectedNodeAnchor.position.X, referenceAnchorPoints.Max(x => x.position.Y) + guideLinePadding),
-                    color = verticalAlignments.First().otherNodeAnchor.color
+                    color = verticalAlignments.Any(x => (int)x.diff.X == 0) ? selectedNodeAnchor.color : dimmedColor
                 };
                 //Plugin.Log.Debug($"Vertical line: {verticalLine.start} -> {verticalLine.end}");
                 overlayGuideLines.Add((verticalLine.start, verticalLine.end, verticalLine.color));
@@ -229,9 +230,9 @@ public class AlignmentOverlayWindow : Window, IDisposable {
         }
 
         if (overlayGuideLines.Count > 0) {
-            //Plugin.Debug.Log(Plugin.Log.Debug, $"Guide lines: {overlayGuideLines.Count}");
+            //Plugin.Log.Debug($"Guide lines: {overlayGuideLines.Count}");
             overlayGuideLines = overlayGuideLines.Distinct().ToList();
-            //Plugin.Debug.Log(Plugin.Log.Debug, $"Guide lines: {overlayGuideLines.Count}");
+            //Plugin.Log.Debug($"Guide lines: {overlayGuideLines.Count}");
             //foreach (var guideLine in overlayGuideLines) {
             //    Plugin.Log.Debug($"Guide line: {guideLine.Item1} -> {guideLine.Item2} ({guideLine.Item3})");
             //}
