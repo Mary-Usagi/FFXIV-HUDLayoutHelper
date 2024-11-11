@@ -72,12 +72,6 @@ public class ConfigWindow : Window, IDisposable {
 
     public void Dispose() { }
 
-    private string[][] KeybindDescriptions = [
-        ["Ctrl + C", "Copy position of selected HUD element"],
-        ["Ctrl + V", "Paste copied position to selected HUD element"],
-        ["Ctrl + Z", "Undo last action"],
-        ["Ctrl + Y", "Redo last action"]
-    ];
 
     public override void PreDraw() {
         // Flags must be added or removed before Draw() is being called, or they won't apply
@@ -324,7 +318,7 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.Spacing();
 
         ImGui.BeginTable("##Table1", 2, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.PadOuterX);
-        ImGui.TableSetupColumn("##Column1", ImGuiTableColumnFlags.WidthFixed, 75f);
+        ImGui.TableSetupColumn("##Column1", ImGuiTableColumnFlags.WidthFixed, 100f);
         ImGui.TableSetupColumn("##Column2", ImGuiTableColumnFlags.WidthStretch);
 
         ImGui.TableNextColumn();
@@ -332,11 +326,11 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.TableNextColumn();
         ImGui.TableHeader("Description");
 
-        foreach (var keybind in KeybindDescriptions) {
-            for (var i = 0; i < keybind.Length; i++) {
-                ImGui.TableNextColumn();
-                ImGui.TextWrapped(keybind[i]);
-            }
+        foreach (var keybind in Plugin.Keybindings) {
+            ImGui.TableNextColumn();
+            ImGui.TextWrapped(keybind.keys.ToString());
+            ImGui.TableNextColumn();
+            ImGui.TextWrapped(keybind.description.Text);
         }
         ImGui.EndTable();
     }
@@ -366,7 +360,13 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.Bullet();
         ImGui.TextWrapped("Moving any HUD element after undoing will clear the redo history!");
         ImGui.Unindent();
-
+        ImGui.BulletText("Alignment Overlay:");
+        ImGui.Indent();
+        ImGui.Bullet();
+        ImGui.TextWrapped("Press the 'Toggle Alignment Overlay' keybind to show or hide the alignment overlay.");
+        ImGui.Bullet();
+        ImGui.TextWrapped("The overlay displays the center and corners of elements as dots and lines when the selected elements corners are aligned with others.");
+        ImGui.Unindent();
         ImGui.Spacing();
         ImGui.TextWrapped("All undo and redo histories are saved per HUD layout. You can check the debug info tab to see the current state of the histories.");
 

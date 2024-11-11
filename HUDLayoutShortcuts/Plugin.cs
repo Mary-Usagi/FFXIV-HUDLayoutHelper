@@ -355,6 +355,11 @@ namespace HUDLayoutShortcuts {
                     ExtraModifier = extraModifier;
                     State = state;
                 }
+
+                public override string ToString() {
+                    string extraModifier = ExtraModifier != null ? $" + {ExtraModifier?.ToString().ToLower()}" : "";
+                    return $"Ctrl{extraModifier} + {MainKey}";
+                }
             }
 
             public Description description { get; set; }
@@ -391,7 +396,7 @@ namespace HUDLayoutShortcuts {
             ),
             // TODO: better description
             new Keybind( action: Keybind.Action.ToggleAlignmentOverlay,
-                description: (name: "Toggle Alignment Overlay", text: "Toggle the alignment overlay"),
+                description: (name: "Toggle Alignment Overlay", text: "Toggle alignment overlay with guidelines on/off"),
                 keys: ( mainKey: SeVirtualKey.R, state: KeyStateFlags.Pressed, extraModifier: null)
             )
 
