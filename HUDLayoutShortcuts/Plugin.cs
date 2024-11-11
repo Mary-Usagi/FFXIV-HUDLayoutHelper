@@ -290,8 +290,6 @@ namespace HUDLayoutShortcuts {
             mouseDownTarget = null;
         }
 
-        private enum KeyboardAction { None, Copy, Paste, Undo, Redo, ToggleAlignmentOverlay }
-
         /// <summary>
         /// Represents the data for a mouse event. (AtkEventData) 
         /// </summary>
@@ -334,6 +332,71 @@ namespace HUDLayoutShortcuts {
 
         private HudElementData? currentlyCopied = null;
 
+
+
+        internal class Keybind {
+            internal enum Action { None, Copy, Paste, Undo, Redo, ToggleAlignmentOverlay }
+            internal struct Description {
+                public string Name { get; set; }
+                public string Text { get; set; }
+
+                public Description(string name, string description) {
+                    Name = name;
+                    Text = description;
+                }
+            }
+            internal struct Keys {
+                public SeVirtualKey MainKey { get; set; }
+                public SeVirtualKey? ExtraModifier { get; set; }
+                public KeyStateFlags State { get; set; }
+
+                public Keys(SeVirtualKey mainKey, KeyStateFlags state, SeVirtualKey? extraModifier=null) {
+                    MainKey = mainKey;
+                    ExtraModifier = extraModifier;
+                    State = state;
+                }
+            }
+
+            public Description description { get; set; }
+            public Keys keys { get; set; }
+            public Action KeybindAction { get; set; }
+
+            public Keybind((string name, string text) description, (SeVirtualKey mainKey, KeyStateFlags state, SeVirtualKey? extraModifier) keys, Keybind.Action action) {
+                this.description = new Description(description.Item1, description.Item2);
+                this.keys = new Keys(keys.Item1, keys.Item2, keys.Item3);
+                this.KeybindAction = action;
+            }
+        }
+
+        internal List<Keybind> Keybindings = new List<Keybind>() {
+            new Keybind( action: Keybind.Action.Copy,
+                description: (name: "Copy", text: "Copy position of selected HUD element"), 
+                keys: ( mainKey: SeVirtualKey.C, state: KeyStateFlags.Pressed, extraModifier: null)
+            ),
+            new Keybind( action: Keybind.Action.Paste,
+                description: (name: "Paste", text: "Paste copied position to selected HUD element"),
+                keys: ( mainKey: SeVirtualKey.V, state: KeyStateFlags.Released, extraModifier: null)
+            ),
+            new Keybind( action: Keybind.Action.Redo,
+                description: (name: "Redo", text: "Redo last action"),
+                keys: ( mainKey: SeVirtualKey.Z, state: KeyStateFlags.Pressed, extraModifier: SeVirtualKey.SHIFT)
+            ),
+            new Keybind( action: Keybind.Action.Redo,
+                description: (name: "Redo", text: "Redo last action"),
+                keys: ( mainKey: SeVirtualKey.Y, state: KeyStateFlags.Pressed, extraModifier: null)
+            ),
+            new Keybind( action: Keybind.Action.Undo,
+                description: (name: "Undo", text: "Undo last action"),
+                keys: ( mainKey: SeVirtualKey.Z, state: KeyStateFlags.Pressed, extraModifier: null)
+            ),
+            // TODO: better description
+            new Keybind( action: Keybind.Action.ToggleAlignmentOverlay,
+                description: (name: "Toggle Alignment Overlay", text: "Toggle the alignment overlay"),
+                keys: ( mainKey: SeVirtualKey.R, state: KeyStateFlags.Pressed, extraModifier: null)
+            )
+
+        };
+
         /// <summary>
         /// Handles keyboard shortcuts for copy, paste, undo, and redo actions.
         /// </summary>
@@ -349,27 +412,18 @@ namespace HUDLayoutShortcuts {
             if (!ctrlKeystate.HasFlag(KeyStateFlags.Down)) return;
 
             // Set the keyboard action based on the key states
-            KeyboardAction keyboardAction = KeyboardAction.None;
-            List<(SeVirtualKey, KeyStateFlags, KeyboardAction, SeVirtualKey?)> keybinds = new() {
-                (SeVirtualKey.C, KeyStateFlags.Pressed, KeyboardAction.Copy,    null),
-                (SeVirtualKey.V, KeyStateFlags.Released, KeyboardAction.Paste,  null),
-                (SeVirtualKey.Z, KeyStateFlags.Pressed, KeyboardAction.Redo,    SeVirtualKey.SHIFT),
-                (SeVirtualKey.Z, KeyStateFlags.Pressed, KeyboardAction.Undo,    null),
-                (SeVirtualKey.Y, KeyStateFlags.Pressed, KeyboardAction.Redo,    null),
-                (SeVirtualKey.R, KeyStateFlags.Pressed, KeyboardAction.ToggleAlignmentOverlay,  null)
-            };
-            for (int i = 0; i < keybinds.Count; i++) {
-                (SeVirtualKey key, KeyStateFlags state, KeyboardAction action, SeVirtualKey? extraModifier) = keybinds[i];
-                KeyStateFlags keyState = UIInputData.Instance()->GetKeyState(key);
-                if (extraModifier != null && !UIInputData.Instance()->GetKeyState(extraModifier.Value).HasFlag(KeyStateFlags.Down)) continue;
-                if (keyState.HasFlag(state)) {
-                    keyboardAction = action;
+            Keybind.Action keyboardAction = Keybind.Action.None;
+            foreach (var keybind in Keybindings) {
+                KeyStateFlags keyState = UIInputData.Instance()->GetKeyState(keybind.keys.MainKey);
+                if (keybind.keys.ExtraModifier != null && !UIInputData.Instance()->GetKeyState(keybind.keys.ExtraModifier.Value).HasFlag(KeyStateFlags.Down)) continue;
+                if (keyState.HasFlag(keybind.keys.State)) {
+                    keyboardAction = keybind.KeybindAction;
                     break;
                 }
             }
 
-            if (keyboardAction == KeyboardAction.None) return;
-            this.Debug.Log(this.Log.Debug, $"KeyboardAction: {keyboardAction}");
+            if (keyboardAction == Keybind.Action.None) return;
+            this.Debug.Log(this.Log.Debug, $"Keybind.Action: {keyboardAction}");
 
             // Abort if a popup is open
             AddonHudLayoutWindow* hudLayoutWindow = (AddonHudLayoutWindow*)GameGui.GetAddonByName("_HudLayoutWindow", 1);
@@ -385,19 +439,19 @@ namespace HUDLayoutShortcuts {
             // Depending on the keyboard action, execute the corresponding operation
             HudElementData? changedElement = null;
             switch (keyboardAction) {
-                case KeyboardAction.Copy:
+                case Keybind.Action.Copy:
                     HandleCopyAction(this.HudLayoutScreen);
                     break;
-                case KeyboardAction.Paste:
+                case Keybind.Action.Paste:
                     changedElement = HandlePasteAction(this.HudLayoutScreen, this.AgentHudLayout);
                     break;
-                case KeyboardAction.Undo:
+                case Keybind.Action.Undo:
                     changedElement = HandleUndoAction(this.HudLayoutScreen, this.AgentHudLayout);
                     break;
-                case KeyboardAction.Redo:
+                case Keybind.Action.Redo:
                     changedElement = HandleRedoAction(this.HudLayoutScreen, this.AgentHudLayout);
                     break;
-                case KeyboardAction.ToggleAlignmentOverlay:
+                case Keybind.Action.ToggleAlignmentOverlay:
                     this.ToggleAlignmentOverlay();
                     break;
             }
