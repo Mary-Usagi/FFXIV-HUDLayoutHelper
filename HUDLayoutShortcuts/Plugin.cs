@@ -108,6 +108,7 @@ namespace HUDLayoutShortcuts {
             // TODO: Maybe when not saving, put unsaved undos into redo? -> Done
             // TODO: Maybe instead of moving unsaved todos into redo, save another undo that contains all of the changed elements at once? 
             // TODO: check rewind logic for other redo strategies
+            // TODO: update icon to also show alignment overlay
 
             // TODO: find a better name, like: HUD Layout Helpers / HUD Layout Tools / HUD Layout Util(itie)s
         }
