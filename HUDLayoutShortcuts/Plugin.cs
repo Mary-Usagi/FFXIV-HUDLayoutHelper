@@ -395,7 +395,7 @@ namespace HUDLayoutShortcuts {
                 keys: ( mainKey: SeVirtualKey.Y, state: KeyStateFlags.Pressed, shiftPressed: false)
             ),
             new Keybind( action: Keybind.Action.ToggleAlignmentOverlay,
-                description: (name: "Toggle Alignment Overlay", text: "Toggle alignment overlay with guidelines on/off"),
+                description: (name: "Toggle Alignment Helper Overlay", text: "Toggle alignment helper overlay on/off"),
                 keys: ( mainKey: SeVirtualKey.R, state: KeyStateFlags.Pressed, shiftPressed : false)
             )
 

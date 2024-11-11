@@ -363,9 +363,9 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.BulletText("Alignment Overlay:");
         ImGui.Indent();
         ImGui.Bullet();
-        ImGui.TextWrapped("Press the 'Toggle Alignment Overlay' keybind to show or hide the alignment overlay.");
+        ImGui.TextWrapped("Press the 'Toggle Alignment Helper Overlay' keybind to show or hide the alignment overlay.");
         ImGui.Bullet();
-        ImGui.TextWrapped("The overlay displays the center and corners of elements as dots and lines when the selected elements corners are aligned with others.");
+        ImGui.TextWrapped("The overlay displays lines between the corners and centers of HUD elements to help align them.");
         ImGui.Unindent();
         ImGui.Spacing();
         ImGui.TextWrapped("All undo and redo histories are saved per HUD layout. You can check the debug info tab to see the current state of the histories.");
