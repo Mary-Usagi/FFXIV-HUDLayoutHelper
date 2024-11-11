@@ -347,17 +347,17 @@ namespace HUDLayoutShortcuts {
             }
             internal struct Keys {
                 public SeVirtualKey MainKey { get; set; }
-                public SeVirtualKey? ExtraModifier { get; set; }
+                public bool ShiftPressed { get; set; }
                 public KeyStateFlags State { get; set; }
 
-                public Keys(SeVirtualKey mainKey, KeyStateFlags state, SeVirtualKey? extraModifier=null) {
+                public Keys(SeVirtualKey mainKey, KeyStateFlags state, bool shiftPressed) {
                     MainKey = mainKey;
-                    ExtraModifier = extraModifier;
+                    ShiftPressed = shiftPressed;
                     State = state;
                 }
 
                 public override string ToString() {
-                    string extraModifier = ExtraModifier != null ? $" + {ExtraModifier?.ToString().ToLower()}" : "";
+                    string extraModifier = ShiftPressed ? $" + Shift" : "";
                     return $"Ctrl{extraModifier} + {MainKey}";
                 }
             }
@@ -366,7 +366,7 @@ namespace HUDLayoutShortcuts {
             public Keys keys { get; set; }
             public Action KeybindAction { get; set; }
 
-            public Keybind((string name, string text) description, (SeVirtualKey mainKey, KeyStateFlags state, SeVirtualKey? extraModifier) keys, Keybind.Action action) {
+            public Keybind((string name, string text) description, (SeVirtualKey mainKey, KeyStateFlags state, bool shiftPressed) keys, Keybind.Action action) {
                 this.description = new Description(description.Item1, description.Item2);
                 this.keys = new Keys(keys.Item1, keys.Item2, keys.Item3);
                 this.KeybindAction = action;
@@ -376,28 +376,27 @@ namespace HUDLayoutShortcuts {
         internal List<Keybind> Keybindings = new List<Keybind>() {
             new Keybind( action: Keybind.Action.Copy,
                 description: (name: "Copy", text: "Copy position of selected HUD element"), 
-                keys: ( mainKey: SeVirtualKey.C, state: KeyStateFlags.Pressed, extraModifier: null)
+                keys: ( mainKey: SeVirtualKey.C, state: KeyStateFlags.Pressed, shiftPressed: false)
             ),
             new Keybind( action: Keybind.Action.Paste,
                 description: (name: "Paste", text: "Paste copied position to selected HUD element"),
-                keys: ( mainKey: SeVirtualKey.V, state: KeyStateFlags.Released, extraModifier: null)
-            ),
-            new Keybind( action: Keybind.Action.Redo,
-                description: (name: "Redo", text: "Redo last action"),
-                keys: ( mainKey: SeVirtualKey.Z, state: KeyStateFlags.Pressed, extraModifier: SeVirtualKey.SHIFT)
-            ),
-            new Keybind( action: Keybind.Action.Redo,
-                description: (name: "Redo", text: "Redo last action"),
-                keys: ( mainKey: SeVirtualKey.Y, state: KeyStateFlags.Pressed, extraModifier: null)
+                keys: ( mainKey: SeVirtualKey.V, state: KeyStateFlags.Released, shiftPressed: false)
             ),
             new Keybind( action: Keybind.Action.Undo,
                 description: (name: "Undo", text: "Undo last action"),
-                keys: ( mainKey: SeVirtualKey.Z, state: KeyStateFlags.Pressed, extraModifier: null)
+                keys: ( mainKey: SeVirtualKey.Z, state: KeyStateFlags.Pressed,shiftPressed : false)
             ),
-            // TODO: better description
+            new Keybind( action: Keybind.Action.Redo,
+                description: (name: "Redo", text: "Redo last action"),
+                keys: ( mainKey: SeVirtualKey.Z, state: KeyStateFlags.Pressed, shiftPressed: true)
+            ),
+            new Keybind( action: Keybind.Action.Redo,
+                description: (name: "Redo", text: "Redo last action"),
+                keys: ( mainKey: SeVirtualKey.Y, state: KeyStateFlags.Pressed, shiftPressed: false)
+            ),
             new Keybind( action: Keybind.Action.ToggleAlignmentOverlay,
                 description: (name: "Toggle Alignment Overlay", text: "Toggle alignment overlay with guidelines on/off"),
-                keys: ( mainKey: SeVirtualKey.R, state: KeyStateFlags.Pressed, extraModifier: null)
+                keys: ( mainKey: SeVirtualKey.R, state: KeyStateFlags.Pressed, shiftPressed : false)
             )
 
         };
@@ -420,7 +419,8 @@ namespace HUDLayoutShortcuts {
             Keybind.Action keyboardAction = Keybind.Action.None;
             foreach (var keybind in Keybindings) {
                 KeyStateFlags keyState = UIInputData.Instance()->GetKeyState(keybind.keys.MainKey);
-                if (keybind.keys.ExtraModifier != null && !UIInputData.Instance()->GetKeyState(keybind.keys.ExtraModifier.Value).HasFlag(KeyStateFlags.Down)) continue;
+                if (keybind.keys.ShiftPressed && !UIInputData.Instance()->GetKeyState(SeVirtualKey.SHIFT).HasFlag(KeyStateFlags.Down)) continue;
+                if (!keybind.keys.ShiftPressed && UIInputData.Instance()->GetKeyState(SeVirtualKey.SHIFT).HasFlag(KeyStateFlags.Down)) continue;
                 if (keyState.HasFlag(keybind.keys.State)) {
                     keyboardAction = keybind.KeybindAction;
                     break;
