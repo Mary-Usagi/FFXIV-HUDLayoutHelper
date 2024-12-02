@@ -40,7 +40,7 @@ namespace HUDLayoutShortcuts {
         /// <param name="resNodeID">The resource node ID.</param>
         /// <param name="hudElementData">The HUD element data.</param>
         /// <param name="hudLayoutScreen">The HUD layout screen pointer.</param>
-        internal static unsafe void SimulateMouseClickOnHudElement(AtkResNode* resNode, uint resNodeID, HudElementData hudElementData, AddonHudLayoutScreen* hudLayoutScreen, Plugin plugin, byte customFlag) {
+        internal static unsafe void SimulateMouseClickOnHudElement(AtkResNode* resNode, uint resNodeID, HudElementData hudElementData, AddonHudLayoutScreen* hudLayoutScreen, Plugin plugin, AtkEventStateFlags customFlag) {
             if (resNode == null) {
                 plugin.Log.Warning("ResNode is null");
                 return;
@@ -55,9 +55,9 @@ namespace HUDLayoutShortcuts {
             AtkEvent mouseDownEvent = *resNode->AtkEventManager.Event;
             mouseDownEvent.State.EventType = AtkEventType.MouseDown;
             mouseDownEvent.Param = resNodeID;
-            mouseDownEvent.Flags = 4;
+            mouseDownEvent.State.StateFlags = (AtkEventStateFlags)4;
             // Add custom Flag to the event to identify it as a custom event
-            mouseDownEvent.Flags |= customFlag;
+            mouseDownEvent.State.StateFlags |= customFlag;
 
             // Set the event data with the x and y position of the mouse click
             AtkEventData* mouseDownEventData = &eventData;
@@ -74,10 +74,10 @@ namespace HUDLayoutShortcuts {
             mouseUpEvent.Param = 99;
             mouseUpEvent.NextEvent = null;
             mouseUpEvent.Target = (AtkEventTarget*)atkStagePtr;
-            mouseUpEvent.Unk29 = 0;
-            mouseUpEvent.Flags = 6;
+            mouseUpEvent.State.UnkFlags1 = 0;
+            mouseUpEvent.State.StateFlags = (AtkEventStateFlags)6;
             // Add custom Flag to the event to identify it as a custom event
-            mouseUpEvent.Flags |= customFlag;
+            mouseUpEvent.State.StateFlags |= customFlag;
 
             // Set the event data with the x and y position of the mouse click
             plugin.Debug.Log(plugin.Log.Debug, "Calling MouseUp event");

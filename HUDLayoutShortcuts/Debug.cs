@@ -176,11 +176,11 @@ namespace HUDLayoutShortcuts {
             }
 
             Plugin.Log.Debug("-------- AtkEvent --------");
-            Plugin.Log.Debug($"AtkEvent Flags: {atkEvent->Flags}");
+            Plugin.Log.Debug($"AtkEvent Flags: {atkEvent->State.StateFlags}");
             Plugin.Log.Debug($"AtkEvent Param: {atkEvent->Param}");
             Plugin.Log.Debug($"AtkEvent Listener: {(uint)atkEvent->Listener:X}");
             Plugin.Log.Debug($"AtkEvent Node: {(uint)atkEvent->Node:X}");
-            Plugin.Log.Debug($"AtkEvent Unk29: {atkEvent->Unk29}");
+            Plugin.Log.Debug($"AtkEvent Unk29: {atkEvent->State.UnkFlags1}");
             Plugin.Log.Debug($"AtkEvent NextEvent: {(uint)atkEvent->NextEvent:X}");
             Plugin.Log.Debug($"(AtkStage): {(uint)AtkStage.Instance():X}");
             Plugin.Log.Debug($"AtkEvent Target: {(uint)atkEvent->Target:X}");

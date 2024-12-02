@@ -194,7 +194,7 @@ namespace HUDLayoutShortcuts {
         }
         // SETUP END
 
-        private byte CUSTOM_FLAG = 16;
+        private AtkEventStateFlags CUSTOM_FLAG = (AtkEventStateFlags)16;
         private HudElementData? mouseDownTarget = null;
 
         private unsafe void HandleMouseDownEvent(AddonEvent type, AddonArgs args) {
@@ -205,8 +205,8 @@ namespace HUDLayoutShortcuts {
             // Check if the event has the custom flag set, if so, filter it out
             AtkEvent* atkEvent = (AtkEvent*)receiveEventArgs.AtkEvent;
 
-            if ((atkEvent->Flags & CUSTOM_FLAG) == CUSTOM_FLAG) {
-                atkEvent->Flags &= (byte)~CUSTOM_FLAG;
+            if ((atkEvent->State.StateFlags & CUSTOM_FLAG) == CUSTOM_FLAG) {
+                atkEvent->State.StateFlags &= (AtkEventStateFlags)~CUSTOM_FLAG;
                 return;
             }
 
@@ -245,8 +245,8 @@ namespace HUDLayoutShortcuts {
 
             // Check if the event has the custom flag set, if so, filter it out
             AtkEvent* atkEvent = (AtkEvent*)receiveEventArgs.AtkEvent;
-            if ((atkEvent->Flags & CUSTOM_FLAG) == CUSTOM_FLAG) {
-                atkEvent->Flags &= (byte)~CUSTOM_FLAG;
+            if ((atkEvent->State.StateFlags & CUSTOM_FLAG) == CUSTOM_FLAG) {
+                atkEvent->State.StateFlags &= (AtkEventStateFlags)~CUSTOM_FLAG;
                 return;
             }
 
