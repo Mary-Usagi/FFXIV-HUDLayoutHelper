@@ -53,7 +53,7 @@ namespace HUDLayoutShortcuts {
             // ----> MouseDown Event
             // Create the mouse down event from the selected node's event
             AtkEvent mouseDownEvent = *resNode->AtkEventManager.Event;
-            mouseDownEvent.Type = AtkEventType.MouseDown;
+            mouseDownEvent.State.EventType = AtkEventType.MouseDown;
             mouseDownEvent.Param = resNodeID;
             mouseDownEvent.Flags = 4;
             // Add custom Flag to the event to identify it as a custom event
@@ -70,7 +70,7 @@ namespace HUDLayoutShortcuts {
             // Create the mouse up event from the selected node's event
             uint atkStagePtr = (uint)AtkStage.Instance();
             AtkEvent mouseUpEvent = *resNode->AtkEventManager.Event;
-            mouseUpEvent.Type = AtkEventType.MouseUp;
+            mouseUpEvent.State.EventType = AtkEventType.MouseUp;
             mouseUpEvent.Param = 99;
             mouseUpEvent.NextEvent = null;
             mouseUpEvent.Target = (AtkEventTarget*)atkStagePtr;

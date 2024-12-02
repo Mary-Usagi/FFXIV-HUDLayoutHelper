@@ -114,7 +114,7 @@ public class AlignmentOverlayWindow : Window, IDisposable {
         // See: https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp
         //ImDrawList* draw_list = ImGui.GetForegroundDrawList(ImGui.GetMainViewport());
         if (!Plugin.ClientState.IsLoggedIn) return;
-        if (Plugin.ClientState is not { LocalPlayer.ClassJob.Id: var classJobId }) return;
+        if (Plugin.ClientState is not { LocalPlayer.ClassJob.RowId: var classJobId }) return;
         if (Plugin.AgentHudLayout == null || Plugin.HudLayoutScreen == null) return;
 
         ImDrawListPtr imDrawListPtr = ImGui.GetForegroundDrawList(ImGui.GetMainViewport());

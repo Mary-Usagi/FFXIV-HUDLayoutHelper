@@ -209,7 +209,7 @@ namespace HUDLayoutShortcuts {
             }
 
             Plugin.Log.Debug("-------- AtkEvent End --------");
-            Plugin.Log.Debug($"AtkEvent Type: {atkEvent->Type}");
+            Plugin.Log.Debug($"AtkEvent Type: {atkEvent->State.EventType}");
         }
 
         /// <summary>

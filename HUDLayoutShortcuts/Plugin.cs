@@ -14,6 +14,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Timers;
+using FFXIVClientStructs.FFXIV.Client.System.Input;
 
 namespace HUDLayoutShortcuts {
     public sealed class Plugin : IDalamudPlugin {
@@ -203,6 +204,7 @@ namespace HUDLayoutShortcuts {
 
             // Check if the event has the custom flag set, if so, filter it out
             AtkEvent* atkEvent = (AtkEvent*)receiveEventArgs.AtkEvent;
+
             if ((atkEvent->Flags & CUSTOM_FLAG) == CUSTOM_FLAG) {
                 atkEvent->Flags &= (byte)~CUSTOM_FLAG;
                 return;
@@ -409,7 +411,7 @@ namespace HUDLayoutShortcuts {
         private unsafe void HandleKeyboardShortcuts(IFramework framework) {
             // Executes every frame
             if (!ClientState.IsLoggedIn) return;
-            if (ClientState is not { LocalPlayer.ClassJob.Id: var classJobId }) return;
+            if (ClientState is not { LocalPlayer.ClassJob.RowId: var classJobId }) return;
             if (ImGui.GetIO().WantCaptureKeyboard) return; // TODO: Necessary? 
 
             // Get the state of the control key, abort if not pressed 
