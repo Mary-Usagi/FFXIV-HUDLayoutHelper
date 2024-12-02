@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using System.Text.Json;
 using FFXIVClientStructs.FFXIV.Client.Graphics;
 
-namespace HUDLayoutShortcuts {
+namespace HUDLayoutHelper {
     /// <summary>
     /// Represents data for a HUD element.
     /// </summary>

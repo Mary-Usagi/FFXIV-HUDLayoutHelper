@@ -15,7 +15,7 @@ using FFXIVClientStructs.FFXIV.Component.GUI;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 using System.Drawing;
 
-namespace HUDLayoutShortcuts;
+namespace HUDLayoutHelper;
 
 /// <summary>
 /// https://www.reddit.com/r/imgui/comments/kknzqw/how_do_i_draw_triangle_in_imgui/

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HUDLayoutShortcuts {
+namespace HUDLayoutHelper {
     [Serializable]
     public class Configuration : IPluginConfiguration {
         public int Version { get; set; } = 0;

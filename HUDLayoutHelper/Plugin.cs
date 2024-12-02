@@ -16,14 +16,14 @@ using System.Text.Json;
 using System.Timers;
 using FFXIVClientStructs.FFXIV.Client.System.Input;
 
-namespace HUDLayoutShortcuts {
+namespace HUDLayoutHelper {
     public sealed class Plugin : IDalamudPlugin {
         public bool DEBUG = false;
 
-        public string Name => "HUDLayoutShortcuts";
-        private const string CommandName = "/hudshortcuts";
+        public string Name => "HUDLayoutHelper";
+        private const string CommandName = "/hudhelper";
 
-        public readonly WindowSystem WindowSystem = new("HUDLayoutShortcuts");
+        public readonly WindowSystem WindowSystem = new("HUDLayoutHelper");
         public Configuration Configuration { get; init; }
         private ConfigWindow ConfigWindow { get; init; }
         private AlignmentOverlayWindow AlignmentOverlayWindow { get; init; }

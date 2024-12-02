@@ -6,9 +6,9 @@ using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
 using System.Collections.Generic;
 
-namespace HUDLayoutShortcuts {
+namespace HUDLayoutHelper {
     /// <summary>
-    /// Provides debugging functionality for the HUDLayoutShortcuts plugin.
+    /// Provides debugging functionality for the HUDLayoutHelper plugin.
     /// </summary>
     public sealed class Debug : IDisposable {
         private Plugin Plugin { get; }

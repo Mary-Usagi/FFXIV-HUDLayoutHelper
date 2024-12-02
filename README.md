@@ -1,4 +1,4 @@
-# HUDLayoutShortcuts
+# HUDLayoutHelper
 
 A Dalamud Plugin for FFXIV. 
 

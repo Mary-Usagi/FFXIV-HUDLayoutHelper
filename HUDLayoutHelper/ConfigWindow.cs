@@ -11,7 +11,7 @@ using System.Text;
 using static FFXIVClientStructs.FFXIV.Client.UI.UIInputData;
 using YamlDotNet.Serialization;
 
-namespace HUDLayoutShortcuts;
+namespace HUDLayoutHelper;
 
 public class ConfigWindow : Window, IDisposable {
     private Plugin Plugin;
@@ -54,7 +54,7 @@ public class ConfigWindow : Window, IDisposable {
     internal WindowTabs windowTabs;
 
 
-    public ConfigWindow(Plugin plugin) : base("HUD Layout Shortcuts Settings"){
+    public ConfigWindow(Plugin plugin) : base("HUD Layout Helper Settings"){
         Flags = ImGuiWindowFlags.AlwaysUseWindowPadding;
 
         SizeConstraints = new WindowSizeConstraints {
@@ -336,7 +336,7 @@ public class ConfigWindow : Window, IDisposable {
     }
 
     internal void DrawAbout() {
-        ImGui.TextWrapped("About HUD Layout Shortcuts:");
+        ImGui.TextWrapped("About HUD Layout Helper:");
         ImGui.Separator();
         ImGui.TextWrapped("This plugin helps manage and customize the HUD layout when being in the native HUD Layout editor of FFXIV. Use the provided keybinds to copy, paste, undo, and redo changes to HUD elements.");
         ImGui.Spacing();

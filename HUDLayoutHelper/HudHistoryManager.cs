@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HUDLayoutShortcuts {
+namespace HUDLayoutHelper {
     internal class HudElementAction {
         public HudElementData PreviousState { get; }
         public HudElementData NewState { get; }

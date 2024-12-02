@@ -5,9 +5,9 @@ using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
-using static HUDLayoutShortcuts.Plugin;
+using static HUDLayoutHelper.Plugin;
 
-namespace HUDLayoutShortcuts {
+namespace HUDLayoutHelper {
     internal class Utils {
         /// <summary>
         /// Finds a HUD resource node by name.
