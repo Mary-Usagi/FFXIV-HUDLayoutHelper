@@ -24,7 +24,7 @@ There are different colors and line styles for different types of alignment:
 - ${\textsf{\color{red}Red}}$ lines and dots: highlighting alignment with the **centers** of HUD elements.
 - ${\textsf{\color{green}Green}}$ lines and dots: highlighting alignment with the **corners** of HUD elements.
 
-## Images
+## Screenshots
 #### Alignment Overlay
 ![Alignment Overlay](./HUDLayoutHelper/images/alignment_lines.png)
 
