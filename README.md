@@ -32,3 +32,11 @@ There are different colors and line styles for different types of alignment:
 This window can be toggled on and off in the settings and displays the keybinds for the plugin. It is attached to the HUD Layout Editor window and will move with it. 
 
 ![Shortcut Hints](./HUDLayoutHelper/images/shortcut_hints.png)
+
+
+<details>
+  <summary>GIF</summary>
+
+  ![HUDLayoutHelper](https://github.com/user-attachments/assets/854e77d8-2313-4c49-a277-983a1719c63c)
+
+</details> 
