@@ -1,19 +1,11 @@
 ﻿using Dalamud.Interface.Windowing;
-using Dalamud.Utility;
-using FFXIVClientStructs;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Numerics;
-using System.Runtime.InteropServices;
-using System.Text;
-using static FFXIVClientStructs.FFXIV.Client.UI.UIInputData;
-using YamlDotNet.Serialization;
-using Dalamud.Plugin.Services;
-using FFXIVClientStructs.FFXIV.Component.GUI;
-using FFXIVClientStructs.FFXIV.Client.UI.Misc;
-using System.Drawing;
 
 namespace HUDLayoutHelper;
 

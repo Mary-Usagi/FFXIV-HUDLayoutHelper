@@ -5,16 +5,14 @@ using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
+using FFXIVClientStructs.FFXIV.Client.System.Input;
 using FFXIVClientStructs.FFXIV.Client.UI;
-using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
-using System.Timers;
-using FFXIVClientStructs.FFXIV.Client.System.Input;
 
 namespace HUDLayoutHelper {
     public sealed class Plugin : IDalamudPlugin {
