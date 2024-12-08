@@ -109,10 +109,11 @@ namespace HUDLayoutHelper {
         /// <param name="hudLayoutScreenPtr">The HUD layout screen pointer.</param>
         /// <param name="plugin">The plugin instance.</param>
         /// <returns>True if the HUD layout is ready, false otherwise.</returns>
-        internal static unsafe bool IsHudLayoutReady(out AgentHUDLayout* agentHudLayoutPtr, out AddonHudLayoutScreen* hudLayoutScreenPtr, Plugin plugin) {
+        internal static unsafe bool IsHudLayoutReady(out AgentHUDLayout* agentHudLayoutPtr, out AddonHudLayoutScreen* hudLayoutScreenPtr, out AddonHudLayoutWindow* hudLayoutWindowPtr, Plugin plugin) {
             agentHudLayoutPtr = null;
             hudLayoutScreenPtr = null;
-            
+            hudLayoutWindowPtr = null;
+
             // Get the HudLayout agent, return false if not found
             AgentHUDLayout* agentHudLayout = (AgentHUDLayout*)plugin.GameGui.FindAgentInterface("HudLayout");
             if (agentHudLayout == null) return false;
@@ -125,8 +126,17 @@ namespace HUDLayoutHelper {
             AddonHudLayoutScreen* hudLayoutScreen = (AddonHudLayoutScreen*)addonHudLayoutScreenPtr;
             if (hudLayoutScreen == null) return false;
 
+            // Get the HudLayoutWindow, return false if not found
+            nint addonHudLayoutWindowPtr = plugin.GameGui.GetAddonByName("_HudLayoutWindow", 1);
+            if (addonHudLayoutWindowPtr == nint.Zero) return false;
+
+            // Get the HudLayoutWindow pointer
+            AddonHudLayoutWindow* hudLayoutWindow = (AddonHudLayoutWindow*)addonHudLayoutWindowPtr;
+            if (hudLayoutWindow == null) return false;
+
             agentHudLayoutPtr = agentHudLayout;
             hudLayoutScreenPtr = hudLayoutScreen;
+            hudLayoutWindowPtr = hudLayoutWindow;
             return true;
         }
 

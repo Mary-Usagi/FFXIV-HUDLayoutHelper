@@ -29,6 +29,8 @@ namespace HUDLayoutHelper {
         private AlignmentOverlayWindow AlignmentOverlayWindow { get; init; }
         private bool IsOverlayVisible = false;
 
+        private ShortcutHintsWindow ShortcutHintsWindow { get; init; }
+
         [PluginService] internal static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
         [PluginService] internal static ITextureProvider TextureProvider { get; private set; } = null!;
         [PluginService] internal static ICommandManager CommandManager { get; private set; } = null!;
@@ -47,6 +49,7 @@ namespace HUDLayoutHelper {
         // HUD Layout Addon Pointers
         internal unsafe AgentHUDLayout* AgentHudLayout = null;
         internal unsafe AddonHudLayoutScreen* HudLayoutScreen = null;
+        internal unsafe AddonHudLayoutWindow* HudLayoutWindow = null;
 
         public Plugin(
             IGameGui gameGui,
@@ -81,6 +84,9 @@ namespace HUDLayoutHelper {
             // Add the alignment overlay window
             AlignmentOverlayWindow = new AlignmentOverlayWindow(this);
             WindowSystem.AddWindow(AlignmentOverlayWindow);
+
+            ShortcutHintsWindow = new ShortcutHintsWindow(this);
+            WindowSystem.AddWindow(ShortcutHintsWindow);
 
             PluginInterface.UiBuilder.Draw += DrawUI;
 
@@ -118,19 +124,21 @@ namespace HUDLayoutHelper {
         /// </summary>
         /// <returns></returns>
         private unsafe bool InitializeHudLayoutAddons() {
-            if (!Utils.IsHudLayoutReady(out AgentHUDLayout* agentHudLayout, out AddonHudLayoutScreen* hudLayoutScreen, this)) {
+            if (!Utils.IsHudLayoutReady(out AgentHUDLayout* agentHudLayout, out AddonHudLayoutScreen* hudLayoutScreen, out AddonHudLayoutWindow* hudLayoutWindow, this)) {
                 this.Log.Warning("HudLayoutScreen not ready.");
                 return false;
             }
 
             AgentHudLayout = agentHudLayout;
             HudLayoutScreen = hudLayoutScreen;
+            HudLayoutWindow = hudLayoutWindow;
             return true;
         }
 
         private unsafe void ClearHudLayoutAddons() {
             AgentHudLayout = null;
             HudLayoutScreen = null;
+            HudLayoutWindow = null;
         }
 
         private void RegisterCallbacks() {
@@ -156,6 +164,7 @@ namespace HUDLayoutHelper {
             }
 
             if (IsOverlayVisible && !AlignmentOverlayWindow.IsOpen) AlignmentOverlayWindow.Toggle();
+            if (!ShortcutHintsWindow.IsOpen) ShortcutHintsWindow.Toggle();
             UpdatePreviousElements();
             this.Framework.Update += PerformScheduledElementChangeCheck;
             this.Framework.Update += OnUpdate;
@@ -181,7 +190,12 @@ namespace HUDLayoutHelper {
                 IsOverlayVisible = false;
             }
             AlignmentOverlayWindow.IsOpen = false;
-            
+
+            if (ShortcutHintsWindow.IsOpen) {
+                ShortcutHintsWindow.Toggle();
+            }
+            ShortcutHintsWindow.IsOpen = false;
+
             previousHudLayoutIndexElements.Clear();
 
             ClearHudLayoutAddons();
@@ -337,10 +351,12 @@ namespace HUDLayoutHelper {
             internal struct Description {
                 public string Name { get; set; }
                 public string Text { get; set; }
+                public string ShortText { get; set; }
 
-                public Description(string name, string description) {
+                public Description(string name, string description, string shortDescription) {
                     Name = name;
                     Text = description;
+                    ShortText = shortDescription;
                 }
             }
             internal struct Keys {
@@ -364,36 +380,36 @@ namespace HUDLayoutHelper {
             public Keys keys { get; set; }
             public Action KeybindAction { get; set; }
 
-            public Keybind((string name, string text) description, (SeVirtualKey mainKey, KeyStateFlags state, bool shiftPressed) keys, Keybind.Action action) {
-                this.description = new Description(description.Item1, description.Item2);
-                this.keys = new Keys(keys.Item1, keys.Item2, keys.Item3);
+            public Keybind((string name, string text, string shortText) description, (SeVirtualKey mainKey, KeyStateFlags state, bool shiftPressed) keys, Keybind.Action action) {
+                this.description = new Description(description.name, description.text, description.shortText);
+                this.keys = new Keys(keys.mainKey, keys.state, keys.shiftPressed);
                 this.KeybindAction = action;
             }
         }
 
         internal List<Keybind> Keybindings = new List<Keybind>() {
             new Keybind( action: Keybind.Action.Copy,
-                description: (name: "Copy", text: "Copy position of selected HUD element"), 
+                description: (name: "Copy", text: "Copy position of selected HUD element", shortText: "Copy"),
                 keys: ( mainKey: SeVirtualKey.C, state: KeyStateFlags.Pressed, shiftPressed: false)
             ),
             new Keybind( action: Keybind.Action.Paste,
-                description: (name: "Paste", text: "Paste copied position to selected HUD element"),
+                description: (name: "Paste", text: "Paste copied position to selected HUD element", shortText: "Paste"),
                 keys: ( mainKey: SeVirtualKey.V, state: KeyStateFlags.Released, shiftPressed: false)
             ),
             new Keybind( action: Keybind.Action.Undo,
-                description: (name: "Undo", text: "Undo last action"),
+                description: (name: "Undo", text: "Undo last action", shortText: "Undo"),
                 keys: ( mainKey: SeVirtualKey.Z, state: KeyStateFlags.Pressed,shiftPressed : false)
             ),
             new Keybind( action: Keybind.Action.Redo,
-                description: (name: "Redo", text: "Redo last action"),
-                keys: ( mainKey: SeVirtualKey.Z, state: KeyStateFlags.Pressed, shiftPressed: true)
-            ),
-            new Keybind( action: Keybind.Action.Redo,
-                description: (name: "Redo", text: "Redo last action"),
+                description: (name: "Redo", text: "Redo last action", shortText: "Redo"),
                 keys: ( mainKey: SeVirtualKey.Y, state: KeyStateFlags.Pressed, shiftPressed: false)
             ),
+            new Keybind( action: Keybind.Action.Redo,
+                description: (name: "Redo", text: "Redo last action", shortText: "Redo"),
+                keys: ( mainKey: SeVirtualKey.Z, state: KeyStateFlags.Pressed, shiftPressed: true)
+            ),
             new Keybind( action: Keybind.Action.ToggleAlignmentOverlay,
-                description: (name: "Toggle Alignment Helper Overlay", text: "Toggle alignment helper overlay on/off"),
+                description: (name: "Toggle Alignment Helper Overlay", text: "Toggle alignment helper overlay on/off", shortText: "Toggle Overlay"),
                 keys: ( mainKey: SeVirtualKey.R, state: KeyStateFlags.Pressed, shiftPressed : false)
             )
 
@@ -429,9 +445,7 @@ namespace HUDLayoutHelper {
             this.Debug.Log(this.Log.Debug, $"Keybind.Action: {keyboardAction}");
 
             // Abort if a popup is open
-            AddonHudLayoutWindow* hudLayoutWindow = (AddonHudLayoutWindow*)GameGui.GetAddonByName("_HudLayoutWindow", 1);
-            if (hudLayoutWindow == null) return;
-            if (hudLayoutWindow->NumOpenPopups > 0) {
+            if (this.HudLayoutWindow->NumOpenPopups > 0) {
                 this.Debug.Log(this.Log.Warning, "Popup open, not executing action.");
                 return;
             }
@@ -632,6 +646,7 @@ namespace HUDLayoutHelper {
             WindowSystem.RemoveAllWindows();
             ConfigWindow.Dispose();
             AlignmentOverlayWindow.Dispose();
+            ShortcutHintsWindow.Dispose();
             CommandManager.RemoveHandler(CommandName);
         }
 

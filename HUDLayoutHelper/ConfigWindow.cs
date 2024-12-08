@@ -53,6 +53,7 @@ public class ConfigWindow : Window, IDisposable {
     }
     internal WindowTabs windowTabs;
 
+    private string savedConfigHash = "";
 
     public ConfigWindow(Plugin plugin) : base("HUD Layout Helper Settings"){
         Flags = ImGuiWindowFlags.AlwaysUseWindowPadding;
@@ -64,6 +65,7 @@ public class ConfigWindow : Window, IDisposable {
         Plugin = plugin;
         SizeCondition = ImGuiCond.Always;
         Configuration = plugin.Configuration;
+        this.savedConfigHash = Configuration.GetHash();
 
         // Initialize the tab actions
         this.windowTabs = new WindowTabs(DrawAbout, DrawKeybinds, DrawSettings, DrawDebugInfoTab);
@@ -73,14 +75,7 @@ public class ConfigWindow : Window, IDisposable {
     public void Dispose() { }
 
 
-    public override void PreDraw() {
-        // Flags must be added or removed before Draw() is being called, or they won't apply
-        if (Configuration.IsConfigWindowMovable) {
-            Flags &= ~ImGuiWindowFlags.NoMove;
-        } else {
-            Flags |= ImGuiWindowFlags.NoMove;
-        }
-    }
+    public override void PreDraw() { }
 
     // TODO
     public unsafe static bool BeginTabItem(string label, ImGuiTabItemFlags flags) {
@@ -120,6 +115,9 @@ public class ConfigWindow : Window, IDisposable {
 
                 // Check if this tab should be selected by default
                 var flags = ImGuiTabItemFlags.None;
+                if (tab.name.Contains("Settings") && this.savedConfigHash != Configuration.GetHash()) {
+                    flags |= ImGuiTabItemFlags.UnsavedDocument;
+                }
                 if (tab.selected) {
                     flags |= ImGuiTabItemFlags.SetSelected;
                     tab.setSelected(false);
@@ -242,6 +240,7 @@ public class ConfigWindow : Window, IDisposable {
         // can't ref a property, so use a local copy
         int maxUndoHistorySize = Configuration.MaxUndoHistorySize;
         bool isDebugTabOpen = Configuration.DebugTabOpen;
+        bool showShortcutHints = Configuration.ShowShortcutHints;
         HudHistoryManager.RedoStrategy redoActionStrategy = Configuration.RedoActionStrategy;
 
         ImGui.Spacing();
@@ -288,6 +287,12 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
+        if (ImGui.Checkbox("Show Shortcut Hints", ref showShortcutHints)) {
+            Configuration.ShowShortcutHints = showShortcutHints;
+        }
+        if (ImGui.IsItemHovered()) {
+            ImGui.SetTooltip("Show a window with a list of available shortcuts in the HUD Layout Editor");
+        }
         if (ImGui.Checkbox("Show Debug Tab", ref isDebugTabOpen)) {
             Configuration.DebugTabOpen = isDebugTabOpen;
         }
@@ -307,8 +312,8 @@ public class ConfigWindow : Window, IDisposable {
             Plugin.HudHistoryManager.SetRedoStrategy(redoActionStrategy);
             this.windowTabs.DebugInfo.setOpen(Configuration.DebugTabOpen); 
             Configuration.Save();
+            this.savedConfigHash = Configuration.GetHash();
         }
-
     }
 
     internal void DrawKeybinds() {
@@ -317,7 +322,7 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.TextWrapped("Keybinds that are available when in the HUD Layout Editor:");
         ImGui.Spacing();
 
-        ImGui.BeginTable("##Table1", 2, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.PadOuterX);
+        ImGui.BeginTable("##Table1", 2, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.PadOuterX | ImGuiTableFlags.RowBg);
         ImGui.TableSetupColumn("##Column1", ImGuiTableColumnFlags.WidthFixed, 100f);
         ImGui.TableSetupColumn("##Column2", ImGuiTableColumnFlags.WidthStretch);
 
