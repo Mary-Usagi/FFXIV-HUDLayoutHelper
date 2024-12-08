@@ -43,12 +43,12 @@ namespace HUDLayoutHelper {
         [Serializable]
         public enum RedoStrategy {
             ClearOnAction,
-            ClearSameElementOnAction,
+            //ClearSameElementOnAction,
             InsertOnAction
         }
         internal static Dictionary<RedoStrategy, string> RedoStrategyDescriptions = new() {
             { RedoStrategy.ClearOnAction, "Clears the Redo History when any element is moved after an Undo" },
-            { RedoStrategy.ClearSameElementOnAction, "Clears only the Redo History for the element that was moved after an Undo" },
+            //{ RedoStrategy.ClearSameElementOnAction, "Clears only the Redo History for the element that was moved after an Undo" },
             { RedoStrategy.InsertOnAction, "Inserts the new action into the History without clearing anything" }
         };
 
@@ -106,9 +106,9 @@ namespace HUDLayoutHelper {
                 case RedoStrategy.ClearOnAction:
                     redoHistory[hudLayoutIndex].Clear();
                     break;
-                case RedoStrategy.ClearSameElementOnAction:
-                    redoHistory[hudLayoutIndex].RemoveAll(a => a.NewState.ResNodeDisplayName == action.NewState.ResNodeDisplayName);
-                    break;
+                //case RedoStrategy.ClearSameElementOnAction:
+                //    redoHistory[hudLayoutIndex].RemoveAll(a => a.NewState.ResNodeDisplayName == action.NewState.ResNodeDisplayName);
+                //    break;
                 case RedoStrategy.InsertOnAction:
                     // Do nothing
                     break;
