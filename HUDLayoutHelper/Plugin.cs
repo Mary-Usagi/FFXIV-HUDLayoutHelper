@@ -107,6 +107,7 @@ namespace HUDLayoutHelper {
             });
 
             // TODO: check rewind logic for other redo strategies
+            // TODO: Show numbers for distance of alignment lines? 
         }
 
         // SETUP START
