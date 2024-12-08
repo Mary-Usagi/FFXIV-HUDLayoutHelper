@@ -1,6 +1,6 @@
 # HUDLayoutHelper
 
-A Dalamud Plugin for FFXIV. 
+A Dalamud Plugin for FFXIV that adds QoL features to the native HUD Layout editor. 
 
 - Copy and paste HUD element positions. 
 - Undo and redo movement of HUD elements. 
