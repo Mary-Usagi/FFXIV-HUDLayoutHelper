@@ -365,7 +365,11 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.Bullet();
         ImGui.TextWrapped("Press the 'Toggle Alignment Helper Overlay' keybind to show or hide the alignment overlay.");
         ImGui.Bullet();
-        ImGui.TextWrapped("The overlay displays lines between the corners and centers of HUD elements to help align them.");
+        ImGui.TextWrapped("The overlay displays lines between the corners and centers of the selected HUD element and all others to help with alignment.");
+        ImGui.Bullet();
+        ImGui.TextWrapped("Red dots and lines represent the center of HUD elements. Green dots and lines represent the corners.");
+        ImGui.Bullet();
+        ImGui.TextWrapped("Faded lines are drawn when elements almost align and solid lines when they are completely aligned.");
         ImGui.Unindent();
         ImGui.Spacing();
         ImGui.TextWrapped("All undo and redo histories are saved per HUD layout. You can check the debug info tab to see the current state of the histories.");

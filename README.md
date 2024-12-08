@@ -13,6 +13,15 @@ A Dalamud Plugin for FFXIV.
 	- **Ctrl + V**: Paste copied HUD element.
 	- **Ctrl + Z**: Undo last action.
 	- **Ctrl + Y**: Redo last action.
-	- **Ctrl + R**: Toggle alignment helper overlay. 
+	- **Ctrl + R**: Toggle alignment helper overlay.
 
-<!-- TODO: Add alignment images -->
+## Alignment Helper Overlay Visuals
+The help lines are always shown for the currently selected HUD element in relation to all other HUD elements. 
+
+**Red dots and lines**: center of HUD elements.  
+**Green dots and lines**: corners of HUD elements.  
+**Solid line**: completely aligned with another HUD element.  
+**Faded line**: almost aligned with another HUD element.
+
+### Sample image: 
+![Alignment Overlay](./HUDLayoutHelper/images/alignment_lines.png)
