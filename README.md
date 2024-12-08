@@ -19,11 +19,10 @@ A Dalamud Plugin for FFXIV.
 When the alignment helper overlay is enabled, lines will be drawn between the corners and centers of the selected HUD element and other HUD elements to help align them. 
 
 There are different colors and line styles for different types of alignment: 
-- **Solid line**: the selected HUD element has one point (corner or center) that is fully aligned with another HUD element.  
-- *Faded line*: the selected HUD element is close to being aligned with another HUD element.
-- <code style="color : Red">Red lines and dots</code>: highlighting alignment with the centers of HUD elements.
-- <code style="color : Green">Green lines and dots</code>: highlighting alignment with the corners of HUD elements.
-
+- **Solid line**: the selected HUD element has at least one point (corner or center) that is fully aligned with another HUD element.  
+- Faded line: the selected HUD element has one point that is close to being aligned with another HUD element.
+- ${\textsf{\color{red}Red}}$ lines and dots: highlighting alignment with the **centers** of HUD elements.
+- ${\textsf{\color{green}Green}}$ lines and dots: highlighting alignment with the **corners** of HUD elements.
 
 ## Images
 #### Alignment Overlay
