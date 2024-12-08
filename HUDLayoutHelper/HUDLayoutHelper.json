@@ -9,12 +9,10 @@
   "Tags": [
     "hud",
     "layout",
-    "editor",
     "copy",
     "paste",
     "undo",
-    "shortcuts",
-    "helper",
-    "plugin"
+    "align",
+    "qol"
   ]
 }
