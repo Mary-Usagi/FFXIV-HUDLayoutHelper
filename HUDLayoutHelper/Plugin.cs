@@ -106,7 +106,6 @@ namespace HUDLayoutHelper {
                 this.RemoveCallbacks();
             });
 
-            // TODO: check rewind logic for other redo strategies
             // TODO: Show numbers for distance of alignment lines? 
         }
 
@@ -560,8 +559,6 @@ namespace HUDLayoutHelper {
                 return null;
             }
 
-            // TODO: Check if newState is the same as the current state of the element? 
-
             // Find node with same name as oldState
             (nint undoNodePtr, uint undoNodeId) = Utils.FindHudResnodeByName(hudLayoutScreen, oldState.ResNodeDisplayName);
             if (undoNodePtr == nint.Zero) {
@@ -600,8 +597,6 @@ namespace HUDLayoutHelper {
                 this.Log.Debug($"Nothing to redo.");
                 return null;
             }
-            
-            // TODO: Check if oldState is the same as the current state of the element? 
 
             // Find node with same name as new state
             (nint redoNodePtr, uint redoNodeId) = Utils.FindHudResnodeByName(hudLayoutScreen, newState.ResNodeDisplayName);
@@ -693,8 +688,8 @@ namespace HUDLayoutHelper {
                 this.Debug.Log(this.Log.Debug, $"HUD Layout needs to be saved changed to: {needToSave}");
                 this.currentNeedToSave = needToSave;
             }
+
             // Reset undo and redo history if HUD Layout was closed with unsaved changes
-            // TODO: okay like this? 
             if (needToSave_change && !needToSave && hudLayoutIndex_change) {
                 this.Debug.Log(this.Log.Debug, $"HUD Layout changed without saving.");
                 this.HudHistoryManager.RewindHistoryAndAddToRedo(currentHudLayoutIndex_backup);

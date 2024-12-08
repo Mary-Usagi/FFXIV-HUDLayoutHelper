@@ -72,7 +72,6 @@ namespace HUDLayoutHelper {
             } catch (NullReferenceException) {}
             //IsEnabled = resNode->NodeFlags.HasFlag(NodeFlags.Visible);
 
-            // TODO: Maybe get corresponding addon?
             ElementId = ResNodeDisplayName.GetHashCode();
             AddonName = "";
             Scale = -1;
