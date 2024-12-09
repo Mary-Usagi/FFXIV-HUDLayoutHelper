@@ -21,8 +21,8 @@ When the alignment helper overlay is enabled, lines will be drawn between the co
 There are different colors and line styles for different types of alignment: 
 - **Solid line**: the selected HUD element has at least one point (corner or center) that is fully aligned with another HUD element.  
 - Faded line: the selected HUD element has one point that is close to being aligned with another HUD element.
-- ${\textsf{\color{red}Red}}$ lines and dots: highlighting alignment with the **centers** of HUD elements.
-- ${\textsf{\color{green}Green}}$ lines and dots: highlighting alignment with the **corners** of HUD elements.
+- Red lines and dots: highlighting alignment with the **centers** of HUD elements.
+- Green lines and dots: highlighting alignment with the **corners** of HUD elements.
 
 ## Screenshots
 #### Alignment Overlay
