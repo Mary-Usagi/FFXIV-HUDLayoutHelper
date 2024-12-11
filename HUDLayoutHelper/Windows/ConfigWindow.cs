@@ -1,33 +1,28 @@
-﻿using Dalamud.Interface.Windowing;
-using HUDLayoutHelper.Utilities;
-using ImGuiNET;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
+using Dalamud.Interface.Windowing;
+using HUDLayoutHelper.Utilities;
+using ImGuiNET;
 
 namespace HUDLayoutHelper.Windows;
 
 public class ConfigWindow : Window, IDisposable {
-    private Plugin Plugin;
-    private Configuration Configuration;
+    private Plugin Plugin { get; }
+    private Configuration Configuration { get; }
 
-    internal class WindowTab {
-        public string name;
-        public Action action;
-        public bool open;
-        public bool selected;
-        public WindowTab(string name, Action action, bool open = true, bool selected = false) {
-            this.name = name;
-            this.action = action;
-            this.open = open;
+    internal class WindowTab(string name, Action action, bool open = true, bool selected = false) {
+        public string name = name;
+        public Action action = action;
+        public bool open = open;
+        public bool selected = selected;
+
+        public void SetSelected(bool selected) {
             this.selected = selected;
         }
-        public void setSelected(bool selected) {
-            this.selected = selected;
-        }
-        public void setOpen(bool open) {
+        public void SetOpen(bool open) {
             this.open = open;
         }
     }
@@ -40,32 +35,32 @@ public class ConfigWindow : Window, IDisposable {
         internal List<WindowTab> TabList;
 
         public WindowTabs(Action about, Action keybinds, Action settings, Action debugInfo) {
-            About.action = about;
-            Keybinds.action = keybinds;
-            Settings.action = settings;
-            DebugInfo.action = debugInfo;
-            TabList = new List<WindowTab> { About, Keybinds, Settings, DebugInfo };
+            this.About.action = about;
+            this.Keybinds.action = keybinds;
+            this.Settings.action = settings;
+            this.DebugInfo.action = debugInfo;
+            this.TabList = [this.About, this.Keybinds, this.Settings, this.DebugInfo];
         }
     }
-    internal WindowTabs windowTabs;
+    internal WindowTabs AllTabs { get; }
 
     private string savedConfigHash = "";
 
     public ConfigWindow(Plugin plugin) : base("HUD Layout Helper Settings") {
-        Flags = ImGuiWindowFlags.AlwaysUseWindowPadding;
+        this.Flags = ImGuiWindowFlags.AlwaysUseWindowPadding;
 
-        SizeConstraints = new WindowSizeConstraints {
+        this.SizeConstraints = new WindowSizeConstraints {
             MinimumSize = new Vector2(290, 200),
             MaximumSize = new Vector2(float.MaxValue, float.MaxValue)
         };
-        Plugin = plugin;
-        SizeCondition = ImGuiCond.Always;
-        Configuration = plugin.Configuration;
-        savedConfigHash = Configuration.GetHash();
+        this.Plugin = plugin;
+        this.SizeCondition = ImGuiCond.Always;
+        this.Configuration = plugin.Configuration;
+        this.savedConfigHash = this.Configuration.GetHash();
 
         // Initialize the tab actions
-        windowTabs = new WindowTabs(DrawAbout, DrawKeybinds, DrawSettings, DrawDebugInfoTab);
-        windowTabs.DebugInfo.setOpen(Configuration.DebugTabOpen);
+        this.AllTabs = new WindowTabs(this.DrawAbout, this.DrawKeybinds, this.DrawSettings, this.DrawDebugInfoTab);
+        this.AllTabs.DebugInfo.SetOpen(this.Configuration.DebugTabOpen);
     }
 
     public void Dispose() { }
@@ -105,18 +100,18 @@ public class ConfigWindow : Window, IDisposable {
     public unsafe override void Draw() {
         // See: https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp
         if (ImGui.BeginTabBar("##TabBar", ImGuiTabBarFlags.None)) {
-            foreach (var tab in windowTabs.TabList) {
+            foreach (var tab in this.AllTabs.TabList) {
                 // Check if tab should be open
                 if (!tab.open) continue;
 
                 // Check if this tab should be selected by default
                 var flags = ImGuiTabItemFlags.None;
-                if (tab.name.Contains("Settings") && savedConfigHash != Configuration.GetHash()) {
+                if (tab.name.Contains("Settings") && this.savedConfigHash != this.Configuration.GetHash()) {
                     flags |= ImGuiTabItemFlags.UnsavedDocument;
                 }
                 if (tab.selected) {
                     flags |= ImGuiTabItemFlags.SetSelected;
-                    tab.setSelected(false);
+                    tab.SetSelected(false);
                 }
 
                 if (BeginTabItem(tab.name, flags)) {
@@ -129,13 +124,13 @@ public class ConfigWindow : Window, IDisposable {
     }
 
     internal void DrawDebugInfoTab() {
-        ImGui.TextWrapped($"Current HUD Layout Index: {Utils.GetCurrentHudLayoutIndex(Plugin, false) + 1}");
+        ImGui.TextWrapped($"Current HUD Layout Index: {Utils.GetCurrentHudLayoutIndex(this.Plugin, false) + 1}");
         ImGui.Spacing();
         if (ImGui.BeginTabBar("##TabBarHudLayouts")) {
-            for (var i = 0; i < Plugin.HudHistoryManager.HudLayoutCount; i++) {
+            for (var i = 0; i < HudHistoryManager.HudLayoutCount; i++) {
                 if (ImGui.BeginTabItem($"HUD {i + 1}##TabItemHudLayout{i}")) {
                     ImGui.BeginChild($"##Child {i}", new Vector2(0, 0), false);
-                    DrawDebugInfo(i);
+                    this.DrawDebugInfo(i);
                     ImGui.EndChild();
                     ImGui.EndTabItem();
                 }
@@ -164,7 +159,7 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.TableNextColumn();
         ImGui.TableHeader("Saved");
 
-        var undoHistory = Plugin.HudHistoryManager.undoHistory[hudLayout];
+        var undoHistory = this.Plugin.HudHistoryManager.UndoHistory[hudLayout];
         for (var i = 0; i < undoHistory.Count; i++) {
             ImGui.TableNextColumn();
             ImGui.TextWrapped(i.ToString());
@@ -175,7 +170,7 @@ public class ConfigWindow : Window, IDisposable {
             ImGui.TableNextColumn();
             ImGui.TextWrapped(undoHistory[i].Saved ? "x" : "");
         }
-        for (var i = undoHistory.Count; i < Plugin.HudHistoryManager.MaxHistorySize; i++) {
+        for (var i = undoHistory.Count; i < this.Plugin.HudHistoryManager.MaxHistorySize; i++) {
             ImGui.TableNextColumn();
             ImGui.TextWrapped(i.ToString());
             ImGui.TableNextColumn();
@@ -206,7 +201,7 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.TableNextColumn();
         ImGui.TableHeader("Saved");
 
-        var redoHistory = Plugin.HudHistoryManager.redoHistory[hudLayout];
+        var redoHistory = this.Plugin.HudHistoryManager.RedoHistory[hudLayout];
         for (var i = 0; i < redoHistory.Count; i++) {
             ImGui.TableNextColumn();
             ImGui.TextWrapped(i.ToString());
@@ -217,7 +212,7 @@ public class ConfigWindow : Window, IDisposable {
             ImGui.TableNextColumn();
             ImGui.TextWrapped(redoHistory[i].Saved ? "x" : "");
         }
-        for (var i = redoHistory.Count; i < Plugin.HudHistoryManager.MaxHistorySize; i++) {
+        for (var i = redoHistory.Count; i < this.Plugin.HudHistoryManager.MaxHistorySize; i++) {
             ImGui.TableNextColumn();
             ImGui.TextWrapped(i.ToString());
             ImGui.TableNextColumn();
@@ -234,10 +229,10 @@ public class ConfigWindow : Window, IDisposable {
 
     internal void DrawSettings() {
         // can't ref a property, so use a local copy
-        int maxUndoHistorySize = Configuration.MaxUndoHistorySize;
-        bool isDebugTabOpen = Configuration.DebugTabOpen;
-        bool showShortcutHints = Configuration.ShowShortcutHints;
-        HudHistoryManager.RedoStrategy redoActionStrategy = Configuration.RedoActionStrategy;
+        int maxUndoHistorySize = this.Configuration.MaxUndoHistorySize;
+        bool isDebugTabOpen = this.Configuration.DebugTabOpen;
+        bool showShortcutHints = this.Configuration.ShowShortcutHints;
+        HudHistoryManager.RedoStrategy redoActionStrategy = this.Configuration.RedoActionStrategy;
 
         ImGui.Spacing();
 
@@ -247,7 +242,7 @@ public class ConfigWindow : Window, IDisposable {
             if (maxUndoHistorySize < 1) {
                 maxUndoHistorySize = 1;
             }
-            Configuration.MaxUndoHistorySize = maxUndoHistorySize;
+            this.Configuration.MaxUndoHistorySize = maxUndoHistorySize;
         }
         if (ImGui.IsItemHovered()) {
             ImGui.SetTooltip("The maximum number of actions that can be undone");
@@ -266,13 +261,12 @@ public class ConfigWindow : Window, IDisposable {
         // Redo Strategy
         HudHistoryManager.RedoStrategy[] redoStrategies = (HudHistoryManager.RedoStrategy[])Enum.GetValues(typeof(HudHistoryManager.RedoStrategy));
         int itemSelectedIndex = Array.IndexOf(redoStrategies, redoActionStrategy);
-        string combo_preview_value = Configuration.RedoActionStrategy.ToString();
 
         for (int n = 0; n < redoStrategies.Length; n++) {
             bool is_selected = itemSelectedIndex == n;
             if (ImGui.RadioButton(redoStrategies[n].ToString(), is_selected)) {
                 redoActionStrategy = redoStrategies[n];
-                Configuration.RedoActionStrategy = redoActionStrategy;
+                this.Configuration.RedoActionStrategy = redoActionStrategy;
                 itemSelectedIndex = n;
             }
             if (ImGui.IsItemHovered()) {
@@ -284,13 +278,13 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.Separator();
         ImGui.Spacing();
         if (ImGui.Checkbox("Show Shortcut Hints", ref showShortcutHints)) {
-            Configuration.ShowShortcutHints = showShortcutHints;
+            this.Configuration.ShowShortcutHints = showShortcutHints;
         }
         if (ImGui.IsItemHovered()) {
             ImGui.SetTooltip("Show a window with a list of available shortcuts in the HUD Layout Editor");
         }
         if (ImGui.Checkbox("Show Debug Tab", ref isDebugTabOpen)) {
-            Configuration.DebugTabOpen = isDebugTabOpen;
+            this.Configuration.DebugTabOpen = isDebugTabOpen;
         }
         if (ImGui.IsItemHovered()) {
             ImGui.SetTooltip("Show the debug tab with information about the undo and redo histories");
@@ -300,15 +294,15 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.Spacing();
         ImGui.Spacing();
         if (ImGui.Button("Apply & Save Settings")) {
-            Plugin.Log.Debug("Saving configuration");
-            if (!Plugin.HudHistoryManager.SetHistorySize(maxUndoHistorySize)) {
-                Configuration.MaxUndoHistorySize = 100;
-                Plugin.Log.Warning("Failed to set history size");
+            this.Plugin.Log.Debug("Saving configuration");
+            if (!this.Plugin.HudHistoryManager.SetHistorySize(maxUndoHistorySize)) {
+                this.Configuration.MaxUndoHistorySize = 100;
+                this.Plugin.Log.Warning("Failed to set history size");
             }
-            Plugin.HudHistoryManager.SetRedoStrategy(redoActionStrategy);
-            windowTabs.DebugInfo.setOpen(Configuration.DebugTabOpen);
-            Configuration.Save();
-            savedConfigHash = Configuration.GetHash();
+            this.Plugin.HudHistoryManager.SetRedoStrategy(redoActionStrategy);
+            this.AllTabs.DebugInfo.SetOpen(this.Configuration.DebugTabOpen);
+            this.Configuration.Save();
+            this.savedConfigHash = this.Configuration.GetHash();
         }
     }
 
@@ -327,11 +321,11 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.TableNextColumn();
         ImGui.TableHeader("Description");
 
-        foreach (var keybind in Plugin.Keybindings) {
+        foreach (var keybind in this.Plugin.Keybindings) {
             ImGui.TableNextColumn();
-            ImGui.TextWrapped(keybind.keys.ToString());
+            ImGui.TextWrapped(keybind.KeybindKeys.ToString());
             ImGui.TableNextColumn();
-            ImGui.TextWrapped(keybind.description.Text);
+            ImGui.TextWrapped(keybind.KeybindDescription.Text);
         }
         ImGui.EndTable();
     }
@@ -382,9 +376,9 @@ public class ConfigWindow : Window, IDisposable {
      * Set the tab that should be open and selected when the window is drawn
      */
     internal void SetSelectedTab(WindowTab tab) {
-        foreach (WindowTab windowTab in windowTabs.TabList) {
-            windowTab.setSelected(false);
+        foreach (WindowTab windowTab in this.AllTabs.TabList) {
+            windowTab.SetSelected(false);
         }
-        tab.setSelected(true);
+        tab.SetSelected(true);
     }
 }

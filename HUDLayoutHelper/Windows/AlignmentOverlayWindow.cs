@@ -1,12 +1,12 @@
-﻿using Dalamud.Interface.Windowing;
-using FFXIVClientStructs.FFXIV.Component.GUI;
-using HUDLayoutHelper.Utilities;
-using ImGuiNET;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Numerics;
+using Dalamud.Interface.Windowing;
+using FFXIVClientStructs.FFXIV.Component.GUI;
+using HUDLayoutHelper.Utilities;
+using ImGuiNET;
 
 namespace HUDLayoutHelper.Windows;
 
@@ -18,37 +18,37 @@ namespace HUDLayoutHelper.Windows;
 /// 
 /// </summary>
 public class AlignmentOverlayWindow : Window, IDisposable {
-    private Plugin Plugin;
-    private Configuration Configuration;
+    private Plugin Plugin { get; }
+    private Configuration Configuration { get; }
 
     public AlignmentOverlayWindow(Plugin plugin) : base("Overlay") {
-        Flags = ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoInputs;
+        this.Flags = ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoInputs;
         //Flags = ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoInputs;
 
-        SizeConstraints = new WindowSizeConstraints {
+        this.SizeConstraints = new WindowSizeConstraints {
             MinimumSize = ImGui.GetIO().DisplaySize,
             MaximumSize = ImGui.GetIO().DisplaySize
         };
-        Position = new Vector2(0, 0);
+        this.Position = new Vector2(0, 0);
 
-        Plugin = plugin;
-        SizeCondition = ImGuiCond.Always;
-        PositionCondition = ImGuiCond.Always;
-        Configuration = plugin.Configuration;
+        this.Plugin = plugin;
+        this.SizeCondition = ImGuiCond.Always;
+        this.PositionCondition = ImGuiCond.Always;
+        this.Configuration = plugin.Configuration;
     }
 
     public override void OnOpen() {
-        Plugin.UpdatePreviousElements();
+        this.Plugin.UpdatePreviousElements();
     }
 
     public void Dispose() { }
 
     public override void PreDraw() {
         // Flags must be added or removed before Draw() is being called, or they won't apply
-        Flags |= ImGuiWindowFlags.NoMove;
+        this.Flags |= ImGuiWindowFlags.NoMove;
     }
 
-    internal uint ColorToUint(Color color) {
+    internal static uint ColorToUint(Color color) {
         return (uint)(color.A << 24 | color.B << 16 | color.G << 8 | color.R);
     }
 
@@ -67,11 +67,11 @@ public class AlignmentOverlayWindow : Window, IDisposable {
 
         internal SortedDictionary<string, Anchor> AnchorMap { get; }
 
-        internal Anchor TopLeft => AnchorMap["TopLeft"];
-        internal Anchor TopRight => AnchorMap["TopRight"];
-        internal Anchor BottomLeft => AnchorMap["BottomLeft"];
-        internal Anchor BottomRight => AnchorMap["BottomRight"];
-        internal Anchor Center => AnchorMap["Center"];
+        internal Anchor TopLeft => this.AnchorMap["TopLeft"];
+        internal Anchor TopRight => this.AnchorMap["TopRight"];
+        internal Anchor BottomLeft => this.AnchorMap["BottomLeft"];
+        internal Anchor BottomRight => this.AnchorMap["BottomRight"];
+        internal Anchor Center => this.AnchorMap["Center"];
 
         internal HudOverlayNode(
             short left, short top,
@@ -82,7 +82,7 @@ public class AlignmentOverlayWindow : Window, IDisposable {
             Vector2 topLeft = new Vector2(left, top);
             Vector2 center = topLeft + new Vector2(MathF.Round(width / 2f, MidpointRounding.AwayFromZero), MathF.Round(height / 2f, MidpointRounding.AwayFromZero));
 
-            AnchorMap = new SortedDictionary<string, Anchor> {
+            this.AnchorMap = new SortedDictionary<string, Anchor> {
                 { "TopLeft", new Anchor(topLeft, cornerColor ?? blackColor, cornerSize) },
                 { "TopRight", new Anchor(topLeft + new Vector2(width, 0), cornerColor ?? blackColor, cornerSize) },
                 { "BottomLeft", new Anchor(topLeft + new Vector2(0, height), cornerColor ?? blackColor, cornerSize) },
@@ -92,13 +92,13 @@ public class AlignmentOverlayWindow : Window, IDisposable {
         }
     }
 
-    static readonly Color redColor = Color.FromArgb(255, 0, 0);
-    static readonly Color blueColor = Color.FromArgb(0, 0, 255);
-    static readonly Color greenColor = Color.FromArgb(0, 255, 0);
-    static readonly Color blackColor = Color.FromArgb(175, 0, 0, 0);
+    private static readonly Color redColor = Color.FromArgb(255, 0, 0);
+    private static readonly Color blueColor = Color.FromArgb(0, 0, 255);
+    private static readonly Color greenColor = Color.FromArgb(0, 255, 0);
+    private static readonly Color blackColor = Color.FromArgb(175, 0, 0, 0);
 
-    const int MAX_ANCHOR_DIFF = 10;
-    const int guideLinePadding = 25;
+    private const int MaxAnchorDist = 10;
+    private const int GuideLinePadding = 25;
 
     /// <summary>
     ///  TODO
@@ -106,18 +106,18 @@ public class AlignmentOverlayWindow : Window, IDisposable {
     public unsafe override void Draw() {
         // See: https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp
         //ImDrawList* draw_list = ImGui.GetForegroundDrawList(ImGui.GetMainViewport());
-        if (!Plugin.ClientState.IsLoggedIn) return;
-        if (Plugin.ClientState is not { LocalPlayer.ClassJob.RowId: var classJobId }) return;
-        if (Plugin.AgentHudLayout == null || Plugin.HudLayoutScreen == null) return;
+        if (!this.Plugin.ClientState.IsLoggedIn) return;
+        if (this.Plugin.ClientState is not { LocalPlayer.ClassJob.RowId: var classJobId }) return;
+        if (this.Plugin.AgentHudLayout == null || this.Plugin.HudLayoutScreen == null) return;
 
         ImDrawListPtr imDrawListPtr = ImGui.GetForegroundDrawList(ImGui.GetMainViewport());
 
         // get current element data 
-        AtkResNode* selectedResNode = Utils.GetCollisionNodeByIndex(Plugin.HudLayoutScreen, 0);
+        AtkResNode* selectedResNode = Utils.GetCollisionNodeByIndex(this.Plugin.HudLayoutScreen, 0);
         if (selectedResNode == null) return;
 
         // Create a new HudElementData object with the data of the selected element
-        var hudLayoutElements = Plugin.previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex(Plugin, false)];
+        var hudLayoutElements = this.Plugin.previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex(this.Plugin, false)];
 
         HudElementData selectedHudElement = new HudElementData(selectedResNode);
         HudOverlayNode selectedHudOverlayNode = new HudOverlayNode(
@@ -128,7 +128,7 @@ public class AlignmentOverlayWindow : Window, IDisposable {
         );
         //Plugin.Log.Debug($"hudLayoutElements: {hudLayoutElements.Count}");
         // Create guide nodes for all elements except the selected one
-        List<HudOverlayNode> otherHudOverlayNodes = new List<HudOverlayNode>();
+        List<HudOverlayNode> otherHudOverlayNodes = [];
         foreach (var element in hudLayoutElements) {
             if (!element.Value.IsVisible) continue;
             if (element.Value.ElementId == selectedHudElement.ElementId) continue;
@@ -150,8 +150,8 @@ public class AlignmentOverlayWindow : Window, IDisposable {
             from otherNode in otherHudOverlayNodes
             from otherNodeAnchor in otherNode.AnchorMap
             let diff = Vector2.Abs(otherNodeAnchor.Value.position - selectedNodeAnchor.Value.position)
-            let isHorizontal = diff.Y < MAX_ANCHOR_DIFF
-            let isVertical = diff.X < MAX_ANCHOR_DIFF
+            let isHorizontal = diff.Y < MaxAnchorDist
+            let isVertical = diff.X < MaxAnchorDist
             where isHorizontal || isVertical
             select new { otherNode, otherNodeAnchor = otherNodeAnchor.Value, otherNodeAnchorName = otherNodeAnchor, selectedNodeAnchor = selectedNodeAnchor.Value, selectedNodeAnchorName = selectedNodeAnchor, diff, dimmedColor, isHorizontal, isVertical }
         ).ToList();
@@ -171,7 +171,7 @@ public class AlignmentOverlayWindow : Window, IDisposable {
         });
 
         // Create guide lines
-        List<(Vector2, Vector2, Color)> overlayGuideLines = new List<(Vector2, Vector2, Color)>();
+        List<(Vector2, Vector2, Color)> overlayGuideLines = [];
 
         foreach (var group in alignedAnchors.GroupBy(x => (x.otherNodeAnchor, x.selectedNodeAnchor))) {
             var otherNode = group.First().otherNode;
@@ -190,8 +190,8 @@ public class AlignmentOverlayWindow : Window, IDisposable {
 
             if (horizontalAlignments.Count > 0) {
                 var horizontalLine = new {
-                    start = new Vector2(referenceAnchorPoints.Min(x => x.position.X) - guideLinePadding, selectedNodeAnchor.position.Y),
-                    end = new Vector2(referenceAnchorPoints.Max(x => x.position.X) + guideLinePadding, selectedNodeAnchor.position.Y),
+                    start = new Vector2(referenceAnchorPoints.Min(x => x.position.X) - GuideLinePadding, selectedNodeAnchor.position.Y),
+                    end = new Vector2(referenceAnchorPoints.Max(x => x.position.X) + GuideLinePadding, selectedNodeAnchor.position.Y),
                     color = horizontalAlignments.Any(x => (int)x.diff.Y == 0) ? selectedNodeAnchor.color : dimmedColor
                 };
                 //Plugin.Log.Debug($"Horizontal line: {horizontalLine.start} -> {horizontalLine.end}");
@@ -199,8 +199,8 @@ public class AlignmentOverlayWindow : Window, IDisposable {
             }
             if (verticalAlignments.Count > 0) {
                 var verticalLine = new {
-                    start = new Vector2(selectedNodeAnchor.position.X, referenceAnchorPoints.Min(x => x.position.Y) - guideLinePadding),
-                    end = new Vector2(selectedNodeAnchor.position.X, referenceAnchorPoints.Max(x => x.position.Y) + guideLinePadding),
+                    start = new Vector2(selectedNodeAnchor.position.X, referenceAnchorPoints.Min(x => x.position.Y) - GuideLinePadding),
+                    end = new Vector2(selectedNodeAnchor.position.X, referenceAnchorPoints.Max(x => x.position.Y) + GuideLinePadding),
                     color = verticalAlignments.Any(x => (int)x.diff.X == 0) ? selectedNodeAnchor.color : dimmedColor
                 };
                 //Plugin.Log.Debug($"Vertical line: {verticalLine.start} -> {verticalLine.end}");

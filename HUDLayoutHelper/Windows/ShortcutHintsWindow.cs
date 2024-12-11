@@ -1,41 +1,41 @@
-﻿using Dalamud.Interface.Windowing;
-using ImGuiNET;
-using System;
+﻿using System;
 using System.Numerics;
+using Dalamud.Interface.Windowing;
+using ImGuiNET;
 
 namespace HUDLayoutHelper.Windows;
 
 public class ShortcutHintsWindow : Window, IDisposable {
-    private Plugin Plugin;
-    private Configuration Configuration;
+    private Plugin Plugin { get; }
+    private Configuration Configuration { get; }
     public ShortcutHintsWindow(Plugin plugin) : base("HUD Layout Helper Shortcuts") {
-        Flags = ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoBringToFrontOnFocus | ImGuiWindowFlags.NoFocusOnAppearing | ImGuiWindowFlags.NoNav | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoBackground;
+        this.Flags = ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoBringToFrontOnFocus | ImGuiWindowFlags.NoFocusOnAppearing | ImGuiWindowFlags.NoNav | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoBackground;
 
-        Plugin = plugin;
-        SizeCondition = ImGuiCond.Always;
-        PositionCondition = ImGuiCond.Always;
+        this.Plugin = plugin;
+        this.SizeCondition = ImGuiCond.Always;
+        this.PositionCondition = ImGuiCond.Always;
         //base.BgAlpha = 0.5f;
-        ShowCloseButton = false;
-        AllowClickthrough = true;
-        RespectCloseHotkey = false;
-        SizeConstraints = new WindowSizeConstraints {
+        this.ShowCloseButton = false;
+        this.AllowClickthrough = true;
+        this.RespectCloseHotkey = false;
+        this.SizeConstraints = new WindowSizeConstraints {
             MinimumSize = new Vector2(260, 50),
         };
-        Configuration = plugin.Configuration;
+        this.Configuration = plugin.Configuration;
     }
 
     public unsafe void SetWindowPosition() {
-        if (Plugin.HudLayoutWindow == null) return;
+        if (this.Plugin.HudLayoutWindow == null) return;
         // Get the position of the HUD Layout window
         short x = 0, y = 0;
-        Plugin.HudLayoutWindow->GetPosition(&x, &y);
-        float height = Plugin.HudLayoutWindow->GetScaledHeight(true);
-        Position = new Vector2(x + 2, y + height - 15);
+        this.Plugin.HudLayoutWindow->GetPosition(&x, &y);
+        float height = this.Plugin.HudLayoutWindow->GetScaledHeight(true);
+        this.Position = new Vector2(x + 2, y + height - 15);
     }
 
     public unsafe void DrawHelpWindow() {
-        if (Plugin.HudLayoutWindow == null) return;
-        SetWindowPosition();
+        if (this.Plugin.HudLayoutWindow == null) return;
+        this.SetWindowPosition();
 
         ImGui.PushStyleColor(ImGuiCol.Header, new Vector4(0.5f, 0, 0, 0.5f));
         ImGui.PushStyleColor(ImGuiCol.HeaderHovered, new Vector4(0f, 0, 0, 0.5f));
@@ -55,11 +55,11 @@ public class ShortcutHintsWindow : Window, IDisposable {
             ImGui.TableSetupColumn("##Column2", ImGuiTableColumnFlags.WidthStretch);
 
 
-            foreach (var keybind in Plugin.Keybindings) {
+            foreach (var keybind in this.Plugin.Keybindings) {
                 ImGui.TableNextColumn();
-                ImGui.Text(keybind.keys.ToString());
+                ImGui.Text(keybind.KeybindKeys.ToString());
                 ImGui.TableNextColumn();
-                ImGui.Text(keybind.description.ShortText);
+                ImGui.Text(keybind.KeybindDescription.ShortText);
             }
             ImGui.EndTable();
 
@@ -75,11 +75,10 @@ public class ShortcutHintsWindow : Window, IDisposable {
     public unsafe override void PreDraw() { }
 
     public unsafe override void Draw() {
-        if (Configuration.ShowShortcutHints == false) return;
-        if (!Plugin.ClientState.IsLoggedIn) return;
-        if (Plugin.ClientState is not { LocalPlayer.ClassJob.RowId: var classJobId }) return;
-        if (Plugin.AgentHudLayout == null || Plugin.HudLayoutScreen == null) return;
-        DrawHelpWindow();
+        if (this.Configuration.ShowShortcutHints == false) return;
+        if (!this.Plugin.ClientState.IsLoggedIn) return;
+        if (this.Plugin.ClientState is not { LocalPlayer.ClassJob.RowId: var classJobId }) return;
+        if (this.Plugin.AgentHudLayout == null || this.Plugin.HudLayoutScreen == null) return;
+        this.DrawHelpWindow();
     }
-
 }
