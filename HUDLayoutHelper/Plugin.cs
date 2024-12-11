@@ -18,7 +18,7 @@ using ImGuiNET;
 
 namespace HUDLayoutHelper;
 public sealed class Plugin : IDalamudPlugin {
-    private readonly bool DEBUG = false;
+    private const bool DEBUG = false;
 
     public string Name => "HUDLayoutHelper";
     private const string CommandName = "/hudhelper";
@@ -43,20 +43,18 @@ public sealed class Plugin : IDalamudPlugin {
     [PluginService] internal static IChatGui ChatGui { get; private set; } = null!;
 
     public static Debug Debug { get; private set; } = null!;
-    internal static HudHistoryManager HudHistoryManager { get; private set; } = null!;
 
 
     // HUD Layout Addon Pointers
     internal unsafe AgentHUDLayout* AgentHudLayout = null;
     internal unsafe AddonHudLayoutScreen* HudLayoutScreen = null;
     internal unsafe AddonHudLayoutWindow* HudLayoutWindow = null;
+    
+    internal static HudHistoryManager HudHistoryManager { get; private set; } = null!;
 
     public Plugin() {
-        Debug = new Debug(this.DEBUG);
-
+        Debug = new Debug(DEBUG);
         this.Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
-
-
         HudHistoryManager = new HudHistoryManager(this.Configuration.MaxUndoHistorySize, this.Configuration.RedoActionStrategy);
 
         this.ConfigWindow = new ConfigWindow(this);
@@ -287,44 +285,8 @@ public sealed class Plugin : IDalamudPlugin {
         this.mouseDownTarget = null;
     }
 
-    /// <summary>
-    /// Represents the data for a mouse event. (AtkEventData) 
-    /// </summary>
-    public unsafe struct MouseEventData(short posX, short posY) {
-        public short PosX = posX;
-        public short PosY = posY;
-
-        /// <summary>
-        /// Converts the mouse event data to an AtkEventData struct. 
-        /// By placing the x and y values at the beginning of the byte array and padding the rest with 0. 
-        /// </summary>
-        public AtkEventData ToAtkEventData() {
-            // Create a byte array with the size of the AtkEventData struct
-            int size = sizeof(AtkEventData);
-            byte[] eventDataBytes = new byte[size];
-
-            // Convert the PosX and PosY values to byte arrays and add an offset of 10 
-            byte[] xBytes = BitConverter.GetBytes(this.PosX + 10);
-            byte[] yBytes = BitConverter.GetBytes(this.PosY + 10);
-
-            // Copy xBytes to index 0 and yBytes to index 2 of the eventDataBytes array
-            Array.Copy(xBytes, 0, eventDataBytes, 0, 2);
-            Array.Copy(yBytes, 0, eventDataBytes, 2, 2);
-
-            // Create the event data struct from the byte array
-            AtkEventData eventData = new AtkEventData();
-
-            // Use a fixed block to pin the byte array in memory and cast it to an AtkEventData pointer
-            fixed (byte* p = eventDataBytes) {
-                eventData = *(AtkEventData*)p;
-            }
-            return eventData;
-        }
-    }
 
     private HudElementData? currentlyCopied = null;
-
-
 
     internal class Keybind {
         internal enum Action { None, Copy, Paste, Undo, Redo, ToggleAlignmentOverlay }
@@ -518,7 +480,7 @@ public sealed class Plugin : IDalamudPlugin {
         HudHistoryManager.AddUndoAction(hudLayoutIndex, previousState, parsedData);
 
         // Simulate Mouse Click
-        Utils.SimulateMouseClickOnHudElement(selectedNode, 0, parsedData, hudLayoutScreen, this, CustomAtkFlag);
+        Utils.SimulateMouseClickOnHudElement(selectedNode, 0, parsedData, hudLayoutScreen, CustomAtkFlag);
 
         // Send Event to HudLayout to inform about a change 
         Utils.SendChangeEvent(agentHudLayout);
@@ -556,7 +518,7 @@ public sealed class Plugin : IDalamudPlugin {
         HudHistoryManager.PerformUndo(Utils.GetCurrentHudLayoutIndex(), undoNodeState);
 
         // Simulate Mouse Click
-        Utils.SimulateMouseClickOnHudElement(undoNode, undoNodeId, oldState, hudLayoutScreen, this, CustomAtkFlag);
+        Utils.SimulateMouseClickOnHudElement(undoNode, undoNodeId, oldState, hudLayoutScreen, CustomAtkFlag);
 
         // Send Event to HudLayout to inform about a change 
         Utils.SendChangeEvent(agentHudLayout);
@@ -594,7 +556,7 @@ public sealed class Plugin : IDalamudPlugin {
         HudHistoryManager.PerformRedo(Utils.GetCurrentHudLayoutIndex(), redoNodeState);
 
         // Simulate Mouse Click
-        Utils.SimulateMouseClickOnHudElement(redoNode, redoNodeId, newState, hudLayoutScreen, this, CustomAtkFlag);
+        Utils.SimulateMouseClickOnHudElement(redoNode, redoNodeId, newState, hudLayoutScreen, CustomAtkFlag);
 
         // Send Event to HudLayout to inform about a change 
         Utils.SendChangeEvent(agentHudLayout);
