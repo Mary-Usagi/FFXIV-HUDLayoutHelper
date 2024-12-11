@@ -11,6 +11,7 @@ namespace HUDLayoutHelper.Windows;
 
 public class ConfigWindow : Window, IDisposable {
     private Configuration Configuration { get; }
+    private readonly HudHistoryManager HudHistoryManager;
 
     internal class WindowTab(string name, Action action, bool open = true, bool selected = false) {
         public string name = name;
@@ -45,7 +46,10 @@ public class ConfigWindow : Window, IDisposable {
 
     private string savedConfigHash = "";
 
-    public ConfigWindow(Plugin plugin) : base("HUD Layout Helper Settings") {
+    public ConfigWindow(Configuration config, HudHistoryManager hudHistoryManager) : base("HUD Layout Helper Settings") {
+        this.HudHistoryManager = hudHistoryManager;
+        this.Configuration = config;
+
         this.Flags = ImGuiWindowFlags.AlwaysUseWindowPadding;
 
         this.SizeConstraints = new WindowSizeConstraints {
@@ -53,7 +57,6 @@ public class ConfigWindow : Window, IDisposable {
             MaximumSize = new Vector2(float.MaxValue, float.MaxValue)
         };
         this.SizeCondition = ImGuiCond.Always;
-        this.Configuration = plugin.Configuration;
         this.savedConfigHash = this.Configuration.GetHash();
 
         // Initialize the tab actions
@@ -157,7 +160,7 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.TableNextColumn();
         ImGui.TableHeader("Saved");
 
-        var undoHistory = Plugin.HudHistoryManager.UndoHistory[hudLayout];
+        var undoHistory = this.HudHistoryManager.UndoHistory[hudLayout];
         for (var i = 0; i < undoHistory.Count; i++) {
             ImGui.TableNextColumn();
             ImGui.TextWrapped(i.ToString());
@@ -168,7 +171,7 @@ public class ConfigWindow : Window, IDisposable {
             ImGui.TableNextColumn();
             ImGui.TextWrapped(undoHistory[i].Saved ? "x" : "");
         }
-        for (var i = undoHistory.Count; i < Plugin.HudHistoryManager.MaxHistorySize; i++) {
+        for (var i = undoHistory.Count; i < this.HudHistoryManager.MaxHistorySize; i++) {
             ImGui.TableNextColumn();
             ImGui.TextWrapped(i.ToString());
             ImGui.TableNextColumn();
@@ -199,7 +202,7 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.TableNextColumn();
         ImGui.TableHeader("Saved");
 
-        var redoHistory = Plugin.HudHistoryManager.RedoHistory[hudLayout];
+        var redoHistory = this.HudHistoryManager.RedoHistory[hudLayout];
         for (var i = 0; i < redoHistory.Count; i++) {
             ImGui.TableNextColumn();
             ImGui.TextWrapped(i.ToString());
@@ -210,7 +213,7 @@ public class ConfigWindow : Window, IDisposable {
             ImGui.TableNextColumn();
             ImGui.TextWrapped(redoHistory[i].Saved ? "x" : "");
         }
-        for (var i = redoHistory.Count; i < Plugin.HudHistoryManager.MaxHistorySize; i++) {
+        for (var i = redoHistory.Count; i < this.HudHistoryManager.MaxHistorySize; i++) {
             ImGui.TableNextColumn();
             ImGui.TextWrapped(i.ToString());
             ImGui.TableNextColumn();
@@ -293,11 +296,11 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.Spacing();
         if (ImGui.Button("Apply & Save Settings")) {
             Plugin.Log.Debug("Saving configuration");
-            if (!Plugin.HudHistoryManager.SetHistorySize(maxUndoHistorySize)) {
+            if (!this.HudHistoryManager.SetHistorySize(maxUndoHistorySize)) {
                 this.Configuration.MaxUndoHistorySize = 100;
                 Plugin.Log.Warning("Failed to set history size");
             }
-            Plugin.HudHistoryManager.SetRedoStrategy(redoActionStrategy);
+            this.HudHistoryManager.SetRedoStrategy(redoActionStrategy);
             this.AllTabs.DebugInfo.SetOpen(this.Configuration.DebugTabOpen);
             this.Configuration.Save();
             this.savedConfigHash = this.Configuration.GetHash();

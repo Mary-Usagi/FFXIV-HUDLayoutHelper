@@ -44,20 +44,19 @@ public sealed class Plugin : IDalamudPlugin {
 
     public static Debug Debug { get; private set; } = null!;
 
-
     // HUD Layout Addon Pointers
     internal unsafe AgentHUDLayout* AgentHudLayout = null;
     internal unsafe AddonHudLayoutScreen* HudLayoutScreen = null;
     internal unsafe AddonHudLayoutWindow* HudLayoutWindow = null;
     
-    internal static HudHistoryManager HudHistoryManager { get; private set; } = null!;
+    internal HudHistoryManager HudHistoryManager { get; private set; } = null!;
 
     public Plugin() {
         Debug = new Debug(DEBUG);
         this.Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
-        HudHistoryManager = new HudHistoryManager(this.Configuration.MaxUndoHistorySize, this.Configuration.RedoActionStrategy);
+        this.HudHistoryManager = new HudHistoryManager(this.Configuration.MaxUndoHistorySize, this.Configuration.RedoActionStrategy);
 
-        this.ConfigWindow = new ConfigWindow(this);
+        this.ConfigWindow = new ConfigWindow(this.Configuration, this.HudHistoryManager);
         this.WindowSystem.AddWindow(this.ConfigWindow);
         CommandManager.AddHandler(CommandName, new CommandInfo(this.OnCommand) {
             HelpMessage = "Toggle the config and debug window."
@@ -90,7 +89,7 @@ public sealed class Plugin : IDalamudPlugin {
         AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, "_HudLayoutScreen", (type, args) => {
             Debug.Log(Log.Debug, "HudLayoutScreen finalize.");
             // Remove unsaved history if HUD is closed (instead of layout changed) with unsaved changes
-            HudHistoryManager.RewindHistoryAndAddToRedo(this.currentHudLayoutIndex);
+            this.HudHistoryManager.RewindHistoryAndAddToRedo(this.currentHudLayoutIndex);
             this.RemoveCallbacks();
         });
 
@@ -276,7 +275,7 @@ public sealed class Plugin : IDalamudPlugin {
 
         // Save the current state of the selected element for undo operations
         Log.Debug($"User moved: {this.mouseDownTarget.PrettyPrint()} -> ({newState.PosX}, {newState.PosY})");
-        HudHistoryManager.AddUndoAction(Utils.GetCurrentHudLayoutIndex(), this.mouseDownTarget, newState);
+        this.HudHistoryManager.AddUndoAction(Utils.GetCurrentHudLayoutIndex(), this.mouseDownTarget, newState);
 
         // Update previousElements
         var previousElements = this.previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex()];
@@ -477,7 +476,7 @@ public sealed class Plugin : IDalamudPlugin {
 
         // Add the previous state and the new state to the undo history
         int hudLayoutIndex = Utils.GetCurrentHudLayoutIndex();
-        HudHistoryManager.AddUndoAction(hudLayoutIndex, previousState, parsedData);
+        this.HudHistoryManager.AddUndoAction(hudLayoutIndex, previousState, parsedData);
 
         // Simulate Mouse Click
         Utils.SimulateMouseClickOnHudElement(selectedNode, 0, parsedData, hudLayoutScreen, CustomAtkFlag);
@@ -496,7 +495,7 @@ public sealed class Plugin : IDalamudPlugin {
     /// <param name="agentHudLayout"></param>
     private unsafe HudElementData? HandleUndoAction(AddonHudLayoutScreen* hudLayoutScreen, AgentHUDLayout* agentHudLayout) {
         // Get the last added action from the undo history
-        (HudElementData? oldState, HudElementData? newState) = HudHistoryManager.PeekUndoAction(Utils.GetCurrentHudLayoutIndex());
+        (HudElementData? oldState, HudElementData? newState) = this.HudHistoryManager.PeekUndoAction(Utils.GetCurrentHudLayoutIndex());
         if (oldState == null || newState == null) {
             Log.Debug($"Nothing to undo.");
             return null;
@@ -515,7 +514,7 @@ public sealed class Plugin : IDalamudPlugin {
         // Set the position of the currently selected element to the parsed position
         undoNode->ParentNode->SetPositionShort(oldState.PosX, oldState.PosY);
 
-        HudHistoryManager.PerformUndo(Utils.GetCurrentHudLayoutIndex(), undoNodeState);
+        this.HudHistoryManager.PerformUndo(Utils.GetCurrentHudLayoutIndex(), undoNodeState);
 
         // Simulate Mouse Click
         Utils.SimulateMouseClickOnHudElement(undoNode, undoNodeId, oldState, hudLayoutScreen, CustomAtkFlag);
@@ -535,7 +534,7 @@ public sealed class Plugin : IDalamudPlugin {
     /// <param name="agentHudLayout"></param>
     private unsafe HudElementData? HandleRedoAction(AddonHudLayoutScreen* hudLayoutScreen, AgentHUDLayout* agentHudLayout) {
         // Get the last added action from the redo history
-        (HudElementData? oldState, HudElementData? newState) = HudHistoryManager.PeekRedoAction(Utils.GetCurrentHudLayoutIndex());
+        (HudElementData? oldState, HudElementData? newState) = this.HudHistoryManager.PeekRedoAction(Utils.GetCurrentHudLayoutIndex());
         if (oldState == null || newState == null) {
             Log.Debug($"Nothing to redo.");
             return null;
@@ -553,7 +552,7 @@ public sealed class Plugin : IDalamudPlugin {
         // Set the position of the currently selected element to the parsed position
         redoNode->ParentNode->SetPositionShort(newState.PosX, newState.PosY);
 
-        HudHistoryManager.PerformRedo(Utils.GetCurrentHudLayoutIndex(), redoNodeState);
+        this.HudHistoryManager.PerformRedo(Utils.GetCurrentHudLayoutIndex(), redoNodeState);
 
         // Simulate Mouse Click
         Utils.SimulateMouseClickOnHudElement(redoNode, redoNodeId, newState, hudLayoutScreen, CustomAtkFlag);
@@ -636,13 +635,13 @@ public sealed class Plugin : IDalamudPlugin {
         // Reset undo and redo history if HUD Layout was closed with unsaved changes
         if (needToSave_change && !needToSave && hudLayoutIndex_change) {
             Debug.Log(Log.Debug, $"HUD Layout changed without saving.");
-            HudHistoryManager.RewindHistoryAndAddToRedo(currentHudLayoutIndex_backup);
+            this.HudHistoryManager.RewindHistoryAndAddToRedo(currentHudLayoutIndex_backup);
         }
 
         // Mark history as saved when HUD Layout is saved
         if (needToSave_change && !needToSave && !hudLayoutIndex_change) {
             Debug.Log(Log.Debug, $"HUD Layout was saved.");
-            HudHistoryManager.MarkHistoryAsSaved(currentHudLayoutIndex_backup);
+            this.HudHistoryManager.MarkHistoryAsSaved(currentHudLayoutIndex_backup);
         }
     }
 
@@ -703,7 +702,7 @@ public sealed class Plugin : IDalamudPlugin {
         foreach (var elementData in currentElements) {
             if (previousElements.TryGetValue(elementData.Key, out var previousData)) {
                 if (HasPositionChanged(previousData, elementData.Value)) {
-                    HudHistoryManager.AddUndoAction(Utils.GetCurrentHudLayoutIndex(false), previousData, elementData.Value);
+                    this.HudHistoryManager.AddUndoAction(Utils.GetCurrentHudLayoutIndex(false), previousData, elementData.Value);
                     changedElements.Add(elementData.Value);
                     Log.Debug($"User moved: {previousData.PrettyPrint()} -> ({elementData.Value.PosX}, {elementData.Value.PosY})");
                 }
