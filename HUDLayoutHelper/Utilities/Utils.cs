@@ -6,7 +6,7 @@ using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
 using static HUDLayoutHelper.Plugin;
 
-namespace HUDLayoutHelper {
+namespace HUDLayoutHelper.Utilities {
     internal class Utils {
         /// <summary>
         /// Finds a HUD resource node by name.
@@ -154,7 +154,7 @@ namespace HUDLayoutHelper {
         }
 
 
-        internal static unsafe int GetCurrentHudLayoutIndex(Plugin plugin, bool log = true) {  
+        internal static unsafe int GetCurrentHudLayoutIndex(Plugin plugin, bool log = true) {
             int index = AddonConfig.Instance()->ModuleData->CurrentHudLayout;
             if (log) plugin.Debug.Log(plugin.Log.Debug, $"Current HUD Layout Index: {index}");
             if (index < 0 || index >= 10) {

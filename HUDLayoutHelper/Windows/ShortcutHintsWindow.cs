@@ -3,21 +3,21 @@ using ImGuiNET;
 using System;
 using System.Numerics;
 
-namespace HUDLayoutHelper;
+namespace HUDLayoutHelper.Windows;
 
 public class ShortcutHintsWindow : Window, IDisposable {
     private Plugin Plugin;
     private Configuration Configuration;
-    public ShortcutHintsWindow(Plugin plugin) : base("HUD Layout Helper Shortcuts"){
+    public ShortcutHintsWindow(Plugin plugin) : base("HUD Layout Helper Shortcuts") {
         Flags = ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoBringToFrontOnFocus | ImGuiWindowFlags.NoFocusOnAppearing | ImGuiWindowFlags.NoNav | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoBackground;
 
         Plugin = plugin;
         SizeCondition = ImGuiCond.Always;
         PositionCondition = ImGuiCond.Always;
         //base.BgAlpha = 0.5f;
-        base.ShowCloseButton = false;
-        base.AllowClickthrough = true;
-        base.RespectCloseHotkey = false;
+        ShowCloseButton = false;
+        AllowClickthrough = true;
+        RespectCloseHotkey = false;
         SizeConstraints = new WindowSizeConstraints {
             MinimumSize = new Vector2(260, 50),
         };
@@ -25,16 +25,16 @@ public class ShortcutHintsWindow : Window, IDisposable {
     }
 
     public unsafe void SetWindowPosition() {
-        if (this.Plugin.HudLayoutWindow == null) return;
+        if (Plugin.HudLayoutWindow == null) return;
         // Get the position of the HUD Layout window
         short x = 0, y = 0;
-        this.Plugin.HudLayoutWindow->GetPosition(&x, &y);
-        float height = this.Plugin.HudLayoutWindow->GetScaledHeight(true);
-        this.Position = new Vector2(x + 2, y + height - 15);
+        Plugin.HudLayoutWindow->GetPosition(&x, &y);
+        float height = Plugin.HudLayoutWindow->GetScaledHeight(true);
+        Position = new Vector2(x + 2, y + height - 15);
     }
 
     public unsafe void DrawHelpWindow() {
-        if (this.Plugin.HudLayoutWindow == null) return;
+        if (Plugin.HudLayoutWindow == null) return;
         SetWindowPosition();
 
         ImGui.PushStyleColor(ImGuiCol.Header, new Vector4(0.5f, 0, 0, 0.5f));

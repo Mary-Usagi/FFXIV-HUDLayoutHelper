@@ -4,7 +4,7 @@ using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
 using System.Collections.Generic;
 
-namespace HUDLayoutHelper {
+namespace HUDLayoutHelper.Utilities {
     /// <summary>
     /// Provides debugging functionality for the HUDLayoutHelper plugin.
     /// </summary>
@@ -59,11 +59,11 @@ namespace HUDLayoutHelper {
             };
 
             // Check if the event type is in the handled list
-            if (!handledTypeList.Contains((AtkEventType)receiveEventArgs.AtkEventType) && !handledByteEventList.Contains((byte)receiveEventArgs.AtkEventType)) {
+            if (!handledTypeList.Contains((AtkEventType)receiveEventArgs.AtkEventType) && !handledByteEventList.Contains(receiveEventArgs.AtkEventType)) {
                 return;
             }
 
-            if (receiveEventArgs.AtkEventType == 15) { 
+            if (receiveEventArgs.AtkEventType == 15) {
                 if (receiveEventArgs.Data != nint.Zero) {
                     AtkEventData* eventDataTemp = (AtkEventData*)receiveEventArgs.Data;
                     if (eventDataTemp->ListItemData.SelectedIndex == 256) {

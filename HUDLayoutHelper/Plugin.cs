@@ -9,6 +9,8 @@ using FFXIVClientStructs.FFXIV.Client.System.Input;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using HUDLayoutHelper.Utilities;
+using HUDLayoutHelper.Windows;
 using ImGuiNET;
 using System;
 using System.Collections.Generic;
@@ -181,7 +183,7 @@ namespace HUDLayoutHelper {
             this.AddonLifecycle.UnregisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutWindow");
             this.AddonLifecycle.UnregisterListener(AddonEvent.PostReceiveEvent, "_HudLayoutWindow");
 
-            if (AlignmentOverlayWindow.IsOpen) { 
+            if (AlignmentOverlayWindow.IsOpen) {
                 AlignmentOverlayWindow.Toggle();
                 IsOverlayVisible = true;
             } else {
@@ -268,7 +270,7 @@ namespace HUDLayoutHelper {
             }
 
             // Check if the mouse target is the same as the selected element 
-            if (mouseDownTarget == null) { 
+            if (mouseDownTarget == null) {
                 this.Debug.Log(this.Log.Warning, $"No mouse target found.");
                 return;
             }
@@ -546,7 +548,7 @@ namespace HUDLayoutHelper {
 
             // Add the previous state and the new state to the undo history
             int hudLayoutIndex = Utils.GetCurrentHudLayoutIndex(this);
-            this.HudHistoryManager.AddUndoAction(hudLayoutIndex, previousState, parsedData); 
+            this.HudHistoryManager.AddUndoAction(hudLayoutIndex, previousState, parsedData);
 
             // Simulate Mouse Click
             Utils.SimulateMouseClickOnHudElement(selectedNode, 0, parsedData, hudLayoutScreen, this, this.CUSTOM_FLAG);
@@ -604,7 +606,7 @@ namespace HUDLayoutHelper {
         /// <param name="agentHudLayout"></param>
         private unsafe HudElementData? HandleRedoAction(AddonHudLayoutScreen* hudLayoutScreen, AgentHUDLayout* agentHudLayout) {
             // Get the last added action from the redo history
-            (HudElementData? oldState, HudElementData? newState) = this.HudHistoryManager.PeekRedoAction(Utils.GetCurrentHudLayoutIndex(this));  
+            (HudElementData? oldState, HudElementData? newState) = this.HudHistoryManager.PeekRedoAction(Utils.GetCurrentHudLayoutIndex(this));
             if (oldState == null || newState == null) {
                 this.Log.Debug($"Nothing to redo.");
                 return null;
@@ -714,7 +716,7 @@ namespace HUDLayoutHelper {
                 this.HudHistoryManager.MarkHistoryAsSaved(currentHudLayoutIndex_backup);
             }
         }
-        
+
         private int LastKeyboardEvent = 0;
         private int LastChangeCheck = 0;
         private int LastChangeCHeckHudLayoutIndex = -1;

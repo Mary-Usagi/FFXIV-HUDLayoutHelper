@@ -1,5 +1,6 @@
 ﻿using Dalamud.Interface.Windowing;
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using HUDLayoutHelper.Utilities;
 using ImGuiNET;
 using System;
 using System.Collections.Generic;
@@ -7,7 +8,7 @@ using System.Drawing;
 using System.Linq;
 using System.Numerics;
 
-namespace HUDLayoutHelper;
+namespace HUDLayoutHelper.Windows;
 
 /// <summary>
 /// https://www.reddit.com/r/imgui/comments/kknzqw/how_do_i_draw_triangle_in_imgui/
@@ -20,7 +21,7 @@ public class AlignmentOverlayWindow : Window, IDisposable {
     private Plugin Plugin;
     private Configuration Configuration;
 
-    public AlignmentOverlayWindow(Plugin plugin) : base("Overlay"){
+    public AlignmentOverlayWindow(Plugin plugin) : base("Overlay") {
         Flags = ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoInputs;
         //Flags = ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoInputs;
 
@@ -73,9 +74,9 @@ public class AlignmentOverlayWindow : Window, IDisposable {
         internal Anchor Center => AnchorMap["Center"];
 
         internal HudOverlayNode(
-            short left, short top, 
-            int width, int height, 
-            Color? centerColor = null, Color? cornerColor = null, 
+            short left, short top,
+            int width, int height,
+            Color? centerColor = null, Color? cornerColor = null,
             float centerSize = 1.5f, float cornerSize = 1.5f
         ) {
             Vector2 topLeft = new Vector2(left, top);
@@ -94,7 +95,7 @@ public class AlignmentOverlayWindow : Window, IDisposable {
     static readonly Color redColor = Color.FromArgb(255, 0, 0);
     static readonly Color blueColor = Color.FromArgb(0, 0, 255);
     static readonly Color greenColor = Color.FromArgb(0, 255, 0);
-    static readonly Color blackColor = Color.FromArgb(175, 0, 0, 0); 
+    static readonly Color blackColor = Color.FromArgb(175, 0, 0, 0);
 
     const int MAX_ANCHOR_DIFF = 10;
     const int guideLinePadding = 25;
@@ -121,7 +122,7 @@ public class AlignmentOverlayWindow : Window, IDisposable {
         HudElementData selectedHudElement = new HudElementData(selectedResNode);
         HudOverlayNode selectedHudOverlayNode = new HudOverlayNode(
             selectedHudElement.PosX, selectedHudElement.PosY,
-            selectedHudElement.Width-1, selectedHudElement.Height-1,
+            selectedHudElement.Width - 1, selectedHudElement.Height - 1,
             redColor, greenColor,
             2.5f, 2f
         );
@@ -133,11 +134,11 @@ public class AlignmentOverlayWindow : Window, IDisposable {
             if (element.Value.ElementId == selectedHudElement.ElementId) continue;
             otherHudOverlayNodes.Add(new HudOverlayNode(
                 element.Value.PosX, element.Value.PosY,
-                element.Value.Width-1, element.Value.Height-1
+                element.Value.Width - 1, element.Value.Height - 1
             ));
         }
         HudOverlayNode fullScreenHudOverlayNode = new HudOverlayNode(
-            -1, -1, 
+            -1, -1,
             (int)ImGui.GetIO().DisplaySize.X, (int)ImGui.GetIO().DisplaySize.Y
         );
         otherHudOverlayNodes.Add(fullScreenHudOverlayNode);
@@ -145,14 +146,14 @@ public class AlignmentOverlayWindow : Window, IDisposable {
 
         var alignedAnchors = (
             from selectedNodeAnchor in selectedHudOverlayNode.AnchorMap
-                let dimmedColor = Color.FromArgb(100, selectedNodeAnchor.Value.color.R, selectedNodeAnchor.Value.color.G, selectedNodeAnchor.Value.color.B)
+            let dimmedColor = Color.FromArgb(100, selectedNodeAnchor.Value.color.R, selectedNodeAnchor.Value.color.G, selectedNodeAnchor.Value.color.B)
             from otherNode in otherHudOverlayNodes
-                from otherNodeAnchor in otherNode.AnchorMap
-                    let diff = Vector2.Abs(otherNodeAnchor.Value.position - selectedNodeAnchor.Value.position)
-                    let isHorizontal = diff.Y < MAX_ANCHOR_DIFF
-                    let isVertical = diff.X < MAX_ANCHOR_DIFF
+            from otherNodeAnchor in otherNode.AnchorMap
+            let diff = Vector2.Abs(otherNodeAnchor.Value.position - selectedNodeAnchor.Value.position)
+            let isHorizontal = diff.Y < MAX_ANCHOR_DIFF
+            let isVertical = diff.X < MAX_ANCHOR_DIFF
             where isHorizontal || isVertical
-            select new { otherNode, otherNodeAnchor=otherNodeAnchor.Value, otherNodeAnchorName = otherNodeAnchor, selectedNodeAnchor=selectedNodeAnchor.Value, selectedNodeAnchorName=selectedNodeAnchor, diff, dimmedColor, isHorizontal, isVertical }
+            select new { otherNode, otherNodeAnchor = otherNodeAnchor.Value, otherNodeAnchorName = otherNodeAnchor, selectedNodeAnchor = selectedNodeAnchor.Value, selectedNodeAnchorName = selectedNodeAnchor, diff, dimmedColor, isHorizontal, isVertical }
         ).ToList();
 
         //Plugin.Log.Debug($"Aligned anchors: {alignedAnchors.Count}");

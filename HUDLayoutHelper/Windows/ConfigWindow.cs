@@ -1,4 +1,5 @@
 ﻿using Dalamud.Interface.Windowing;
+using HUDLayoutHelper.Utilities;
 using ImGuiNET;
 using System;
 using System.Collections.Generic;
@@ -6,7 +7,7 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace HUDLayoutHelper;
+namespace HUDLayoutHelper.Windows;
 
 public class ConfigWindow : Window, IDisposable {
     private Plugin Plugin;
@@ -50,7 +51,7 @@ public class ConfigWindow : Window, IDisposable {
 
     private string savedConfigHash = "";
 
-    public ConfigWindow(Plugin plugin) : base("HUD Layout Helper Settings"){
+    public ConfigWindow(Plugin plugin) : base("HUD Layout Helper Settings") {
         Flags = ImGuiWindowFlags.AlwaysUseWindowPadding;
 
         SizeConstraints = new WindowSizeConstraints {
@@ -60,11 +61,11 @@ public class ConfigWindow : Window, IDisposable {
         Plugin = plugin;
         SizeCondition = ImGuiCond.Always;
         Configuration = plugin.Configuration;
-        this.savedConfigHash = Configuration.GetHash();
+        savedConfigHash = Configuration.GetHash();
 
         // Initialize the tab actions
-        this.windowTabs = new WindowTabs(DrawAbout, DrawKeybinds, DrawSettings, DrawDebugInfoTab);
-        this.windowTabs.DebugInfo.setOpen(Configuration.DebugTabOpen);
+        windowTabs = new WindowTabs(DrawAbout, DrawKeybinds, DrawSettings, DrawDebugInfoTab);
+        windowTabs.DebugInfo.setOpen(Configuration.DebugTabOpen);
     }
 
     public void Dispose() { }
@@ -78,7 +79,7 @@ public class ConfigWindow : Window, IDisposable {
         byte* ptr;
         if (label != null) {
             num = Encoding.UTF8.GetByteCount(label);
-            Span<byte> span = (num <= 2048) ? stackalloc byte[num + 1] : new byte[num + 1];
+            Span<byte> span = num <= 2048 ? stackalloc byte[num + 1] : new byte[num + 1];
             fixed (byte* spanPtr = span) {
                 fixed (char* labelPtr = label) {
                     Encoding.UTF8.GetBytes(labelPtr, label.Length, spanPtr, num);
@@ -93,7 +94,7 @@ public class ConfigWindow : Window, IDisposable {
         byte* p_open2 = null;
         byte num2 = ImGuiNative.igBeginTabItem(ptr, p_open2, flags);
         if (num > 2048) {
-            Marshal.FreeHGlobal((IntPtr)ptr);
+            Marshal.FreeHGlobal((nint)ptr);
         }
 
         return num2 != 0;
@@ -110,7 +111,7 @@ public class ConfigWindow : Window, IDisposable {
 
                 // Check if this tab should be selected by default
                 var flags = ImGuiTabItemFlags.None;
-                if (tab.name.Contains("Settings") && this.savedConfigHash != Configuration.GetHash()) {
+                if (tab.name.Contains("Settings") && savedConfigHash != Configuration.GetHash()) {
                     flags |= ImGuiTabItemFlags.UnsavedDocument;
                 }
                 if (tab.selected) {
@@ -128,7 +129,7 @@ public class ConfigWindow : Window, IDisposable {
     }
 
     internal void DrawDebugInfoTab() {
-        ImGui.TextWrapped($"Current HUD Layout Index: {Utils.GetCurrentHudLayoutIndex(this.Plugin, false) + 1}");
+        ImGui.TextWrapped($"Current HUD Layout Index: {Utils.GetCurrentHudLayoutIndex(Plugin, false) + 1}");
         ImGui.Spacing();
         if (ImGui.BeginTabBar("##TabBarHudLayouts")) {
             for (var i = 0; i < Plugin.HudHistoryManager.HudLayoutCount; i++) {
@@ -143,7 +144,7 @@ public class ConfigWindow : Window, IDisposable {
         }
     }
 
-    internal void DrawDebugInfo(int hudLayout) {        
+    internal void DrawDebugInfo(int hudLayout) {
         ImGui.Spacing();
         ImGui.Columns(2, $"##Columns {hudLayout}", true);
         ImGui.TextWrapped("Undo History");
@@ -305,9 +306,9 @@ public class ConfigWindow : Window, IDisposable {
                 Plugin.Log.Warning("Failed to set history size");
             }
             Plugin.HudHistoryManager.SetRedoStrategy(redoActionStrategy);
-            this.windowTabs.DebugInfo.setOpen(Configuration.DebugTabOpen); 
+            windowTabs.DebugInfo.setOpen(Configuration.DebugTabOpen);
             Configuration.Save();
-            this.savedConfigHash = Configuration.GetHash();
+            savedConfigHash = Configuration.GetHash();
         }
     }
 

@@ -2,7 +2,7 @@
 obj/
 bin/
 *.user
-/HUDLayoutHelper/images/HUDLayoutIcon.png
-/HUDLayoutHelper/images/HUDLayoutIcon2.png
-/HUDLayoutHelper/images/icon2.png
-/HUDLayoutHelper/images/icon3.png
+/images/HUDLayoutIcon.png
+/images/HUDLayoutIcon2.png
+/images/icon2.png
+/images/icon3.png

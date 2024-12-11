@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace HUDLayoutHelper {
+namespace HUDLayoutHelper.Utilities {
     internal class HudElementAction {
         public HudElementData PreviousState { get; }
         public HudElementData NewState { get; }
@@ -16,11 +16,11 @@ namespace HUDLayoutHelper {
         }
 
         public void SaveAction() {
-            this.Saved = true;
+            Saved = true;
         }
 
         public void UnsaveAction() {
-            this.Saved = false;
+            Saved = false;
         }
     }
 
@@ -58,8 +58,8 @@ namespace HUDLayoutHelper {
 
         public HudHistoryManager(Plugin plugin, int HistorySize, RedoStrategy RedoStrategy) {
             Plugin = plugin;
-            this.MaxHistorySize = HistorySize;
-            this.RedoActionStrategy = RedoStrategy;
+            MaxHistorySize = HistorySize;
+            RedoActionStrategy = RedoStrategy;
 
             // Initialize the undo and redo history lists
             for (int i = 0; i < HudLayoutCount; i++) {
@@ -70,7 +70,7 @@ namespace HUDLayoutHelper {
 
         public bool SetHistorySize(int size) {
             if (size < 1) return false;
-            this.MaxHistorySize = size;
+            MaxHistorySize = size;
             Plugin.Log.Debug($"History size set to {size}");
 
 
@@ -115,8 +115,8 @@ namespace HUDLayoutHelper {
             undoHistory[hudLayoutIndex].Add(action);
 
             // Trim the history if it exceeds the maximum size
-            if (undoHistory[hudLayoutIndex].Count > this.MaxHistorySize) {
-                undoHistory[hudLayoutIndex].RemoveRange(0, undoHistory[hudLayoutIndex].Count - this.MaxHistorySize);
+            if (undoHistory[hudLayoutIndex].Count > MaxHistorySize) {
+                undoHistory[hudLayoutIndex].RemoveRange(0, undoHistory[hudLayoutIndex].Count - MaxHistorySize);
             }
         }
 
@@ -186,7 +186,7 @@ namespace HUDLayoutHelper {
 
         private void RewindHistory(int hudLayoutIndex) {
             if (!HudLayoutExists(hudLayoutIndex)) return;
-            for (int i = redoHistory[hudLayoutIndex].Count-1; i >= 0; i--) {
+            for (int i = redoHistory[hudLayoutIndex].Count - 1; i >= 0; i--) {
                 if (!redoHistory[hudLayoutIndex][i].Saved) break;
                 PerformRedo(hudLayoutIndex, redoHistory[hudLayoutIndex][i].NewState);
             }
@@ -202,7 +202,7 @@ namespace HUDLayoutHelper {
             redoHistory[hudLayoutIndex].Clear();
 
             // Remove all unsaved actions from the undo history
-            for (int i = undoHistory[hudLayoutIndex].Count-1; i >= 0; i--) {
+            for (int i = undoHistory[hudLayoutIndex].Count - 1; i >= 0; i--) {
                 if (undoHistory[hudLayoutIndex][i].Saved) break;
                 undoHistory[hudLayoutIndex].RemoveAt(i);
             }

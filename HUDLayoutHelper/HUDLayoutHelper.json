@@ -5,7 +5,7 @@
   "Description": "Allows you to use keyboard shortcuts in the HUD Layout Editor, like Ctrl+C and Ctrl+V to copy and paste the position of individual HUD elements, and Ctrl+Z and Ctrl+Y to undo and redo changes. \n\nCan also display an overlay showing alignment to other elements with Ctrl+R. ",
   "ApplicableVersion": "any",
   "RepoUrl": "https://github.com/Mary-Usagi/FFXIV-HUDLayoutHelper",
-  "IconUrl": "https://github.com/Mary-Usagi/FFXIV-HUDLayoutHelper/tree/main/HUDLayoutHelper/images/icon.png",
+  "IconUrl": "https://github.com/Mary-Usagi/FFXIV-HUDLayoutHelper/tree/main/images/icon.png",
   "Tags": [
     "hud",
     "layout",

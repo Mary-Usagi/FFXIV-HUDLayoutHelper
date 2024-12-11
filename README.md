@@ -26,12 +26,12 @@ There are different colors and line styles for different types of alignment:
 
 ## Screenshots
 #### Alignment Overlay
-![Alignment Overlay](./HUDLayoutHelper/images/alignment_lines.png)
+![Alignment Overlay](./images/alignment_lines.png)
 
 #### Window with Shortcut Hints
 This window can be toggled on and off in the settings and displays the keybinds for the plugin. It is attached to the HUD Layout Editor window and will move with it. 
 
-![Shortcut Hints](./HUDLayoutHelper/images/shortcut_hints.png)
+![Shortcut Hints](./images/shortcut_hints.png)
 
 
 <details>

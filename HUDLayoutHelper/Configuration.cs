@@ -1,4 +1,5 @@
 ﻿using Dalamud.Configuration;
+using HUDLayoutHelper.Utilities;
 using System;
 
 namespace HUDLayoutHelper {

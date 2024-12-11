@@ -2,7 +2,7 @@
 using System;
 using System.Text.Json;
 
-namespace HUDLayoutHelper {
+namespace HUDLayoutHelper.Utilities {
     /// <summary>
     /// Represents data for a HUD element.
     /// </summary>
@@ -64,7 +64,7 @@ namespace HUDLayoutHelper {
                         IsEnabled = true;
                         break;
                 }
-            } catch (NullReferenceException) {}
+            } catch (NullReferenceException) { }
             //IsEnabled = resNode->NodeFlags.HasFlag(NodeFlags.Visible);
 
             ElementId = ResNodeDisplayName.GetHashCode();
