@@ -9,27 +9,24 @@ namespace HUDLayoutHelper.Utilities;
 /// Provides debugging functionality for the HUDLayoutHelper plugin.
 /// </summary>
 public sealed class Debug : IDisposable {
-    private Plugin Plugin;
-
     private readonly bool isEnabled;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Debug"/> class.
     /// </summary>
-    /// <param name="plugin">The plugin instance.</param>
     /// <param name="enabled">Indicates whether debugging is enabled.</param>
-    public unsafe Debug(Plugin plugin, bool enabled) {
-        this.Plugin = plugin;
+    /// 
+    public unsafe Debug(bool enabled) {
         this.isEnabled = enabled;
 
         if (this.isEnabled) {
             // Log the initialization of the Debug class
-            this.Plugin.Log.Debug("Debug class initialized");
+            Plugin.Log.Debug("Debug class initialized");
 
             // Register a listener for the PreReceiveEvent of the "_HudLayoutScreen" addon
-            this.Plugin.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", this.HandleHudLayoutScreenEvent);
+            Plugin.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", this.HandleHudLayoutScreenEvent);
 
-            this.Plugin.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutWindow", this.HandleHudLayoutScreenEvent);
+            Plugin.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutWindow", this.HandleHudLayoutScreenEvent);
         }
     }
 
@@ -70,7 +67,7 @@ public sealed class Debug : IDisposable {
                     //Plugin.Log.Debug("@@@@@@ Window action");
                     return;
                 } else {
-                    this.Plugin.Log.Debug("@@@@@@ HudElement action");
+                    Plugin.Log.Debug("@@@@@@ HudElement action");
                 }
             } else {
                 return;
@@ -113,29 +110,29 @@ public sealed class Debug : IDisposable {
         //   - Target: AtkStage.Instance()
 
         // Log the event details for debugging purposes
-        this.Plugin.Log.Debug("=====================================");
-        this.Plugin.Log.Debug($"AddonEvent: {type}");
-        this.Plugin.Log.Debug($"AtkEventType: {(AtkEventType)receiveEventArgs.AtkEventType}");
-        this.Plugin.Log.Debug($"AddonArgsType: {receiveEventArgs.Type}");
-        this.Plugin.Log.Debug($"AtkEvent nint: {receiveEventArgs.AtkEvent:X}");
+        Plugin.Log.Debug("=====================================");
+        Plugin.Log.Debug($"AddonEvent: {type}");
+        Plugin.Log.Debug($"AtkEventType: {(AtkEventType)receiveEventArgs.AtkEventType}");
+        Plugin.Log.Debug($"AddonArgsType: {receiveEventArgs.Type}");
+        Plugin.Log.Debug($"AtkEvent nint: {receiveEventArgs.AtkEvent:X}");
 
         if (receiveEventArgs.AtkEvent != nint.Zero) {
             AtkEvent* atkEvent = (AtkEvent*)receiveEventArgs.AtkEvent;
-            this.Plugin.Log.Debug("---------- AtkEvent ----------");
-            this.Plugin.Log.Debug($"AtkEvent: {atkEvent->ToString()}");
+            Plugin.Log.Debug("---------- AtkEvent ----------");
+            Plugin.Log.Debug($"AtkEvent: {atkEvent->ToString()}");
             this.PrintAtkEvent(atkEvent);
-            this.Plugin.Log.Debug("---------- AtkEvent End ----------");
+            Plugin.Log.Debug("---------- AtkEvent End ----------");
         }
 
-        this.Plugin.Log.Debug($"AddonName: {receiveEventArgs.AddonName}");
-        this.Plugin.Log.Debug($"EventId int: {receiveEventArgs.EventParam}");
-        this.Plugin.Log.Debug($"Data Ptr: {receiveEventArgs.Data:X}");
+        Plugin.Log.Debug($"AddonName: {receiveEventArgs.AddonName}");
+        Plugin.Log.Debug($"EventId int: {receiveEventArgs.EventParam}");
+        Plugin.Log.Debug($"Data Ptr: {receiveEventArgs.Data:X}");
 
         if (receiveEventArgs.Data != nint.Zero) {
             AtkEventData* eventData = (AtkEventData*)receiveEventArgs.Data;
-            this.Plugin.Log.Debug($"EventData: {eventData->ToString()}");
-            this.Plugin.Log.Debug($"ListItemData: {eventData->ListItemData}");
-            this.Plugin.Log.Debug($"SelectedIndex: {eventData->ListItemData.SelectedIndex}");
+            Plugin.Log.Debug($"EventData: {eventData->ToString()}");
+            Plugin.Log.Debug($"ListItemData: {eventData->ListItemData}");
+            Plugin.Log.Debug($"SelectedIndex: {eventData->ListItemData.SelectedIndex}");
 
             this.PrintAtkEventData(eventData);
 
@@ -149,7 +146,7 @@ public sealed class Debug : IDisposable {
             for (int i = 0; i < 4; i++) {
                 mousePositions[i] = BitConverter.ToUInt16([bytePtr[i * 2], bytePtr[i * 2 + 1]], 0);
             }
-            this.Plugin.Log.Debug($"Mouse Position: X={mousePositions[0]}, Y={mousePositions[1]}, Z={mousePositions[2]}, W={mousePositions[3]}");
+            Plugin.Log.Debug($"Mouse Position: X={mousePositions[0]}, Y={mousePositions[1]}, Z={mousePositions[2]}, W={mousePositions[3]}");
 
             // Print the rest of the bytes in groups of 8
             int structSize = sizeof(AtkEventData);
@@ -158,7 +155,7 @@ public sealed class Debug : IDisposable {
                 for (int j = 0; j < 8 && i + j < structSize; j++) {
                     byteGroup += $"{bytePtr[i + j]} ";
                 }
-                this.Plugin.Log.Debug($"Bytes {i}-{i + 7}: {byteGroup.Trim()}");
+                Plugin.Log.Debug($"Bytes {i}-{i + 7}: {byteGroup.Trim()}");
             }
         }
     }
@@ -169,19 +166,19 @@ public sealed class Debug : IDisposable {
     /// <param name="atkEvent">The <see cref="AtkEvent"/> to print.</param>
     private unsafe void PrintAtkEvent(AtkEvent* atkEvent) {
         if (atkEvent == null) {
-            this.Plugin.Log.Debug("AtkEvent is null");
+            Plugin.Log.Debug("AtkEvent is null");
             return;
         }
 
-        this.Plugin.Log.Debug("-------- AtkEvent --------");
-        this.Plugin.Log.Debug($"AtkEvent Flags: {atkEvent->State.StateFlags}");
-        this.Plugin.Log.Debug($"AtkEvent Param: {atkEvent->Param}");
-        this.Plugin.Log.Debug($"AtkEvent Listener: {(uint)atkEvent->Listener:X}");
-        this.Plugin.Log.Debug($"AtkEvent Node: {(uint)atkEvent->Node:X}");
-        this.Plugin.Log.Debug($"AtkEvent Unk29: {atkEvent->State.UnkFlags1}");
-        this.Plugin.Log.Debug($"AtkEvent NextEvent: {(uint)atkEvent->NextEvent:X}");
-        this.Plugin.Log.Debug($"(AtkStage): {(uint)AtkStage.Instance():X}");
-        this.Plugin.Log.Debug($"AtkEvent Target: {(uint)atkEvent->Target:X}");
+        Plugin.Log.Debug("-------- AtkEvent --------");
+        Plugin.Log.Debug($"AtkEvent Flags: {atkEvent->State.StateFlags}");
+        Plugin.Log.Debug($"AtkEvent Param: {atkEvent->Param}");
+        Plugin.Log.Debug($"AtkEvent Listener: {(uint)atkEvent->Listener:X}");
+        Plugin.Log.Debug($"AtkEvent Node: {(uint)atkEvent->Node:X}");
+        Plugin.Log.Debug($"AtkEvent Unk29: {atkEvent->State.UnkFlags1}");
+        Plugin.Log.Debug($"AtkEvent NextEvent: {(uint)atkEvent->NextEvent:X}");
+        Plugin.Log.Debug($"(AtkStage): {(uint)AtkStage.Instance():X}");
+        Plugin.Log.Debug($"AtkEvent Target: {(uint)atkEvent->Target:X}");
 
         try {
             // Uncomment the following lines to print detailed information about the target collision node
@@ -203,11 +200,11 @@ public sealed class Debug : IDisposable {
             //     Plugin.Log.Debug($"-> Target Parent: {(uint)targetCollisionNode->ParentNode:X}");
             // }
         } catch (Exception e) {
-            this.Plugin.Log.Debug($"AtkEvent Target: {e.Message}");
+            Plugin.Log.Debug($"AtkEvent Target: {e.Message}");
         }
 
-        this.Plugin.Log.Debug("-------- AtkEvent End --------");
-        this.Plugin.Log.Debug($"AtkEvent Type: {atkEvent->State.EventType}");
+        Plugin.Log.Debug("-------- AtkEvent End --------");
+        Plugin.Log.Debug($"AtkEvent Type: {atkEvent->State.EventType}");
     }
 
     /// <summary>
@@ -216,7 +213,7 @@ public sealed class Debug : IDisposable {
     /// <param name="atkEventData">The <see cref="AtkEventData"/> to print.</param>
     private unsafe void PrintAtkEventData(AtkEventData* atkEventData) {
         if (atkEventData == null) {
-            this.Plugin.Log.Debug("AtkEventData is null");
+            Plugin.Log.Debug("AtkEventData is null");
             return;
         }
 
@@ -228,7 +225,7 @@ public sealed class Debug : IDisposable {
             for (int j = 0; j < 8 && i + j < structSize; j++) {
                 byteGroup += $"{bytePtr[i + j]} ";
             }
-            this.Plugin.Log.Debug($"Bytes {i}-{i + 7}: {byteGroup.Trim()}");
+            Plugin.Log.Debug($"Bytes {i}-{i + 7}: {byteGroup.Trim()}");
         }
     }
 
@@ -239,9 +236,9 @@ public sealed class Debug : IDisposable {
     /// <param name="title">The title for the log entry.</param>
     internal void PrettyPrintList(List<HudElementData> list, string title) {
         if (!this.isEnabled) return;
-        this.Plugin.Log.Debug($"'{title}' count: {list.Count}");
+        Plugin.Log.Debug($"'{title}' count: {list.Count}");
         foreach (var element in list) {
-            this.Plugin.Log.Debug($"\t{element.ResNodeDisplayName} ({element.PosX}, {element.PosY})");
+            Plugin.Log.Debug($"\t{element.ResNodeDisplayName} ({element.PosX}, {element.PosY})");
         }
     }
 
@@ -257,7 +254,7 @@ public sealed class Debug : IDisposable {
     }
 
     public void Dispose() {
-        this.Plugin.AddonLifecycle.UnregisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", this.HandleHudLayoutScreenEvent);
-        this.Plugin.AddonLifecycle.UnregisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutWindow", this.HandleHudLayoutScreenEvent);
+        Plugin.AddonLifecycle.UnregisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", this.HandleHudLayoutScreenEvent);
+        Plugin.AddonLifecycle.UnregisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutWindow", this.HandleHudLayoutScreenEvent);
     }
 }

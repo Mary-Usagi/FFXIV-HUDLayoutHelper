@@ -55,7 +55,7 @@ public class ShortcutHintsWindow : Window, IDisposable {
             ImGui.TableSetupColumn("##Column2", ImGuiTableColumnFlags.WidthStretch);
 
 
-            foreach (var keybind in this.Plugin.Keybindings) {
+            foreach (var keybind in Plugin.Keybindings) {
                 ImGui.TableNextColumn();
                 ImGui.Text(keybind.KeybindKeys.ToString());
                 ImGui.TableNextColumn();
@@ -76,8 +76,8 @@ public class ShortcutHintsWindow : Window, IDisposable {
 
     public unsafe override void Draw() {
         if (this.Configuration.ShowShortcutHints == false) return;
-        if (!this.Plugin.ClientState.IsLoggedIn) return;
-        if (this.Plugin.ClientState is not { LocalPlayer.ClassJob.RowId: var classJobId }) return;
+        if (!Plugin.ClientState.IsLoggedIn) return;
+        if (Plugin.ClientState is not { LocalPlayer.ClassJob.RowId: var classJobId }) return;
         if (this.Plugin.AgentHudLayout == null || this.Plugin.HudLayoutScreen == null) return;
         this.DrawHelpWindow();
     }

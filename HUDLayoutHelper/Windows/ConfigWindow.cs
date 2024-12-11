@@ -10,7 +10,6 @@ using ImGuiNET;
 namespace HUDLayoutHelper.Windows;
 
 public class ConfigWindow : Window, IDisposable {
-    private Plugin Plugin { get; }
     private Configuration Configuration { get; }
 
     internal class WindowTab(string name, Action action, bool open = true, bool selected = false) {
@@ -53,7 +52,6 @@ public class ConfigWindow : Window, IDisposable {
             MinimumSize = new Vector2(290, 200),
             MaximumSize = new Vector2(float.MaxValue, float.MaxValue)
         };
-        this.Plugin = plugin;
         this.SizeCondition = ImGuiCond.Always;
         this.Configuration = plugin.Configuration;
         this.savedConfigHash = this.Configuration.GetHash();
@@ -124,7 +122,7 @@ public class ConfigWindow : Window, IDisposable {
     }
 
     internal void DrawDebugInfoTab() {
-        ImGui.TextWrapped($"Current HUD Layout Index: {Utils.GetCurrentHudLayoutIndex(this.Plugin, false) + 1}");
+        ImGui.TextWrapped($"Current HUD Layout Index: {Utils.GetCurrentHudLayoutIndex(false) + 1}");
         ImGui.Spacing();
         if (ImGui.BeginTabBar("##TabBarHudLayouts")) {
             for (var i = 0; i < HudHistoryManager.HudLayoutCount; i++) {
@@ -159,7 +157,7 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.TableNextColumn();
         ImGui.TableHeader("Saved");
 
-        var undoHistory = this.Plugin.HudHistoryManager.UndoHistory[hudLayout];
+        var undoHistory = Plugin.HudHistoryManager.UndoHistory[hudLayout];
         for (var i = 0; i < undoHistory.Count; i++) {
             ImGui.TableNextColumn();
             ImGui.TextWrapped(i.ToString());
@@ -170,7 +168,7 @@ public class ConfigWindow : Window, IDisposable {
             ImGui.TableNextColumn();
             ImGui.TextWrapped(undoHistory[i].Saved ? "x" : "");
         }
-        for (var i = undoHistory.Count; i < this.Plugin.HudHistoryManager.MaxHistorySize; i++) {
+        for (var i = undoHistory.Count; i < Plugin.HudHistoryManager.MaxHistorySize; i++) {
             ImGui.TableNextColumn();
             ImGui.TextWrapped(i.ToString());
             ImGui.TableNextColumn();
@@ -201,7 +199,7 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.TableNextColumn();
         ImGui.TableHeader("Saved");
 
-        var redoHistory = this.Plugin.HudHistoryManager.RedoHistory[hudLayout];
+        var redoHistory = Plugin.HudHistoryManager.RedoHistory[hudLayout];
         for (var i = 0; i < redoHistory.Count; i++) {
             ImGui.TableNextColumn();
             ImGui.TextWrapped(i.ToString());
@@ -212,7 +210,7 @@ public class ConfigWindow : Window, IDisposable {
             ImGui.TableNextColumn();
             ImGui.TextWrapped(redoHistory[i].Saved ? "x" : "");
         }
-        for (var i = redoHistory.Count; i < this.Plugin.HudHistoryManager.MaxHistorySize; i++) {
+        for (var i = redoHistory.Count; i < Plugin.HudHistoryManager.MaxHistorySize; i++) {
             ImGui.TableNextColumn();
             ImGui.TextWrapped(i.ToString());
             ImGui.TableNextColumn();
@@ -294,12 +292,12 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.Spacing();
         ImGui.Spacing();
         if (ImGui.Button("Apply & Save Settings")) {
-            this.Plugin.Log.Debug("Saving configuration");
-            if (!this.Plugin.HudHistoryManager.SetHistorySize(maxUndoHistorySize)) {
+            Plugin.Log.Debug("Saving configuration");
+            if (!Plugin.HudHistoryManager.SetHistorySize(maxUndoHistorySize)) {
                 this.Configuration.MaxUndoHistorySize = 100;
-                this.Plugin.Log.Warning("Failed to set history size");
+                Plugin.Log.Warning("Failed to set history size");
             }
-            this.Plugin.HudHistoryManager.SetRedoStrategy(redoActionStrategy);
+            Plugin.HudHistoryManager.SetRedoStrategy(redoActionStrategy);
             this.AllTabs.DebugInfo.SetOpen(this.Configuration.DebugTabOpen);
             this.Configuration.Save();
             this.savedConfigHash = this.Configuration.GetHash();
@@ -321,7 +319,7 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.TableNextColumn();
         ImGui.TableHeader("Description");
 
-        foreach (var keybind in this.Plugin.Keybindings) {
+        foreach (var keybind in Plugin.Keybindings) {
             ImGui.TableNextColumn();
             ImGui.TextWrapped(keybind.KeybindKeys.ToString());
             ImGui.TableNextColumn();

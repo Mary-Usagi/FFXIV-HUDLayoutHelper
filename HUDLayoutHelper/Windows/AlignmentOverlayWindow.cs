@@ -106,8 +106,8 @@ public class AlignmentOverlayWindow : Window, IDisposable {
     public unsafe override void Draw() {
         // See: https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp
         //ImDrawList* draw_list = ImGui.GetForegroundDrawList(ImGui.GetMainViewport());
-        if (!this.Plugin.ClientState.IsLoggedIn) return;
-        if (this.Plugin.ClientState is not { LocalPlayer.ClassJob.RowId: var classJobId }) return;
+        if (!Plugin.ClientState.IsLoggedIn) return;
+        if (Plugin.ClientState is not { LocalPlayer.ClassJob.RowId: var classJobId }) return;
         if (this.Plugin.AgentHudLayout == null || this.Plugin.HudLayoutScreen == null) return;
 
         ImDrawListPtr imDrawListPtr = ImGui.GetForegroundDrawList(ImGui.GetMainViewport());
@@ -117,7 +117,7 @@ public class AlignmentOverlayWindow : Window, IDisposable {
         if (selectedResNode == null) return;
 
         // Create a new HudElementData object with the data of the selected element
-        var hudLayoutElements = this.Plugin.previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex(this.Plugin, false)];
+        var hudLayoutElements = this.Plugin.previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex(false)];
 
         HudElementData selectedHudElement = new HudElementData(selectedResNode);
         HudOverlayNode selectedHudOverlayNode = new HudOverlayNode(
