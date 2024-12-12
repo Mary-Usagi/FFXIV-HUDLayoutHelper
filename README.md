@@ -29,7 +29,7 @@ There are different colors and line styles for different types of alignment:
 ![Alignment Overlay](./images/alignment_lines.png)
 
 #### Window with Shortcut Hints
-This window can be toggled on and off in the settings and displays the keybinds for the plugin. It is attached to the HUD Layout Editor window and will move with it. 
+This window can be toggled on and off in the settings and displays the keybinds for the plugin in the HUD Layout Editor. 
 
 ![Shortcut Hints](./images/shortcut_hints.png)
 
