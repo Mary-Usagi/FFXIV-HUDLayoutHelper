@@ -20,7 +20,7 @@ namespace HUDLayoutHelper.Windows;
 public class AlignmentOverlayWindow : Window, IDisposable {
     private Plugin Plugin;
     private Configuration Configuration;
-
+    internal bool ToggledOnByUser { get; set; } = false;
     public AlignmentOverlayWindow(Plugin plugin) : base("Overlay") {
         Flags = ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoInputs;
         //Flags = ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoInputs;
@@ -100,16 +100,20 @@ public class AlignmentOverlayWindow : Window, IDisposable {
     const int MAX_ANCHOR_DIFF = 10;
     const int guideLinePadding = 25;
 
+    public unsafe override void PreOpenCheck() {
+        // If any of these conditions are not met, the window will not be opened
+        this.IsOpen = this.ToggledOnByUser 
+            && Plugin.ClientState.IsLoggedIn 
+            && Plugin.ClientState is { LocalPlayer.ClassJob.RowId: var classJobId } 
+            && Plugin.AgentHudLayout != null && Plugin.HudLayoutScreen != null;
+    }
+
     /// <summary>
     ///  TODO
     /// </summary>
     public unsafe override void Draw() {
         // See: https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp
         //ImDrawList* draw_list = ImGui.GetForegroundDrawList(ImGui.GetMainViewport());
-        if (!Plugin.ClientState.IsLoggedIn) return;
-        if (Plugin.ClientState is not { LocalPlayer.ClassJob.RowId: var classJobId }) return;
-        if (Plugin.AgentHudLayout == null || Plugin.HudLayoutScreen == null) return;
-
         ImDrawListPtr imDrawListPtr = ImGui.GetForegroundDrawList(ImGui.GetMainViewport());
 
         // get current element data 

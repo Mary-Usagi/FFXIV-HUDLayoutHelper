@@ -27,8 +27,6 @@ namespace HUDLayoutHelper {
         public Configuration Configuration { get; init; }
         private ConfigWindow ConfigWindow { get; init; }
         private AlignmentOverlayWindow AlignmentOverlayWindow { get; init; }
-        private bool IsOverlayVisible = false;
-
         private ShortcutHintsWindow ShortcutHintsWindow { get; init; }
 
         [PluginService] internal static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
@@ -163,8 +161,8 @@ namespace HUDLayoutHelper {
                 previousHudLayoutIndexElements.Add(new Dictionary<int, HudElementData>());
             }
 
-            if (IsOverlayVisible && !AlignmentOverlayWindow.IsOpen) AlignmentOverlayWindow.Toggle();
-            if (!ShortcutHintsWindow.IsOpen) ShortcutHintsWindow.Toggle();
+            if (AlignmentOverlayWindow.ToggledOnByUser && !AlignmentOverlayWindow.IsOpen) AlignmentOverlayWindow.Toggle();
+            if (Configuration.ShowShortcutHints && !ShortcutHintsWindow.IsOpen) ShortcutHintsWindow.Toggle();
             UpdatePreviousElements();
             this.Framework.Update += PerformScheduledElementChangeCheck;
             this.Framework.Update += OnUpdate;
@@ -185,10 +183,7 @@ namespace HUDLayoutHelper {
 
             if (AlignmentOverlayWindow.IsOpen) {
                 AlignmentOverlayWindow.Toggle();
-                IsOverlayVisible = true;
-            } else {
-                IsOverlayVisible = false;
-            }
+            } 
             AlignmentOverlayWindow.IsOpen = false;
 
             if (ShortcutHintsWindow.IsOpen) {
@@ -670,8 +665,12 @@ namespace HUDLayoutHelper {
         }
 
         public void ToggleAlignmentOverlay() {
-            AlignmentOverlayWindow.Toggle();
-            this.Log.Info($"Toggled Alignment Overlay {(AlignmentOverlayWindow.IsOpen ? "on" : "off")}");
+            if (AlignmentOverlayWindow.ToggledOnByUser) {
+                AlignmentOverlayWindow.ToggledOnByUser = false;
+            } else {
+                AlignmentOverlayWindow.ToggledOnByUser = true;
+            }
+            this.Log.Info($"Toggled Alignment Overlay {(AlignmentOverlayWindow.ToggledOnByUser ? "on" : "off")}");
         }
 
 
