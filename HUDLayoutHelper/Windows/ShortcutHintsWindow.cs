@@ -6,12 +6,12 @@ using System.Numerics;
 namespace HUDLayoutHelper.Windows;
 
 public class ShortcutHintsWindow : Window, IDisposable {
-    private Plugin Plugin;
+    private Plugin _plugin;
     private Configuration Configuration;
     public ShortcutHintsWindow(Plugin plugin) : base("HUD Layout Helper - Shortcut List") {
         Flags = ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoBringToFrontOnFocus | ImGuiWindowFlags.NoFocusOnAppearing | ImGuiWindowFlags.NoNav;
 
-        Plugin = plugin;
+        _plugin = plugin;
         SizeCondition = ImGuiCond.Always;
         PositionCondition = ImGuiCond.Always;
         BgAlpha = 0.8f;
@@ -33,7 +33,7 @@ public class ShortcutHintsWindow : Window, IDisposable {
         this.IsOpen = Configuration.ShowShortcutHints
             && Plugin.ClientState.IsLoggedIn
             && Plugin.ClientState is { LocalPlayer.ClassJob.RowId: var classJobId }
-            && Plugin.AgentHudLayout != null && Plugin.HudLayoutScreen != null;
+            && _plugin.AgentHudLayout != null && _plugin.HudLayoutScreen != null;
     }
 
     public unsafe override void Draw() {
@@ -42,7 +42,7 @@ public class ShortcutHintsWindow : Window, IDisposable {
         ImGui.TableSetupColumn("##Column1", ImGuiTableColumnFlags.WidthStretch);
         ImGui.TableSetupColumn("##Column2", ImGuiTableColumnFlags.WidthStretch);
 
-        foreach (var keybind in Plugin.Keybindings) {
+        foreach (var keybind in _plugin.Keybindings) {
             ImGui.TableNextColumn();
             ImGui.Text(keybind.keys.ToString());
             ImGui.TableNextColumn();

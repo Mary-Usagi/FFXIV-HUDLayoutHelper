@@ -32,14 +32,14 @@ namespace HUDLayoutHelper {
         [PluginService] internal static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
         [PluginService] internal static ITextureProvider TextureProvider { get; private set; } = null!;
         [PluginService] internal static ICommandManager CommandManager { get; private set; } = null!;
+        [PluginService] internal static IGameGui GameGui { get; private set; } = null!;
+        [PluginService] internal static IClientState ClientState { get; private set; } = null!;
+        [PluginService] internal static IPluginLog Log { get; private set; } = null!;
+        [PluginService] internal static IAddonEventManager AddonEventManager { get; private set; } = null!;
+        [PluginService] internal static IAddonLifecycle AddonLifecycle { get; private set; } = null!;
+        [PluginService] internal static IFramework Framework { get; private set; } = null!;
+        [PluginService] internal static IChatGui ChatGui { get; private set; } = null!;
 
-        public IGameGui GameGui { get; init; }
-        public IClientState ClientState { get; init; }
-        public IPluginLog Log { get; init; }
-        public IAddonEventManager AddonEventManager { get; init; }
-        public IAddonLifecycle AddonLifecycle { get; init; }
-        public IFramework Framework { get; init; }
-        public IChatGui ChatGui { get; init; } = null!;
         public Debug Debug { get; private set; } = null!;
         internal HudHistoryManager HudHistoryManager { get; private set; } = null!;
 
@@ -49,24 +49,8 @@ namespace HUDLayoutHelper {
         internal unsafe AddonHudLayoutScreen* HudLayoutScreen = null;
         internal unsafe AddonHudLayoutWindow* HudLayoutWindow = null;
 
-        public Plugin(
-            IGameGui gameGui,
-            IClientState clientState,
-            IPluginLog pluginLog,
-            IAddonEventManager addonEventManager,
-            IAddonLifecycle addonLifecycle,
-            IFramework framework,
-            IChatGui chatGui
-        ) {
-            this.Log = pluginLog;
-            this.GameGui = gameGui;
-            this.ClientState = clientState;
-            this.AddonEventManager = addonEventManager;
-            this.AddonLifecycle = addonLifecycle;
-            this.Framework = framework;
-            this.ChatGui = chatGui;
-
-            this.Debug = new Debug(this, this.DEBUG);
+        public Plugin() {
+            this.Debug = new Debug(this.DEBUG);
 
             Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
@@ -93,18 +77,18 @@ namespace HUDLayoutHelper {
             PluginInterface.UiBuilder.OpenConfigUi += ToggleConfigUI;
             PluginInterface.UiBuilder.OpenMainUi += ToggleMainUI;
 
-            if (this.GameGui.GetAddonByName("_HudLayoutScreen", 1) != IntPtr.Zero) {
-                this.Debug.Log(this.Log.Debug, "HudLayoutScreen already loaded.");
+            if (Plugin.GameGui.GetAddonByName("_HudLayoutScreen", 1) != IntPtr.Zero) {
+                this.Debug.Log(Plugin.Log.Debug, "HudLayoutScreen already loaded.");
                 this.RegisterCallbacks();
             }
 
-            this.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "_HudLayoutScreen", (type, args) => {
-                this.Debug.Log(this.Log.Debug, "HudLayoutScreen setup.");
+            Plugin.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "_HudLayoutScreen", (type, args) => {
+                this.Debug.Log(Plugin.Log.Debug, "HudLayoutScreen setup.");
                 this.RegisterCallbacks();
             });
 
-            this.AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, "_HudLayoutScreen", (type, args) => {
-                this.Debug.Log(this.Log.Debug, "HudLayoutScreen finalize.");
+            Plugin.AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, "_HudLayoutScreen", (type, args) => {
+                this.Debug.Log(Plugin.Log.Debug, "HudLayoutScreen finalize.");
                 // Remove unsaved history if HUD is closed (instead of layout changed) with unsaved changes
                 this.HudHistoryManager.RewindHistoryAndAddToRedo(this.currentHudLayoutIndex);
                 this.RemoveCallbacks();
@@ -123,7 +107,7 @@ namespace HUDLayoutHelper {
         /// <returns></returns>
         private unsafe bool InitializeHudLayoutAddons() {
             if (!Utils.IsHudLayoutReady(out AgentHUDLayout* agentHudLayout, out AddonHudLayoutScreen* hudLayoutScreen, out AddonHudLayoutWindow* hudLayoutWindow, this)) {
-                this.Log.Warning("HudLayoutScreen not ready.");
+                Plugin.Log.Warning("HudLayoutScreen not ready.");
                 return false;
             }
 
@@ -145,15 +129,15 @@ namespace HUDLayoutHelper {
             InitializeHudLayoutAddons();
 
             // Listen for mouse events to track manual element movements for undo/redo
-            this.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", HandleMouseDownEvent);
-            this.AddonLifecycle.RegisterListener(AddonEvent.PostReceiveEvent, "_HudLayoutScreen", HandleMouseUpEvent);
+            Plugin.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", HandleMouseDownEvent);
+            Plugin.AddonLifecycle.RegisterListener(AddonEvent.PostReceiveEvent, "_HudLayoutScreen", HandleMouseUpEvent);
 
             // For all other changes, track all element positions
-            this.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", HandleKeyboardMoveEvent);
-            this.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutWindow", HandleControllerMoveEvent);
+            Plugin.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", HandleKeyboardMoveEvent);
+            Plugin.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutWindow", HandleControllerMoveEvent);
 
             // Add a check for keyboard shortcuts to the update loop
-            this.Framework.Update += HandleKeyboardShortcuts;
+            Plugin.Framework.Update += HandleKeyboardShortcuts;
 
             // Add a check for element changes to the update loop
             previousHudLayoutIndexElements.Clear();
@@ -164,22 +148,22 @@ namespace HUDLayoutHelper {
             if (AlignmentOverlayWindow.ToggledOnByUser && !AlignmentOverlayWindow.IsOpen) AlignmentOverlayWindow.Toggle();
             if (Configuration.ShowShortcutHints && !ShortcutHintsWindow.IsOpen) ShortcutHintsWindow.Toggle();
             UpdatePreviousElements();
-            this.Framework.Update += PerformScheduledElementChangeCheck;
-            this.Framework.Update += OnUpdate;
+            Plugin.Framework.Update += PerformScheduledElementChangeCheck;
+            Plugin.Framework.Update += OnUpdate;
 
             callbackAdded = true;
         }
         private void RemoveCallbacks() {
             // Remove all event listeners and callbacks
-            this.Framework.Update -= HandleKeyboardShortcuts;
-            this.Framework.Update -= PerformScheduledElementChangeCheck;
-            this.Framework.Update -= OnUpdate;
+            Plugin.Framework.Update -= HandleKeyboardShortcuts;
+            Plugin.Framework.Update -= PerformScheduledElementChangeCheck;
+            Plugin.Framework.Update -= OnUpdate;
 
-            this.AddonLifecycle.UnregisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen");
-            this.AddonLifecycle.UnregisterListener(AddonEvent.PostReceiveEvent, "_HudLayoutScreen");
+            Plugin.AddonLifecycle.UnregisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen");
+            Plugin.AddonLifecycle.UnregisterListener(AddonEvent.PostReceiveEvent, "_HudLayoutScreen");
 
-            this.AddonLifecycle.UnregisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutWindow");
-            this.AddonLifecycle.UnregisterListener(AddonEvent.PostReceiveEvent, "_HudLayoutWindow");
+            Plugin.AddonLifecycle.UnregisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutWindow");
+            Plugin.AddonLifecycle.UnregisterListener(AddonEvent.PostReceiveEvent, "_HudLayoutWindow");
 
             if (AlignmentOverlayWindow.IsOpen) {
                 AlignmentOverlayWindow.Toggle();
@@ -220,23 +204,23 @@ namespace HUDLayoutHelper {
             // Get the currently selected element, abort if none is selected
             int selectedNodeId = receiveEventArgs.EventParam;
             if (selectedNodeId < 0 || selectedNodeId >= this.HudLayoutScreen->CollisionNodeListCount) {
-                this.Debug.Log(this.Log.Error, $"No valid element selected.");
+                this.Debug.Log(Plugin.Log.Error, $"No valid element selected.");
             }
 
             AtkResNode* selectedNode = Utils.GetCollisionNodeByIndex(this.HudLayoutScreen, selectedNodeId);
             if (selectedNode == null) {
-                this.Log.Debug($"No element selected.");
+                Plugin.Log.Debug($"No element selected.");
                 return;
             }
 
             // Temporarily save the current state of the selected element for undo operations
             HudElementData previousState = new HudElementData(selectedNode);
             if (previousState.ResNodeDisplayName != string.Empty && previousState.ResNodeDisplayName != "Unknown") {
-                this.Debug.Log(this.Log.Debug, $"Selected Element by Mouse: {previousState}");
+                this.Debug.Log(Plugin.Log.Debug, $"Selected Element by Mouse: {previousState}");
                 mouseDownTarget = previousState;
 
             } else {
-                this.Debug.Log(this.Log.Warning, $"Could not get ResNodeDisplayName for selected element.");
+                this.Debug.Log(Plugin.Log.Warning, $"Could not get ResNodeDisplayName for selected element.");
                 mouseDownTarget = null;
             }
         }
@@ -260,13 +244,13 @@ namespace HUDLayoutHelper {
             // Get the currently selected element, abort if none is selected
             AtkResNode* selectedNode = Utils.GetCollisionNodeByIndex(this.HudLayoutScreen, 0);
             if (selectedNode == null) {
-                this.Log.Debug($"No element selected.");
+                Plugin.Log.Debug($"No element selected.");
                 return;
             }
 
             // Check if the mouse target is the same as the selected element 
             if (mouseDownTarget == null) {
-                this.Debug.Log(this.Log.Warning, $"No mouse target found.");
+                this.Debug.Log(Plugin.Log.Warning, $"No mouse target found.");
                 return;
             }
 
@@ -275,10 +259,10 @@ namespace HUDLayoutHelper {
 
             // Check if the currently selected element is the same as the last MouseDown target
             if (newState.ResNodeDisplayName != mouseDownTarget.ResNodeDisplayName) {
-                this.Debug.Log(this.Log.Warning, $"Mouse target does not match selected element: {newState}");
+                this.Debug.Log(Plugin.Log.Warning, $"Mouse target does not match selected element: {newState}");
                 return;
             } else {
-                this.Debug.Log(this.Log.Debug, $"Mouse target matches selected element.");
+                this.Debug.Log(Plugin.Log.Debug, $"Mouse target matches selected element.");
             }
 
             // check if the position has changed, if not, do not add to undo history
@@ -287,7 +271,7 @@ namespace HUDLayoutHelper {
             }
 
             // Save the current state of the selected element for undo operations
-            this.Log.Debug($"User moved: {mouseDownTarget.PrettyPrint()} -> ({newState.PosX}, {newState.PosY})");
+            Plugin.Log.Debug($"User moved: {mouseDownTarget.PrettyPrint()} -> ({newState.PosX}, {newState.PosY})");
             this.HudHistoryManager.AddUndoAction(Utils.GetCurrentHudLayoutIndex(this), mouseDownTarget, newState);
 
             // Update previousElements
@@ -437,11 +421,11 @@ namespace HUDLayoutHelper {
             }
 
             if (keyboardAction == Keybind.Action.None) return;
-            this.Debug.Log(this.Log.Debug, $"Keybind.Action: {keyboardAction}");
+            this.Debug.Log(Plugin.Log.Debug, $"Keybind.Action: {keyboardAction}");
 
             // Abort if a popup is open
             if (this.HudLayoutWindow->NumOpenPopups > 0) {
-                this.Debug.Log(this.Log.Warning, "Popup open, not executing action.");
+                this.Debug.Log(Plugin.Log.Warning, "Popup open, not executing action.");
                 return;
             }
 
@@ -470,7 +454,7 @@ namespace HUDLayoutHelper {
 
             // Update previousElements if a change was made
             if (changedElement != null) {
-                this.Debug.Log(this.Log.Debug, $"Changed Element: {changedElement}");
+                this.Debug.Log(Plugin.Log.Debug, $"Changed Element: {changedElement}");
                 HudElementData? changedPreviousElement = null;
                 var previousElements = previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex(this)];
                 previousElements.TryGetValue(changedElement.ElementId, out changedPreviousElement);
@@ -485,7 +469,7 @@ namespace HUDLayoutHelper {
             // Get the currently selected element, abort if none is selected
             AtkResNode* selectedNode = Utils.GetCollisionNodeByIndex(hudLayoutScreen, 0);
             if (selectedNode == null) {
-                this.Log.Debug($"No element selected.");
+                Plugin.Log.Debug($"No element selected.");
                 return;
             }
 
@@ -495,8 +479,8 @@ namespace HUDLayoutHelper {
 
             // Copy the data to the clipboard
             ImGui.SetClipboardText(selectedNodeData.ToString());
-            this.Debug.Log(this.Log.Debug, $"Copied to Clipboard: {selectedNodeData}");
-            this.Log.Debug($"Copied position to clipboard: {selectedNodeData.PrettyPrint()}");
+            this.Debug.Log(Plugin.Log.Debug, $"Copied to Clipboard: {selectedNodeData}");
+            Plugin.Log.Debug($"Copied position to clipboard: {selectedNodeData.PrettyPrint()}");
         }
 
         /// <summary>
@@ -509,14 +493,14 @@ namespace HUDLayoutHelper {
             // Get the currently selected element, abort if none is selected
             AtkResNode* selectedNode = Utils.GetCollisionNodeByIndex(hudLayoutScreen, 0);
             if (selectedNode == null) {
-                this.Log.Debug($"No element selected.");
+                Plugin.Log.Debug($"No element selected.");
                 return null;
             }
 
             // Get the clipboard text
             string clipboardText = ImGui.GetClipboardText();
             if (clipboardText == null) {
-                this.Log.Debug($"Clipboard is empty.");
+                Plugin.Log.Debug($"Clipboard is empty.");
                 return null;
             }
 
@@ -525,14 +509,14 @@ namespace HUDLayoutHelper {
             try {
                 parsedData = JsonSerializer.Deserialize<HudElementData>(clipboardText);
             } catch {
-                this.Log.Warning($"Clipboard data could not be parsed: '{clipboardText}'");
+                Plugin.Log.Warning($"Clipboard data could not be parsed: '{clipboardText}'");
                 return null;
             }
             if (parsedData == null) {
-                this.Log.Warning($"Clipboard data could not be parsed. '{clipboardText}'");
+                Plugin.Log.Warning($"Clipboard data could not be parsed. '{clipboardText}'");
                 return null;
             }
-            this.Debug.Log(this.Log.Debug, $"Parsed Clipboard: {parsedData}");
+            this.Debug.Log(Plugin.Log.Debug, $"Parsed Clipboard: {parsedData}");
 
             // Save the current state of the selected element for undo operations
             HudElementData previousState = new HudElementData(selectedNode);
@@ -551,7 +535,7 @@ namespace HUDLayoutHelper {
             // Send Event to HudLayout to inform about a change 
             Utils.SendChangeEvent(agentHudLayout);
 
-            this.Log.Debug($"Pasted position to selected element: {previousState.ResNodeDisplayName} ({previousState.PosX}, {previousState.PosY}) -> ({parsedData.PosX}, {parsedData.PosY})");
+            Plugin.Log.Debug($"Pasted position to selected element: {previousState.ResNodeDisplayName} ({previousState.PosX}, {previousState.PosY}) -> ({parsedData.PosX}, {parsedData.PosY})");
             return parsedData;
         }
 
@@ -564,14 +548,14 @@ namespace HUDLayoutHelper {
             // Get the last added action from the undo history
             (HudElementData? oldState, HudElementData? newState) = this.HudHistoryManager.PeekUndoAction(Utils.GetCurrentHudLayoutIndex(this));
             if (oldState == null || newState == null) {
-                this.Log.Debug($"Nothing to undo.");
+                Plugin.Log.Debug($"Nothing to undo.");
                 return null;
             }
 
             // Find node with same name as oldState
             (nint undoNodePtr, uint undoNodeId) = Utils.FindHudResnodeByName(hudLayoutScreen, oldState.ResNodeDisplayName);
             if (undoNodePtr == nint.Zero) {
-                this.Log.Warning($"Could not find node with name '{oldState.ResNodeDisplayName}'");
+                Plugin.Log.Warning($"Could not find node with name '{oldState.ResNodeDisplayName}'");
                 return null;
             }
             AtkResNode* undoNode = (AtkResNode*)undoNodePtr;
@@ -589,7 +573,7 @@ namespace HUDLayoutHelper {
             // Send Event to HudLayout to inform about a change 
             Utils.SendChangeEvent(agentHudLayout);
 
-            this.Log.Debug($"Undo: Moved '{undoNodeState.ResNodeDisplayName}' from ({undoNodeState.PosX}, {undoNodeState.PosY}) back to ({oldState.PosX}, {oldState.PosY})");
+            Plugin.Log.Debug($"Undo: Moved '{undoNodeState.ResNodeDisplayName}' from ({undoNodeState.PosX}, {undoNodeState.PosY}) back to ({oldState.PosX}, {oldState.PosY})");
 
             return oldState;
         }
@@ -603,14 +587,14 @@ namespace HUDLayoutHelper {
             // Get the last added action from the redo history
             (HudElementData? oldState, HudElementData? newState) = this.HudHistoryManager.PeekRedoAction(Utils.GetCurrentHudLayoutIndex(this));
             if (oldState == null || newState == null) {
-                this.Log.Debug($"Nothing to redo.");
+                Plugin.Log.Debug($"Nothing to redo.");
                 return null;
             }
 
             // Find node with same name as new state
             (nint redoNodePtr, uint redoNodeId) = Utils.FindHudResnodeByName(hudLayoutScreen, newState.ResNodeDisplayName);
             if (redoNodePtr == nint.Zero) {
-                this.Log.Warning($"Could not find node with name '{newState.ResNodeDisplayName}'");
+                Plugin.Log.Warning($"Could not find node with name '{newState.ResNodeDisplayName}'");
                 return null;
             }
             AtkResNode* redoNode = (AtkResNode*)redoNodePtr;
@@ -627,15 +611,15 @@ namespace HUDLayoutHelper {
             // Send Event to HudLayout to inform about a change 
             Utils.SendChangeEvent(agentHudLayout);
 
-            this.Log.Debug($"Redo: Moved '{redoNodeState.ResNodeDisplayName}' again from ({redoNodeState.PosX}, {redoNodeState.PosY}) to ({newState.PosX}, {newState.PosY})");
+            Plugin.Log.Debug($"Redo: Moved '{redoNodeState.ResNodeDisplayName}' again from ({redoNodeState.PosX}, {redoNodeState.PosY}) to ({newState.PosX}, {newState.PosY})");
 
             return newState;
         }
 
         public void Dispose() {
             this.RemoveCallbacks();
-            this.AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, "_HudLayoutScreen");
-            this.AddonLifecycle.UnregisterListener(AddonEvent.PreFinalize, "_HudLayoutScreen");
+            Plugin.AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, "_HudLayoutScreen");
+            Plugin.AddonLifecycle.UnregisterListener(AddonEvent.PreFinalize, "_HudLayoutScreen");
             this.Debug.Dispose();
 
             WindowSystem.RemoveAllWindows();
@@ -670,7 +654,7 @@ namespace HUDLayoutHelper {
             } else {
                 AlignmentOverlayWindow.ToggledOnByUser = true;
             }
-            this.Log.Info($"Toggled Alignment Overlay {(AlignmentOverlayWindow.ToggledOnByUser ? "on" : "off")}");
+            Plugin.Log.Info($"Toggled Alignment Overlay {(AlignmentOverlayWindow.ToggledOnByUser ? "on" : "off")}");
         }
 
 
@@ -690,7 +674,7 @@ namespace HUDLayoutHelper {
             int hudLayoutIndex = Utils.GetCurrentHudLayoutIndex(this, false);
             if (hudLayoutIndex != this.currentHudLayoutIndex) {
                 hudLayoutIndex_change = true;
-                this.Debug.Log(this.Log.Debug, $"HUD Layout Index changed: {hudLayoutIndex}");
+                this.Debug.Log(Plugin.Log.Debug, $"HUD Layout Index changed: {hudLayoutIndex}");
                 this.currentHudLayoutIndex = hudLayoutIndex;
                 UpdatePreviousElements();
             }
@@ -699,19 +683,19 @@ namespace HUDLayoutHelper {
             bool needToSave = this.AgentHudLayout->NeedToSave;
             if (needToSave != currentNeedToSave) {
                 needToSave_change = true;
-                this.Debug.Log(this.Log.Debug, $"HUD Layout needs to be saved changed to: {needToSave}");
+                this.Debug.Log(Plugin.Log.Debug, $"HUD Layout needs to be saved changed to: {needToSave}");
                 this.currentNeedToSave = needToSave;
             }
 
             // Reset undo and redo history if HUD Layout was closed with unsaved changes
             if (needToSave_change && !needToSave && hudLayoutIndex_change) {
-                this.Debug.Log(this.Log.Debug, $"HUD Layout changed without saving.");
+                this.Debug.Log(Plugin.Log.Debug, $"HUD Layout changed without saving.");
                 this.HudHistoryManager.RewindHistoryAndAddToRedo(currentHudLayoutIndex_backup);
             }
 
             // Mark history as saved when HUD Layout is saved
             if (needToSave_change && !needToSave && !hudLayoutIndex_change) {
-                this.Debug.Log(this.Log.Debug, $"HUD Layout was saved.");
+                this.Debug.Log(Plugin.Log.Debug, $"HUD Layout was saved.");
                 this.HudHistoryManager.MarkHistoryAsSaved(currentHudLayoutIndex_backup);
             }
         }
@@ -752,7 +736,7 @@ namespace HUDLayoutHelper {
 
         private unsafe void PerformScheduledElementChangeCheck(IFramework framework) {
             if (LastKeyboardEvent > LastChangeCheck && Environment.TickCount - LastKeyboardEvent > ChangeCheckInterval) {
-                this.Debug.Log(this.Log.Debug, "Keyboard event detected, checking for element changes.");
+                this.Debug.Log(Plugin.Log.Debug, "Keyboard event detected, checking for element changes.");
                 PerformElementChangeCheck();
                 LastChangeCheck = Environment.TickCount;
             }
@@ -763,7 +747,7 @@ namespace HUDLayoutHelper {
 
         private unsafe void PerformElementChangeCheck() {
             if (this.AgentHudLayout == null || this.HudLayoutScreen == null) return;
-            this.Debug.Log(this.Log.Debug, "Checking for element changes.");
+            this.Debug.Log(Plugin.Log.Debug, "Checking for element changes.");
 
             var previousElements = previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex(this, false)];
 
@@ -775,7 +759,7 @@ namespace HUDLayoutHelper {
                     if (HasPositionChanged(previousData, elementData.Value)) {
                         HudHistoryManager.AddUndoAction(Utils.GetCurrentHudLayoutIndex(this, false), previousData, elementData.Value);
                         changedElements.Add(elementData.Value);
-                        this.Log.Debug($"User moved: {previousData.PrettyPrint()} -> ({elementData.Value.PosX}, {elementData.Value.PosY})");
+                        Plugin.Log.Debug($"User moved: {previousData.PrettyPrint()} -> ({elementData.Value.PosX}, {elementData.Value.PosY})");
                     }
                 }
                 previousElements[elementData.Key] = elementData.Value;
@@ -785,7 +769,7 @@ namespace HUDLayoutHelper {
         }
 
         internal unsafe void UpdatePreviousElements() {
-            this.Debug.Log(this.Log.Debug, "Updating previous elements.");
+            this.Debug.Log(Plugin.Log.Debug, "Updating previous elements.");
             var currentElements = GetCurrentElements();
             var previousElements = previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex(this, false)];
             foreach (var elementData in currentElements) {

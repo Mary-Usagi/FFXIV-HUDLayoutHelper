@@ -18,7 +18,7 @@ namespace HUDLayoutHelper.Windows;
 /// 
 /// </summary>
 public class AlignmentOverlayWindow : Window, IDisposable {
-    private Plugin Plugin;
+    private Plugin _plugin;
     private Configuration Configuration;
     internal bool ToggledOnByUser { get; set; } = false;
     public AlignmentOverlayWindow(Plugin plugin) : base("Overlay") {
@@ -31,14 +31,14 @@ public class AlignmentOverlayWindow : Window, IDisposable {
         };
         Position = new Vector2(0, 0);
 
-        Plugin = plugin;
+        _plugin = plugin;
         SizeCondition = ImGuiCond.Always;
         PositionCondition = ImGuiCond.Always;
         Configuration = plugin.Configuration;
     }
 
     public override void OnOpen() {
-        Plugin.UpdatePreviousElements();
+        _plugin.UpdatePreviousElements();
     }
 
     public void Dispose() { }
@@ -105,7 +105,7 @@ public class AlignmentOverlayWindow : Window, IDisposable {
         this.IsOpen = this.ToggledOnByUser 
             && Plugin.ClientState.IsLoggedIn 
             && Plugin.ClientState is { LocalPlayer.ClassJob.RowId: var classJobId } 
-            && Plugin.AgentHudLayout != null && Plugin.HudLayoutScreen != null;
+            && _plugin.AgentHudLayout != null && _plugin.HudLayoutScreen != null;
     }
 
     /// <summary>
@@ -117,11 +117,11 @@ public class AlignmentOverlayWindow : Window, IDisposable {
         ImDrawListPtr imDrawListPtr = ImGui.GetForegroundDrawList(ImGui.GetMainViewport());
 
         // get current element data 
-        AtkResNode* selectedResNode = Utils.GetCollisionNodeByIndex(Plugin.HudLayoutScreen, 0);
+        AtkResNode* selectedResNode = Utils.GetCollisionNodeByIndex(_plugin.HudLayoutScreen, 0);
         if (selectedResNode == null) return;
 
         // Create a new HudElementData object with the data of the selected element
-        var hudLayoutElements = Plugin.previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex(Plugin, false)];
+        var hudLayoutElements = _plugin.previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex(_plugin, false)];
 
         HudElementData selectedHudElement = new HudElementData(selectedResNode);
         HudOverlayNode selectedHudOverlayNode = new HudOverlayNode(

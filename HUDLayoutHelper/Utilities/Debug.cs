@@ -9,17 +9,14 @@ namespace HUDLayoutHelper.Utilities {
     /// Provides debugging functionality for the HUDLayoutHelper plugin.
     /// </summary>
     public sealed class Debug : IDisposable {
-        private Plugin Plugin { get; }
-
         private bool Enabled { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Debug"/> class.
         /// </summary>
-        /// <param name="plugin">The plugin instance.</param>
         /// <param name="enabled">Indicates whether debugging is enabled.</param>
-        public unsafe Debug(Plugin plugin, bool enabled) {
-            Plugin = plugin;
+        /// 
+        public unsafe Debug(bool enabled) {
             Enabled = enabled;
 
             if (Enabled) {

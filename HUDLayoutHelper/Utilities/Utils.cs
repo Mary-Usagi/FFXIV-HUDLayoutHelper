@@ -41,7 +41,7 @@ namespace HUDLayoutHelper.Utilities {
         /// <param name="hudLayoutScreen">The HUD layout screen pointer.</param>
         internal static unsafe void SimulateMouseClickOnHudElement(AtkResNode* resNode, uint resNodeID, HudElementData hudElementData, AddonHudLayoutScreen* hudLayoutScreen, Plugin plugin, AtkEventStateFlags customFlag) {
             if (resNode == null) {
-                plugin.Log.Warning("ResNode is null");
+                Plugin.Log.Warning("ResNode is null");
                 return;
             }
 
@@ -62,7 +62,7 @@ namespace HUDLayoutHelper.Utilities {
             AtkEventData* mouseDownEventData = &eventData;
 
             // Call the mouse down event on the HUD layout
-            plugin.Debug.Log(plugin.Log.Debug, "Calling MouseDown event");
+            plugin.Debug.Log(Plugin.Log.Debug, "Calling MouseDown event");
             hudLayoutScreen->ReceiveEvent(AtkEventType.MouseDown, (int)mouseDownEvent.Param, &mouseDownEvent, mouseDownEventData);
 
             // ----> MouseUp Event
@@ -79,14 +79,14 @@ namespace HUDLayoutHelper.Utilities {
             mouseUpEvent.State.StateFlags |= customFlag;
 
             // Set the event data with the x and y position of the mouse click
-            plugin.Debug.Log(plugin.Log.Debug, "Calling MouseUp event");
+            plugin.Debug.Log(Plugin.Log.Debug, "Calling MouseUp event");
             AtkEventData* mouseUpEventData = &eventData;
 
             // Call the mouse up event on the HUD layout
             hudLayoutScreen->ReceiveEvent(AtkEventType.MouseUp, 99, &mouseUpEvent, mouseUpEventData);
 
             // ----> Reset mouse cursor to default image (Arrow) 
-            plugin.AddonEventManager.ResetCursor();
+            Plugin.AddonEventManager.ResetCursor();
         }
 
         /// <summary>
@@ -114,11 +114,11 @@ namespace HUDLayoutHelper.Utilities {
             hudLayoutWindowPtr = null;
 
             // Get the HudLayout agent, return false if not found
-            AgentHUDLayout* agentHudLayout = (AgentHUDLayout*)plugin.GameGui.FindAgentInterface("HudLayout");
+            AgentHUDLayout* agentHudLayout = (AgentHUDLayout*)Plugin.GameGui.FindAgentInterface("HudLayout");
             if (agentHudLayout == null) return false;
 
             // Get the HudLayoutScreen, return false if not found
-            nint addonHudLayoutScreenPtr = plugin.GameGui.GetAddonByName("_HudLayoutScreen", 1);
+            nint addonHudLayoutScreenPtr = Plugin.GameGui.GetAddonByName("_HudLayoutScreen", 1);
             if (addonHudLayoutScreenPtr == nint.Zero) return false;
 
             // Get the HudLayoutScreen pointer
@@ -126,7 +126,7 @@ namespace HUDLayoutHelper.Utilities {
             if (hudLayoutScreen == null) return false;
 
             // Get the HudLayoutWindow, return false if not found
-            nint addonHudLayoutWindowPtr = plugin.GameGui.GetAddonByName("_HudLayoutWindow", 1);
+            nint addonHudLayoutWindowPtr = Plugin.GameGui.GetAddonByName("_HudLayoutWindow", 1);
             if (addonHudLayoutWindowPtr == nint.Zero) return false;
 
             // Get the HudLayoutWindow pointer
@@ -156,9 +156,9 @@ namespace HUDLayoutHelper.Utilities {
 
         internal static unsafe int GetCurrentHudLayoutIndex(Plugin plugin, bool log = true) {
             int index = AddonConfig.Instance()->ModuleData->CurrentHudLayout;
-            if (log) plugin.Debug.Log(plugin.Log.Debug, $"Current HUD Layout Index: {index}");
+            if (log) plugin.Debug.Log(Plugin.Log.Debug, $"Current HUD Layout Index: {index}");
             if (index < 0 || index >= 10) {
-                plugin.Debug.Log(plugin.Log.Warning, "Invalid HUD Layout index.");
+                plugin.Debug.Log(Plugin.Log.Warning, "Invalid HUD Layout index.");
                 throw new Exception("Invalid HUD Layout index.");
             }
             return index;
