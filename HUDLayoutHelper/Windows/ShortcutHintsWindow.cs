@@ -42,7 +42,7 @@ public class ShortcutHintsWindow : Window, IDisposable {
         ImGui.TableSetupColumn("##Column1", ImGuiTableColumnFlags.WidthStretch);
         ImGui.TableSetupColumn("##Column2", ImGuiTableColumnFlags.WidthStretch);
 
-        foreach (var keybind in _plugin.Keybindings) {
+        foreach (var keybind in this._plugin.KeybindHandler.KeybindList) {
             ImGui.TableNextColumn();
             ImGui.Text(keybind.keys.ToString());
             ImGui.TableNextColumn();

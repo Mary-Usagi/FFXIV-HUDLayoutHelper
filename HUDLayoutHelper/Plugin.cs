@@ -49,6 +49,8 @@ public sealed class Plugin : IDalamudPlugin {
     internal static unsafe AddonHudLayoutScreen* HudLayoutScreen = null;
     internal static unsafe AddonHudLayoutWindow* HudLayoutWindow = null;
 
+    internal KeybindHandler KeybindHandler { get; } = null!;
+
     public Plugin() {
         Debug = new Debug(this.DEBUG);
 
@@ -70,6 +72,11 @@ public sealed class Plugin : IDalamudPlugin {
         ShortcutHintsWindow = new ShortcutHintsWindow(this);
         WindowSystem.AddWindow(ShortcutHintsWindow);
 
+        // ===== Initialize handlers ===== 
+        this.KeybindHandler = new KeybindHandler(this);
+
+
+        // ===== Register events =====
         PluginInterface.UiBuilder.Draw += DrawUI;
 
         // This adds a button to the plugin installer entry of this plugin which allows
@@ -137,7 +144,7 @@ public sealed class Plugin : IDalamudPlugin {
         Plugin.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutWindow", HandleControllerMoveEvent);
 
         // Add a check for keyboard shortcuts to the update loop
-        Plugin.Framework.Update += HandleKeyboardShortcuts;
+        Plugin.Framework.Update += this.KeybindHandler.HandleKeyboardShortcuts;
 
         // Add a check for element changes to the update loop
         previousHudLayoutIndexElements.Clear();
@@ -155,7 +162,7 @@ public sealed class Plugin : IDalamudPlugin {
     }
     private void RemoveCallbacks() {
         // Remove all event listeners and callbacks
-        Plugin.Framework.Update -= HandleKeyboardShortcuts;
+        Plugin.Framework.Update -= this.KeybindHandler.HandleKeyboardShortcuts;
         Plugin.Framework.Update -= PerformScheduledElementChangeCheck;
         Plugin.Framework.Update -= OnUpdate;
 
@@ -182,7 +189,7 @@ public sealed class Plugin : IDalamudPlugin {
     }
     // SETUP END
 
-    private AtkEventStateFlags CUSTOM_FLAG = (AtkEventStateFlags)16;
+    internal AtkEventStateFlags CUSTOM_FLAG = (AtkEventStateFlags)16;
     private HudElementData? mouseDownTarget = null;
 
     private unsafe void HandleMouseDownEvent(AddonEvent type, AddonArgs args) {
@@ -281,298 +288,6 @@ public sealed class Plugin : IDalamudPlugin {
         mouseDownTarget = null;
     }
 
-    private HudElementData? currentlyCopied = null;
-
-    internal class Keybind {
-        internal enum Action { None, Copy, Paste, Undo, Redo, ToggleAlignmentOverlay }
-        internal struct Description {
-            public string Name { get; set; }
-            public string Text { get; set; }
-            public string ShortText { get; set; }
-
-            public Description(string name, string description, string shortDescription) {
-                Name = name;
-                Text = description;
-                ShortText = shortDescription;
-            }
-        }
-        internal struct Keys {
-            public SeVirtualKey MainKey { get; set; }
-            public bool ShiftPressed { get; set; }
-            public KeyStateFlags State { get; set; }
-
-            public Keys(SeVirtualKey mainKey, KeyStateFlags state, bool shiftPressed) {
-                MainKey = mainKey;
-                ShiftPressed = shiftPressed;
-                State = state;
-            }
-
-            public override string ToString() {
-                string extraModifier = ShiftPressed ? $" + Shift" : "";
-                return $"Ctrl{extraModifier} + {MainKey}";
-            }
-        }
-
-        public Description description { get; set; }
-        public Keys keys { get; set; }
-        public Action KeybindAction { get; set; }
-
-        public Keybind((string name, string text, string shortText) description, (SeVirtualKey mainKey, KeyStateFlags state, bool shiftPressed) keys, Keybind.Action action) {
-            this.description = new Description(description.name, description.text, description.shortText);
-            this.keys = new Keys(keys.mainKey, keys.state, keys.shiftPressed);
-            this.KeybindAction = action;
-        }
-    }
-
-    internal List<Keybind> Keybindings = new List<Keybind>() {
-        new Keybind( action: Keybind.Action.Copy,
-            description: (name: "Copy", text: "Copy position of selected HUD element", shortText: "Copy"),
-            keys: ( mainKey: SeVirtualKey.C, state: KeyStateFlags.Pressed, shiftPressed: false)
-        ),
-        new Keybind( action: Keybind.Action.Paste,
-            description: (name: "Paste", text: "Paste copied position to selected HUD element", shortText: "Paste"),
-            keys: ( mainKey: SeVirtualKey.V, state: KeyStateFlags.Released, shiftPressed: false)
-        ),
-        new Keybind( action: Keybind.Action.Undo,
-            description: (name: "Undo", text: "Undo last action", shortText: "Undo"),
-            keys: ( mainKey: SeVirtualKey.Z, state: KeyStateFlags.Pressed,shiftPressed : false)
-        ),
-        new Keybind( action: Keybind.Action.Redo,
-            description: (name: "Redo", text: "Redo last action", shortText: "Redo"),
-            keys: ( mainKey: SeVirtualKey.Y, state: KeyStateFlags.Pressed, shiftPressed: false)
-        ),
-        new Keybind( action: Keybind.Action.Redo,
-            description: (name: "Redo", text: "Redo last action", shortText: "Redo"),
-            keys: ( mainKey: SeVirtualKey.Z, state: KeyStateFlags.Pressed, shiftPressed: true)
-        ),
-        new Keybind( action: Keybind.Action.ToggleAlignmentOverlay,
-            description: (name: "Toggle Alignment Helper Overlay", text: "Toggle alignment helper overlay on/off", shortText: "Toggle Overlay"),
-            keys: ( mainKey: SeVirtualKey.R, state: KeyStateFlags.Pressed, shiftPressed : false)
-        )
-
-    };
-
-    /// <summary>
-    /// Handles keyboard shortcuts for copy, paste, undo, and redo actions.
-    /// </summary>
-    /// <param name="framework">The framework interface.</param>
-    private unsafe void HandleKeyboardShortcuts(IFramework framework) {
-        // Executes every frame
-        if (!ClientState.IsLoggedIn) return;
-        if (ClientState is not { LocalPlayer.ClassJob.RowId: var classJobId }) return;
-        if (ImGui.GetIO().WantCaptureKeyboard) return; // TODO: Necessary? 
-
-        // Get the state of the control key, abort if not pressed 
-        KeyStateFlags ctrlKeystate = UIInputData.Instance()->GetKeyState(SeVirtualKey.CONTROL);
-        if (!ctrlKeystate.HasFlag(KeyStateFlags.Down)) return;
-
-        // Set the keyboard action based on the key states
-        Keybind.Action keyboardAction = Keybind.Action.None;
-        foreach (var keybind in Keybindings) {
-            KeyStateFlags keyState = UIInputData.Instance()->GetKeyState(keybind.keys.MainKey);
-            if (keybind.keys.ShiftPressed && !UIInputData.Instance()->GetKeyState(SeVirtualKey.SHIFT).HasFlag(KeyStateFlags.Down)) continue;
-            if (!keybind.keys.ShiftPressed && UIInputData.Instance()->GetKeyState(SeVirtualKey.SHIFT).HasFlag(KeyStateFlags.Down)) continue;
-            if (keyState.HasFlag(keybind.keys.State)) {
-                keyboardAction = keybind.KeybindAction;
-                break;
-            }
-        }
-
-        if (keyboardAction == Keybind.Action.None) return;
-        Debug.Log(Plugin.Log.Debug, $"Keybind.Action: {keyboardAction}");
-
-        // Abort if a popup is open
-        if (HudLayoutWindow->NumOpenPopups > 0) {
-            Debug.Log(Plugin.Log.Warning, "Popup open, not executing action.");
-            return;
-        }
-
-        // Check if the layout editor is open, abort if not
-        if (AgentHudLayout == null || HudLayoutScreen == null) return;
-
-        // Depending on the keyboard action, execute the corresponding operation
-        HudElementData? changedElement = null;
-        switch (keyboardAction) {
-            case Keybind.Action.Copy:
-                HandleCopyAction(HudLayoutScreen);
-                break;
-            case Keybind.Action.Paste:
-                changedElement = HandlePasteAction(HudLayoutScreen, AgentHudLayout);
-                break;
-            case Keybind.Action.Undo:
-                changedElement = HandleUndoAction(HudLayoutScreen, AgentHudLayout);
-                break;
-            case Keybind.Action.Redo:
-                changedElement = HandleRedoAction(HudLayoutScreen, AgentHudLayout);
-                break;
-            case Keybind.Action.ToggleAlignmentOverlay:
-                this.ToggleAlignmentOverlay();
-                break;
-        }
-
-        // Update previousElements if a change was made
-        if (changedElement != null) {
-            Debug.Log(Plugin.Log.Debug, $"Changed Element: {changedElement}");
-            HudElementData? changedPreviousElement = null;
-            var previousElements = previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex()];
-            previousElements.TryGetValue(changedElement.ElementId, out changedPreviousElement);
-            previousElements[changedElement.ElementId] = changedElement;
-        }
-    }
-    /// <summary>
-    /// Copy the position of the selected element to the clipboard. 
-    /// </summary>
-    /// <param name="hudLayoutScreen"></param>
-    private unsafe void HandleCopyAction(AddonHudLayoutScreen* hudLayoutScreen) {
-        // Get the currently selected element, abort if none is selected
-        AtkResNode* selectedNode = Utils.GetCollisionNodeByIndex(hudLayoutScreen, 0);
-        if (selectedNode == null) {
-            Plugin.Log.Debug($"No element selected.");
-            return;
-        }
-
-        // Create a new HudElementData object with the data of the selected element
-        HudElementData selectedNodeData = new HudElementData(selectedNode);
-        currentlyCopied = selectedNodeData;
-
-        // Copy the data to the clipboard
-        ImGui.SetClipboardText(selectedNodeData.ToString());
-        Debug.Log(Plugin.Log.Debug, $"Copied to Clipboard: {selectedNodeData}");
-        Plugin.Log.Debug($"Copied position to clipboard: {selectedNodeData.PrettyPrint()}");
-    }
-
-    /// <summary>
-    /// Paste the position from the clipboard to the selected element 
-    /// and simulate a mouse click on the element.
-    /// </summary>
-    /// <param name="hudLayoutScreen"></param>
-    /// <param name="agentHudLayout"></param>
-    private unsafe HudElementData? HandlePasteAction(AddonHudLayoutScreen* hudLayoutScreen, AgentHUDLayout* agentHudLayout) {
-        // Get the currently selected element, abort if none is selected
-        AtkResNode* selectedNode = Utils.GetCollisionNodeByIndex(hudLayoutScreen, 0);
-        if (selectedNode == null) {
-            Plugin.Log.Debug($"No element selected.");
-            return null;
-        }
-
-        // Get the clipboard text
-        string clipboardText = ImGui.GetClipboardText();
-        if (clipboardText == null) {
-            Plugin.Log.Debug($"Clipboard is empty.");
-            return null;
-        }
-
-        // Parse the clipboard text to a HudElementData object
-        HudElementData? parsedData = null;
-        try {
-            parsedData = JsonSerializer.Deserialize<HudElementData>(clipboardText);
-        } catch {
-            Plugin.Log.Warning($"Clipboard data could not be parsed: '{clipboardText}'");
-            return null;
-        }
-        if (parsedData == null) {
-            Plugin.Log.Warning($"Clipboard data could not be parsed. '{clipboardText}'");
-            return null;
-        }
-        Debug.Log(Plugin.Log.Debug, $"Parsed Clipboard: {parsedData}");
-
-        // Save the current state of the selected element for undo operations
-        HudElementData previousState = new HudElementData(selectedNode);
-
-
-        // Set the position of the currently selected element to the parsed position
-        selectedNode->ParentNode->SetPositionShort(parsedData.PosX, parsedData.PosY);
-
-        // Add the previous state and the new state to the undo history
-        int hudLayoutIndex = Utils.GetCurrentHudLayoutIndex();
-        this.HudHistoryManager.AddUndoAction(hudLayoutIndex, previousState, parsedData);
-
-        // Simulate Mouse Click
-        Utils.SimulateMouseClickOnHudElement(selectedNode, 0, parsedData, hudLayoutScreen, this.CUSTOM_FLAG);
-
-        // Send Event to HudLayout to inform about a change 
-        Utils.SendChangeEvent(agentHudLayout);
-
-        Plugin.Log.Debug($"Pasted position to selected element: {previousState.ResNodeDisplayName} ({previousState.PosX}, {previousState.PosY}) -> ({parsedData.PosX}, {parsedData.PosY})");
-        return parsedData;
-    }
-
-    /// <summary>
-    /// Undo the last operation and simulate a mouse click on the element.
-    /// </summary>
-    /// <param name="hudLayoutScreen"></param>
-    /// <param name="agentHudLayout"></param>
-    private unsafe HudElementData? HandleUndoAction(AddonHudLayoutScreen* hudLayoutScreen, AgentHUDLayout* agentHudLayout) {
-        // Get the last added action from the undo history
-        (HudElementData? oldState, HudElementData? newState) = this.HudHistoryManager.PeekUndoAction(Utils.GetCurrentHudLayoutIndex());
-        if (oldState == null || newState == null) {
-            Plugin.Log.Debug($"Nothing to undo.");
-            return null;
-        }
-
-        // Find node with same name as oldState
-        (nint undoNodePtr, uint undoNodeId) = Utils.FindHudResnodeByName(hudLayoutScreen, oldState.ResNodeDisplayName);
-        if (undoNodePtr == nint.Zero) {
-            Plugin.Log.Warning($"Could not find node with name '{oldState.ResNodeDisplayName}'");
-            return null;
-        }
-        AtkResNode* undoNode = (AtkResNode*)undoNodePtr;
-
-        HudElementData undoNodeState = new HudElementData(undoNode);
-
-        // Set the position of the currently selected element to the parsed position
-        undoNode->ParentNode->SetPositionShort(oldState.PosX, oldState.PosY);
-
-        this.HudHistoryManager.PerformUndo(Utils.GetCurrentHudLayoutIndex(), undoNodeState);
-
-        // Simulate Mouse Click
-        Utils.SimulateMouseClickOnHudElement(undoNode, undoNodeId, oldState, hudLayoutScreen, this.CUSTOM_FLAG);
-
-        // Send Event to HudLayout to inform about a change 
-        Utils.SendChangeEvent(agentHudLayout);
-
-        Plugin.Log.Debug($"Undo: Moved '{undoNodeState.ResNodeDisplayName}' from ({undoNodeState.PosX}, {undoNodeState.PosY}) back to ({oldState.PosX}, {oldState.PosY})");
-
-        return oldState;
-    }
-
-    /// <summary>
-    /// Redo the last operation and simulate a mouse click on the element.
-    /// </summary>
-    /// <param name="hudLayoutScreen"></param>
-    /// <param name="agentHudLayout"></param>
-    private unsafe HudElementData? HandleRedoAction(AddonHudLayoutScreen* hudLayoutScreen, AgentHUDLayout* agentHudLayout) {
-        // Get the last added action from the redo history
-        (HudElementData? oldState, HudElementData? newState) = this.HudHistoryManager.PeekRedoAction(Utils.GetCurrentHudLayoutIndex());
-        if (oldState == null || newState == null) {
-            Plugin.Log.Debug($"Nothing to redo.");
-            return null;
-        }
-
-        // Find node with same name as new state
-        (nint redoNodePtr, uint redoNodeId) = Utils.FindHudResnodeByName(hudLayoutScreen, newState.ResNodeDisplayName);
-        if (redoNodePtr == nint.Zero) {
-            Plugin.Log.Warning($"Could not find node with name '{newState.ResNodeDisplayName}'");
-            return null;
-        }
-        AtkResNode* redoNode = (AtkResNode*)redoNodePtr;
-        HudElementData redoNodeState = new HudElementData(redoNode);
-
-        // Set the position of the currently selected element to the parsed position
-        redoNode->ParentNode->SetPositionShort(newState.PosX, newState.PosY);
-
-        this.HudHistoryManager.PerformRedo(Utils.GetCurrentHudLayoutIndex(), redoNodeState);
-
-        // Simulate Mouse Click
-        Utils.SimulateMouseClickOnHudElement(redoNode, redoNodeId, newState, hudLayoutScreen, this.CUSTOM_FLAG);
-
-        // Send Event to HudLayout to inform about a change 
-        Utils.SendChangeEvent(agentHudLayout);
-
-        Plugin.Log.Debug($"Redo: Moved '{redoNodeState.ResNodeDisplayName}' again from ({redoNodeState.PosX}, {redoNodeState.PosY}) to ({newState.PosX}, {newState.PosY})");
-
-        return newState;
-    }
 
     public void Dispose() {
         this.RemoveCallbacks();
