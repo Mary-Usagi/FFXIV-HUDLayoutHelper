@@ -33,7 +33,7 @@ public class ShortcutHintsWindow : Window, IDisposable {
         this.IsOpen = Configuration.ShowShortcutHints
             && Plugin.ClientState.IsLoggedIn
             && Plugin.ClientState is { LocalPlayer.ClassJob.RowId: var classJobId }
-            && _plugin.AgentHudLayout != null && _plugin.HudLayoutScreen != null;
+            && Plugin.AgentHudLayout != null && Plugin.HudLayoutScreen != null;
     }
 
     public unsafe override void Draw() {

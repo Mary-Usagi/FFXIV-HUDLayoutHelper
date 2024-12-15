@@ -105,7 +105,7 @@ public class AlignmentOverlayWindow : Window, IDisposable {
         this.IsOpen = this.ToggledOnByUser 
             && Plugin.ClientState.IsLoggedIn 
             && Plugin.ClientState is { LocalPlayer.ClassJob.RowId: var classJobId } 
-            && _plugin.AgentHudLayout != null && _plugin.HudLayoutScreen != null;
+            && Plugin.AgentHudLayout != null && Plugin.HudLayoutScreen != null;
     }
 
     /// <summary>
@@ -117,7 +117,7 @@ public class AlignmentOverlayWindow : Window, IDisposable {
         ImDrawListPtr imDrawListPtr = ImGui.GetForegroundDrawList(ImGui.GetMainViewport());
 
         // get current element data 
-        AtkResNode* selectedResNode = Utils.GetCollisionNodeByIndex(_plugin.HudLayoutScreen, 0);
+        AtkResNode* selectedResNode = Utils.GetCollisionNodeByIndex(Plugin.HudLayoutScreen, 0);
         if (selectedResNode == null) return;
 
         // Create a new HudElementData object with the data of the selected element

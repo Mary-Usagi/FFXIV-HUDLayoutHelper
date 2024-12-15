@@ -45,9 +45,9 @@ public sealed class Plugin : IDalamudPlugin {
 
 
     // HUD Layout Addon Pointers
-    internal unsafe AgentHUDLayout* AgentHudLayout = null;
-    internal unsafe AddonHudLayoutScreen* HudLayoutScreen = null;
-    internal unsafe AddonHudLayoutWindow* HudLayoutWindow = null;
+    internal static unsafe AgentHUDLayout* AgentHudLayout = null;
+    internal static unsafe AddonHudLayoutScreen* HudLayoutScreen = null;
+    internal static unsafe AddonHudLayoutWindow* HudLayoutWindow = null;
 
     public Plugin() {
         Debug = new Debug(this.DEBUG);
@@ -199,15 +199,15 @@ public sealed class Plugin : IDalamudPlugin {
         }
 
         // Check if the layout editor is open, abort if not
-        if (this.AgentHudLayout == null || this.HudLayoutScreen == null) return;
+        if (AgentHudLayout == null || HudLayoutScreen == null) return;
 
         // Get the currently selected element, abort if none is selected
         int selectedNodeId = receiveEventArgs.EventParam;
-        if (selectedNodeId < 0 || selectedNodeId >= this.HudLayoutScreen->CollisionNodeListCount) {
+        if (selectedNodeId < 0 || selectedNodeId >= HudLayoutScreen->CollisionNodeListCount) {
             Debug.Log(Plugin.Log.Error, $"No valid element selected.");
         }
 
-        AtkResNode* selectedNode = Utils.GetCollisionNodeByIndex(this.HudLayoutScreen, selectedNodeId);
+        AtkResNode* selectedNode = Utils.GetCollisionNodeByIndex(HudLayoutScreen, selectedNodeId);
         if (selectedNode == null) {
             Plugin.Log.Debug($"No element selected.");
             return;
@@ -239,10 +239,10 @@ public sealed class Plugin : IDalamudPlugin {
         }
 
         // Check if the layout editor is open, abort if not
-        if (this.AgentHudLayout == null || this.HudLayoutScreen == null) return;
+        if (AgentHudLayout == null || HudLayoutScreen == null) return;
 
         // Get the currently selected element, abort if none is selected
-        AtkResNode* selectedNode = Utils.GetCollisionNodeByIndex(this.HudLayoutScreen, 0);
+        AtkResNode* selectedNode = Utils.GetCollisionNodeByIndex(HudLayoutScreen, 0);
         if (selectedNode == null) {
             Plugin.Log.Debug($"No element selected.");
             return;
@@ -382,28 +382,28 @@ public sealed class Plugin : IDalamudPlugin {
         Debug.Log(Plugin.Log.Debug, $"Keybind.Action: {keyboardAction}");
 
         // Abort if a popup is open
-        if (this.HudLayoutWindow->NumOpenPopups > 0) {
+        if (HudLayoutWindow->NumOpenPopups > 0) {
             Debug.Log(Plugin.Log.Warning, "Popup open, not executing action.");
             return;
         }
 
         // Check if the layout editor is open, abort if not
-        if (this.AgentHudLayout == null || this.HudLayoutScreen == null) return;
+        if (AgentHudLayout == null || HudLayoutScreen == null) return;
 
         // Depending on the keyboard action, execute the corresponding operation
         HudElementData? changedElement = null;
         switch (keyboardAction) {
             case Keybind.Action.Copy:
-                HandleCopyAction(this.HudLayoutScreen);
+                HandleCopyAction(HudLayoutScreen);
                 break;
             case Keybind.Action.Paste:
-                changedElement = HandlePasteAction(this.HudLayoutScreen, this.AgentHudLayout);
+                changedElement = HandlePasteAction(HudLayoutScreen, AgentHudLayout);
                 break;
             case Keybind.Action.Undo:
-                changedElement = HandleUndoAction(this.HudLayoutScreen, this.AgentHudLayout);
+                changedElement = HandleUndoAction(HudLayoutScreen, AgentHudLayout);
                 break;
             case Keybind.Action.Redo:
-                changedElement = HandleRedoAction(this.HudLayoutScreen, this.AgentHudLayout);
+                changedElement = HandleRedoAction(HudLayoutScreen, AgentHudLayout);
                 break;
             case Keybind.Action.ToggleAlignmentOverlay:
                 this.ToggleAlignmentOverlay();
@@ -620,7 +620,7 @@ public sealed class Plugin : IDalamudPlugin {
     private int currentHudLayoutIndex = -1;
     private bool currentNeedToSave = false;
     private unsafe void OnUpdate(IFramework framework) {
-        if (this.AgentHudLayout == null || this.HudLayoutScreen == null) return;
+        if (AgentHudLayout == null || HudLayoutScreen == null) return;
 
         bool hudLayoutIndex_change = false;
         bool needToSave_change = false;
@@ -638,7 +638,7 @@ public sealed class Plugin : IDalamudPlugin {
         }
 
         // Check flag if HUD Layout needs to be saved
-        bool needToSave = this.AgentHudLayout->NeedToSave;
+        bool needToSave = AgentHudLayout->NeedToSave;
         if (needToSave != currentNeedToSave) {
             needToSave_change = true;
             Debug.Log(Plugin.Log.Debug, $"HUD Layout needs to be saved changed to: {needToSave}");
@@ -704,7 +704,7 @@ public sealed class Plugin : IDalamudPlugin {
     internal List<Dictionary<int, HudElementData>> previousHudLayoutIndexElements = new();
 
     private unsafe void PerformElementChangeCheck() {
-        if (this.AgentHudLayout == null || this.HudLayoutScreen == null) return;
+        if (AgentHudLayout == null || HudLayoutScreen == null) return;
         Debug.Log(Plugin.Log.Debug, "Checking for element changes.");
 
         var previousElements = previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex(false)];
@@ -738,8 +738,8 @@ public sealed class Plugin : IDalamudPlugin {
     internal unsafe Dictionary<int, HudElementData> GetCurrentElements() {
         var elements = new Dictionary<int, HudElementData>();
 
-        for (int i = 0; i < this.HudLayoutScreen->CollisionNodeListCount; i++) {
-            var resNode = this.HudLayoutScreen->CollisionNodeList[i];
+        for (int i = 0; i < HudLayoutScreen->CollisionNodeListCount; i++) {
+            var resNode = HudLayoutScreen->CollisionNodeList[i];
             var elementData = new HudElementData(resNode);
             if (!elementData.IsVisible) continue; // TODO: works? 
             elements[elementData.ElementId] = elementData;
