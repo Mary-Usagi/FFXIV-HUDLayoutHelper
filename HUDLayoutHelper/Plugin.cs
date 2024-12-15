@@ -281,49 +281,7 @@ public sealed class Plugin : IDalamudPlugin {
         mouseDownTarget = null;
     }
 
-    /// <summary>
-    /// Represents the data for a mouse event. (AtkEventData) 
-    /// </summary>
-    public unsafe struct MouseEventData {
-        public short PosX;
-        public short PosY;
-
-        public MouseEventData(short posX, short posY) {
-            PosX = posX;
-            PosY = posY;
-        }
-
-        /// <summary>
-        /// Converts the mouse event data to an AtkEventData struct. 
-        /// By placing the x and y values at the beginning of the byte array and padding the rest with 0. 
-        /// </summary>
-        public AtkEventData ToAtkEventData() {
-            // Create a byte array with the size of the AtkEventData struct
-            int size = sizeof(AtkEventData);
-            byte[] eventDataBytes = new byte[size];
-
-            // Convert the PosX and PosY values to byte arrays and add an offset of 10 
-            byte[] xBytes = BitConverter.GetBytes(PosX + 10);
-            byte[] yBytes = BitConverter.GetBytes(PosY + 10);
-
-            // Copy xBytes to index 0 and yBytes to index 2 of the eventDataBytes array
-            Array.Copy(xBytes, 0, eventDataBytes, 0, 2);
-            Array.Copy(yBytes, 0, eventDataBytes, 2, 2);
-
-            // Create the event data struct from the byte array
-            AtkEventData eventData = new AtkEventData();
-
-            // Use a fixed block to pin the byte array in memory and cast it to an AtkEventData pointer
-            fixed (byte* p = eventDataBytes) {
-                eventData = *(AtkEventData*)p;
-            }
-            return eventData;
-        }
-    }
-
     private HudElementData? currentlyCopied = null;
-
-
 
     internal class Keybind {
         internal enum Action { None, Copy, Paste, Undo, Redo, ToggleAlignmentOverlay }
