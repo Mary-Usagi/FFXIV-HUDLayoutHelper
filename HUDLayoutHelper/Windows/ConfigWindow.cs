@@ -129,7 +129,7 @@ public class ConfigWindow : Window, IDisposable {
     }
 
     internal void DrawDebugInfoTab() {
-        ImGui.TextWrapped($"Current HUD Layout Index: {Utils.GetCurrentHudLayoutIndex(_plugin, false) + 1}");
+        ImGui.TextWrapped($"Current HUD Layout Index: {Utils.GetCurrentHudLayoutIndex(false) + 1}");
         ImGui.Spacing();
         if (ImGui.BeginTabBar("##TabBarHudLayouts")) {
             for (var i = 0; i < _plugin.HudHistoryManager.HudLayoutCount; i++) {

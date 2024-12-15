@@ -25,8 +25,6 @@ internal class HudElementAction {
 }
 
 public class HudHistoryManager {
-    private Plugin _plugin { get; }
-
     // The history of undo actions for each element for each HUD Layout
     internal readonly List<List<HudElementAction>> undoHistory = new();
 
@@ -56,8 +54,7 @@ public class HudHistoryManager {
         Plugin.Log.Debug($"Redo Strategy set to {strategy}");
     }
 
-    public HudHistoryManager(Plugin plugin, int HistorySize, RedoStrategy RedoStrategy) {
-        _plugin = plugin;
+    public HudHistoryManager(int HistorySize, RedoStrategy RedoStrategy) {
         MaxHistorySize = HistorySize;
         RedoActionStrategy = RedoStrategy;
 
@@ -77,7 +74,7 @@ public class HudHistoryManager {
         // Trim the undo history
         for (int i = 0; i < HudLayoutCount; i++) {
             if (undoHistory[i].Count > size) {
-                _plugin.Debug.Log(Plugin.Log.Warning, $"Removing {undoHistory[i].Count - size} elements from undo history on HUD Layout {i}");
+                Plugin.Debug.Log(Plugin.Log.Warning, $"Removing {undoHistory[i].Count - size} elements from undo history on HUD Layout {i}");
                 undoHistory[i].RemoveRange(0, undoHistory[i].Count - size);
             }
         }
@@ -85,7 +82,7 @@ public class HudHistoryManager {
         // Trim the redo history
         for (int i = 0; i < HudLayoutCount; i++) {
             if (redoHistory[i].Count > size) {
-                _plugin.Debug.Log(Plugin.Log.Debug, $"Removing {redoHistory[i].Count - size} elements from redo history on HUD Layout {i}");
+                Plugin.Debug.Log(Plugin.Log.Debug, $"Removing {redoHistory[i].Count - size} elements from redo history on HUD Layout {i}");
                 redoHistory[i].RemoveRange(0, redoHistory[i].Count - size);
             }
         }

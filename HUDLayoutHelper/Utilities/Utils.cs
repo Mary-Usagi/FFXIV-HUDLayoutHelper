@@ -39,7 +39,7 @@ internal class Utils {
     /// <param name="resNodeID">The resource node ID.</param>
     /// <param name="hudElementData">The HUD element data.</param>
     /// <param name="hudLayoutScreen">The HUD layout screen pointer.</param>
-    internal static unsafe void SimulateMouseClickOnHudElement(AtkResNode* resNode, uint resNodeID, HudElementData hudElementData, AddonHudLayoutScreen* hudLayoutScreen, Plugin plugin, AtkEventStateFlags customFlag) {
+    internal static unsafe void SimulateMouseClickOnHudElement(AtkResNode* resNode, uint resNodeID, HudElementData hudElementData, AddonHudLayoutScreen* hudLayoutScreen, AtkEventStateFlags customFlag) {
         if (resNode == null) {
             Plugin.Log.Warning("ResNode is null");
             return;
@@ -62,7 +62,7 @@ internal class Utils {
         AtkEventData* mouseDownEventData = &eventData;
 
         // Call the mouse down event on the HUD layout
-        plugin.Debug.Log(Plugin.Log.Debug, "Calling MouseDown event");
+        Plugin.Debug.Log(Plugin.Log.Debug, "Calling MouseDown event");
         hudLayoutScreen->ReceiveEvent(AtkEventType.MouseDown, (int)mouseDownEvent.Param, &mouseDownEvent, mouseDownEventData);
 
         // ----> MouseUp Event
@@ -79,7 +79,7 @@ internal class Utils {
         mouseUpEvent.State.StateFlags |= customFlag;
 
         // Set the event data with the x and y position of the mouse click
-        plugin.Debug.Log(Plugin.Log.Debug, "Calling MouseUp event");
+        Plugin.Debug.Log(Plugin.Log.Debug, "Calling MouseUp event");
         AtkEventData* mouseUpEventData = &eventData;
 
         // Call the mouse up event on the HUD layout
@@ -106,9 +106,8 @@ internal class Utils {
     /// </summary>
     /// <param name="agentHudLayoutPtr">The agent HUD layout pointer.</param>
     /// <param name="hudLayoutScreenPtr">The HUD layout screen pointer.</param>
-    /// <param name="plugin">The plugin instance.</param>
     /// <returns>True if the HUD layout is ready, false otherwise.</returns>
-    internal static unsafe bool IsHudLayoutReady(out AgentHUDLayout* agentHudLayoutPtr, out AddonHudLayoutScreen* hudLayoutScreenPtr, out AddonHudLayoutWindow* hudLayoutWindowPtr, Plugin plugin) {
+    internal static unsafe bool IsHudLayoutReady(out AgentHUDLayout* agentHudLayoutPtr, out AddonHudLayoutScreen* hudLayoutScreenPtr, out AddonHudLayoutWindow* hudLayoutWindowPtr) {
         agentHudLayoutPtr = null;
         hudLayoutScreenPtr = null;
         hudLayoutWindowPtr = null;
@@ -154,11 +153,11 @@ internal class Utils {
     }
 
 
-    internal static unsafe int GetCurrentHudLayoutIndex(Plugin plugin, bool log = true) {
+    internal static unsafe int GetCurrentHudLayoutIndex(bool log = true) {
         int index = AddonConfig.Instance()->ModuleData->CurrentHudLayout;
-        if (log) plugin.Debug.Log(Plugin.Log.Debug, $"Current HUD Layout Index: {index}");
+        if (log) Plugin.Debug.Log(Plugin.Log.Debug, $"Current HUD Layout Index: {index}");
         if (index < 0 || index >= 10) {
-            plugin.Debug.Log(Plugin.Log.Warning, "Invalid HUD Layout index.");
+            Plugin.Debug.Log(Plugin.Log.Warning, "Invalid HUD Layout index.");
             throw new Exception("Invalid HUD Layout index.");
         }
         return index;
