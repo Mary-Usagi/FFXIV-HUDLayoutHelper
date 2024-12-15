@@ -49,7 +49,7 @@ public sealed class Plugin : IDalamudPlugin {
     internal static unsafe AddonHudLayoutScreen* HudLayoutScreen = null;
     internal static unsafe AddonHudLayoutWindow* HudLayoutWindow = null;
 
-    internal KeybindHandler KeybindHandler { get; } = null!;
+    internal KeybindManager KeybindManager { get; } = null!;
 
     public Plugin() {
         Debug = new Debug(this.DEBUG);
@@ -73,7 +73,7 @@ public sealed class Plugin : IDalamudPlugin {
         WindowSystem.AddWindow(ShortcutHintsWindow);
 
         // ===== Initialize handlers ===== 
-        this.KeybindHandler = new KeybindHandler(this);
+        this.KeybindManager = new KeybindManager(this);
 
 
         // ===== Register events =====
@@ -144,12 +144,12 @@ public sealed class Plugin : IDalamudPlugin {
         Plugin.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutWindow", HandleControllerMoveEvent);
 
         // Add a check for keyboard shortcuts to the update loop
-        Plugin.Framework.Update += this.KeybindHandler.HandleKeyboardShortcuts;
+        Plugin.Framework.Update += this.KeybindManager.HandleKeyboardShortcuts;
 
         // Add a check for element changes to the update loop
-        previousHudLayoutIndexElements.Clear();
+        PreviousHudLayoutIndexElements.Clear();
         for (int i = 0; i < this.HudHistoryManager.HudLayoutCount; i++) {
-            previousHudLayoutIndexElements.Add(new Dictionary<int, HudElementData>());
+            PreviousHudLayoutIndexElements.Add(new Dictionary<int, HudElementData>());
         }
 
         if (AlignmentOverlayWindow.ToggledOnByUser && !AlignmentOverlayWindow.IsOpen) AlignmentOverlayWindow.Toggle();
@@ -162,7 +162,7 @@ public sealed class Plugin : IDalamudPlugin {
     }
     private void RemoveCallbacks() {
         // Remove all event listeners and callbacks
-        Plugin.Framework.Update -= this.KeybindHandler.HandleKeyboardShortcuts;
+        Plugin.Framework.Update -= this.KeybindManager.HandleKeyboardShortcuts;
         Plugin.Framework.Update -= PerformScheduledElementChangeCheck;
         Plugin.Framework.Update -= OnUpdate;
 
@@ -182,7 +182,7 @@ public sealed class Plugin : IDalamudPlugin {
         }
         ShortcutHintsWindow.IsOpen = false;
 
-        previousHudLayoutIndexElements.Clear();
+        PreviousHudLayoutIndexElements.Clear();
 
         ClearHudLayoutAddons();
         callbackAdded = false;
@@ -282,7 +282,7 @@ public sealed class Plugin : IDalamudPlugin {
         this.HudHistoryManager.AddUndoAction(Utils.GetCurrentHudLayoutIndex(), mouseDownTarget, newState);
 
         // Update previousElements
-        var previousElements = previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex()];
+        var previousElements = PreviousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex()];
         previousElements[mouseDownTarget.ElementId] = newState;
 
         mouseDownTarget = null;
@@ -416,13 +416,13 @@ public sealed class Plugin : IDalamudPlugin {
     }
 
 
-    internal List<Dictionary<int, HudElementData>> previousHudLayoutIndexElements = new();
+    internal List<Dictionary<int, HudElementData>> PreviousHudLayoutIndexElements = new();
 
     private unsafe void PerformElementChangeCheck() {
         if (AgentHudLayout == null || HudLayoutScreen == null) return;
         Debug.Log(Plugin.Log.Debug, "Checking for element changes.");
 
-        var previousElements = previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex(false)];
+        var previousElements = PreviousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex(false)];
 
         var currentElements = GetCurrentElements();
 
@@ -444,7 +444,7 @@ public sealed class Plugin : IDalamudPlugin {
     internal unsafe void UpdatePreviousElements() {
         Debug.Log(Plugin.Log.Debug, "Updating previous elements.");
         var currentElements = GetCurrentElements();
-        var previousElements = previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex(false)];
+        var previousElements = PreviousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex(false)];
         foreach (var elementData in currentElements) {
             previousElements[elementData.Key] = elementData.Value;
         }

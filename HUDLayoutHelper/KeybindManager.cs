@@ -1,10 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.System.Input;
 using FFXIVClientStructs.FFXIV.Client.UI;
-using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using HUDLayoutHelper.Utilities;
 using ImGuiNET;
@@ -15,42 +12,44 @@ namespace HUDLayoutHelper;
 
 internal enum KeybindAction { None, Copy, Paste, Undo, Redo, ToggleAlignmentOverlay }
 
-internal class KeybindHandler {
+internal class KeybindManager {
     private HudElementData? currentlyCopied = null;
     private readonly Plugin _plugin;
 
-    public KeybindHandler(Plugin plugin) {
-        this._plugin = plugin;
-    }
-
-    internal List<Keybind> KeybindList = new List<Keybind>() {
-        new Keybind( action: KeybindAction.Copy,
-            description: (name: "Copy", text: "Copy position of selected HUD element", shortText: "Copy"),
-            keys: ( mainKey: SeVirtualKey.C, state: KeyStateFlags.Pressed, shiftPressed: false)
+    internal SortedDictionary<KeybindAction, Keybind> KeybindMap = new SortedDictionary<KeybindAction, Keybind>() {
+        [KeybindAction.Copy] = new Keybind(
+            name: "Copy",
+            text: "Copy position of selected HUD element",
+            combos: [new Keybind.Combo(SeVirtualKey.C)]
         ),
-        new Keybind( action: KeybindAction.Paste,
-            description: (name: "Paste", text: "Paste copied position to selected HUD element", shortText: "Paste"),
-            keys: ( mainKey: SeVirtualKey.V, state: KeyStateFlags.Released, shiftPressed: false)
+        [KeybindAction.Paste] = new Keybind(
+            name: "Paste",
+            text: "Paste copied position to selected HUD element",
+            combos: [new Keybind.Combo(SeVirtualKey.V, KeyStateFlags.Released)]
         ),
-        new Keybind( action: KeybindAction.Undo,
-            description: (name: "Undo", text: "Undo last action", shortText: "Undo"),
-            keys: ( mainKey: SeVirtualKey.Z, state: KeyStateFlags.Pressed,shiftPressed : false)
+        [KeybindAction.Undo] = new Keybind(
+            name: "Undo",
+            text: "Undo last action",
+            combos: [new Keybind.Combo(SeVirtualKey.Z)]
         ),
-        new Keybind( action: KeybindAction.Redo,
-            description: (name: "Redo", text: "Redo last action", shortText: "Redo"),
-            keys: ( mainKey: SeVirtualKey.Y, state: KeyStateFlags.Pressed, shiftPressed: false)
+        [KeybindAction.Redo] = new Keybind(
+            name: "Redo",
+            text: "Redo last action",
+            combos: [
+                new Keybind.Combo(SeVirtualKey.Y),
+                new Keybind.Combo(SeVirtualKey.Z, shiftUsed: true)
+            ]
         ),
-        new Keybind( action: KeybindAction.Redo,
-            description: (name: "Redo", text: "Redo last action", shortText: "Redo"),
-            keys: ( mainKey: SeVirtualKey.Z, state: KeyStateFlags.Pressed, shiftPressed: true)
-        ),
-        new Keybind( action: KeybindAction.ToggleAlignmentOverlay,
-            description: (name: "Toggle Alignment Helper Overlay", text: "Toggle alignment helper overlay on/off", shortText: "Toggle Overlay"),
-            keys: ( mainKey: SeVirtualKey.R, state: KeyStateFlags.Pressed, shiftPressed : false)
+        [KeybindAction.ToggleAlignmentOverlay] = new Keybind(
+            name: "Toggle Alignment Helper Overlay",
+            text: "Toggle alignment helper overlay on/off",
+            combos: [new Keybind.Combo(SeVirtualKey.R)]
         )
-
     };
 
+    public KeybindManager(Plugin plugin) {
+        this._plugin = plugin;
+    }
 
     /// <summary>
     /// Handles keyboard shortcuts for copy, paste, undo, and redo actions.
@@ -67,19 +66,21 @@ internal class KeybindHandler {
         if (!ctrlKeystate.HasFlag(KeyStateFlags.Down)) return;
 
         // Set the keyboard action based on the key states
-        KeybindAction keyboardAction = KeybindAction.None;
-        foreach (var keybind in KeybindList) {
-            KeyStateFlags keyState = UIInputData.Instance()->GetKeyState(keybind.keys.MainKey);
-            if (keybind.keys.ShiftPressed && !UIInputData.Instance()->GetKeyState(SeVirtualKey.SHIFT).HasFlag(KeyStateFlags.Down)) continue;
-            if (!keybind.keys.ShiftPressed && UIInputData.Instance()->GetKeyState(SeVirtualKey.SHIFT).HasFlag(KeyStateFlags.Down)) continue;
-            if (keyState.HasFlag(keybind.keys.State)) {
-                keyboardAction = keybind.KeybindAction;
-                break;
+        KeybindAction detectedKeybindAction = KeybindAction.None;
+        foreach ((var keybindAction, var keybind) in KeybindMap) {
+            foreach (var keyCombo in keybind.Combos) {
+                KeyStateFlags keyState = UIInputData.Instance()->GetKeyState(keyCombo.MainKey);
+                if (keyCombo.ShiftUsed && !UIInputData.Instance()->GetKeyState(SeVirtualKey.SHIFT).HasFlag(KeyStateFlags.Down)) continue;
+                if (!keyCombo.ShiftUsed && UIInputData.Instance()->GetKeyState(SeVirtualKey.SHIFT).HasFlag(KeyStateFlags.Down)) continue;
+                if (keyState.HasFlag(keyCombo.State)) {
+                    detectedKeybindAction = keybindAction;
+                    break;
+                }
             }
         }
 
-        if (keyboardAction == KeybindAction.None) return;
-        Plugin.Debug.Log(Plugin.Log.Debug, $"Keybind.Action: {keyboardAction}");
+        if (detectedKeybindAction == KeybindAction.None) return;
+        Plugin.Debug.Log(Plugin.Log.Debug, $"Keybind.Action: {detectedKeybindAction}");
 
         // Abort if a popup is open
         if (Plugin.HudLayoutWindow->NumOpenPopups > 0) {
@@ -92,7 +93,7 @@ internal class KeybindHandler {
 
         // Depending on the keyboard action, execute the corresponding operation
         HudElementData? changedElement = null;
-        switch (keyboardAction) {
+        switch (detectedKeybindAction) {
             case KeybindAction.Copy:
                 HandleCopyAction();
                 break;
@@ -114,7 +115,7 @@ internal class KeybindHandler {
         if (changedElement != null) {
             Plugin.Debug.Log(Plugin.Log.Debug, $"Changed Element: {changedElement}");
             HudElementData? changedPreviousElement = null;
-            var previousElements = this._plugin.previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex()];
+            var previousElements = this._plugin.PreviousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex()];
             previousElements.TryGetValue(changedElement.ElementId, out changedPreviousElement);
             previousElements[changedElement.ElementId] = changedElement;
         }

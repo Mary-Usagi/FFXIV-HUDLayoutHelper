@@ -42,11 +42,13 @@ public class ShortcutHintsWindow : Window, IDisposable {
         ImGui.TableSetupColumn("##Column1", ImGuiTableColumnFlags.WidthStretch);
         ImGui.TableSetupColumn("##Column2", ImGuiTableColumnFlags.WidthStretch);
 
-        foreach (var keybind in this._plugin.KeybindHandler.KeybindList) {
-            ImGui.TableNextColumn();
-            ImGui.Text(keybind.keys.ToString());
-            ImGui.TableNextColumn();
-            ImGui.Text(keybind.description.ShortText);
+        foreach ((var keybindAction, var keybind) in this._plugin.KeybindManager.KeybindMap) {
+            foreach (var keyCombo in keybind.Combos) {
+                ImGui.TableNextColumn();
+                ImGui.Text(keyCombo.ToString());
+                ImGui.TableNextColumn();
+                ImGui.Text(keybind.Name);
+            }
         }
         ImGui.EndTable();
         ImGui.Spacing();

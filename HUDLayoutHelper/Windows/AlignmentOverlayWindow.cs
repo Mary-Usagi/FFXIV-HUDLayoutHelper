@@ -121,7 +121,7 @@ public class AlignmentOverlayWindow : Window, IDisposable {
         if (selectedResNode == null) return;
 
         // Create a new HudElementData object with the data of the selected element
-        var hudLayoutElements = _plugin.previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex(false)];
+        var hudLayoutElements = _plugin.PreviousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex(false)];
 
         HudElementData selectedHudElement = new HudElementData(selectedResNode);
         HudOverlayNode selectedHudOverlayNode = new HudOverlayNode(

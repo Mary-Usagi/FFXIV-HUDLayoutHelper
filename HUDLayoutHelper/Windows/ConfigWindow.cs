@@ -327,11 +327,13 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.TableNextColumn();
         ImGui.TableHeader("Description");
 
-        foreach (var keybind in this._plugin.KeybindHandler.KeybindList) {
-            ImGui.TableNextColumn();
-            ImGui.TextWrapped(keybind.keys.ToString());
-            ImGui.TableNextColumn();
-            ImGui.TextWrapped(keybind.description.Text);
+        foreach ((var keybindAction, var keybind) in this._plugin.KeybindManager.KeybindMap) {
+            foreach (var keyCombo in keybind.Combos) {
+                ImGui.TableNextColumn();
+                ImGui.TextWrapped(keyCombo.ToString());
+                ImGui.TableNextColumn();
+                ImGui.TextWrapped(keybind.Text);
+            }
         }
         ImGui.EndTable();
     }

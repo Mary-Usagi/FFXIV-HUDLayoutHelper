@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using FFXIVClientStructs.FFXIV.Client.System.Input;
 using FFXIVClientStructs.FFXIV.Client.UI;
 
@@ -10,41 +6,31 @@ namespace HUDLayoutHelper;
 
 
 internal class Keybind {
-    internal struct Description {
-        public string Name { get; set; }
-        public string Text { get; set; }
-        public string ShortText { get; set; }
+    public string Name { get; set; }
+    public string Text { get; set; }
 
-        public Description(string name, string description, string shortDescription) {
-            Name = name;
-            Text = description;
-            ShortText = shortDescription;
-        }
-    }
-    internal struct Keys {
+    internal struct Combo {
         public SeVirtualKey MainKey { get; set; }
-        public bool ShiftPressed { get; set; }
+        public bool ShiftUsed { get; set; }
         public KeyStateFlags State { get; set; }
 
-        public Keys(SeVirtualKey mainKey, KeyStateFlags state, bool shiftPressed) {
+        public Combo(SeVirtualKey mainKey, KeyStateFlags state = KeyStateFlags.Pressed, bool shiftUsed = false) {
             MainKey = mainKey;
-            ShiftPressed = shiftPressed;
+            ShiftUsed = shiftUsed;
             State = state;
         }
 
         public override string ToString() {
-            string extraModifier = ShiftPressed ? $" + Shift" : "";
+            string extraModifier = ShiftUsed ? $" + Shift" : "";
             return $"Ctrl{extraModifier} + {MainKey}";
         }
     }
 
-    public Description description { get; set; }
-    public Keys keys { get; set; }
-    public KeybindAction KeybindAction { get; set; }
+    public List<Combo> Combos { get; set; } = new List<Combo>();
 
-    public Keybind((string name, string text, string shortText) description, (SeVirtualKey mainKey, KeyStateFlags state, bool shiftPressed) keys, KeybindAction action) {
-        this.description = new Description(description.name, description.text, description.shortText);
-        this.keys = new Keys(keys.mainKey, keys.state, keys.shiftPressed);
-        this.KeybindAction = action;
+    public Keybind(string name, string text, List<Combo> combos) { 
+        this.Name = name;
+        this.Text = text;
+        this.Combos = combos;
     }
 }
