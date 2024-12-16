@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.System.Input;
@@ -10,42 +12,40 @@ using ImGuiNET;
 
 namespace HUDLayoutHelper.KeyboardShortcuts;
 
-internal enum KeybindAction { None, Copy, Paste, Undo, Redo, ToggleAlignmentOverlay }
-
 internal class KeybindHandler {
+    private List<HudAction> _allActions { get; } = [
+            HudActions.Copy,
+            HudActions.Paste,
+            HudActions.Undo,
+            HudActions.Redo,
+            HudActions.ToggleAlignmentOverlay
+    ];
+
+    private static List<Keybind> _registeredKeybinds = [];
+
+    internal static Keybind? Register(HudAction action, Keybind keybind) {
+        // check if keybind with same main key and modifier keys is already registered
+        if (_registeredKeybinds.Any(k => k.MainKey == keybind.MainKey &&
+            k.ModifierKeys.SequenceEqual(keybind.ModifierKeys))) {
+            Plugin.Log.Error($"Keybind {keybind} is already registered.");
+            return null;
+        }
+        _registeredKeybinds.Add(keybind);
+        return keybind;
+    }
+    internal static bool Unregister(Keybind keybind) {
+        if (_registeredKeybinds.Contains(keybind)) {
+            _registeredKeybinds.Remove(keybind);
+            return true;
+        }
+        Plugin.Log.Warning($"Keybind {keybind} is not registered.");
+        return false;
+    }
+
+
     private HudElementData? currentlyCopied = null;
     private readonly Plugin _plugin;
 
-    internal SortedDictionary<KeybindAction, Keybind> KeybindMap = new SortedDictionary<KeybindAction, Keybind>() {
-        [KeybindAction.Copy] = new Keybind(
-            name: "Copy",
-            text: "Copy position of selected HUD element",
-            combos: [new Keybind.Combo(SeVirtualKey.C)]
-        ),
-        [KeybindAction.Paste] = new Keybind(
-            name: "Paste",
-            text: "Paste copied position to selected HUD element",
-            combos: [new Keybind.Combo(SeVirtualKey.V, KeyStateFlags.Released)]
-        ),
-        [KeybindAction.Undo] = new Keybind(
-            name: "Undo",
-            text: "Undo last action",
-            combos: [new Keybind.Combo(SeVirtualKey.Z)]
-        ),
-        [KeybindAction.Redo] = new Keybind(
-            name: "Redo",
-            text: "Redo last action",
-            combos: [
-                new Keybind.Combo(SeVirtualKey.Y),
-                new Keybind.Combo(SeVirtualKey.Z, shiftUsed: true)
-            ]
-        ),
-        [KeybindAction.ToggleAlignmentOverlay] = new Keybind(
-            name: "Toggle Alignment Helper Overlay",
-            text: "Toggle alignment helper overlay on/off",
-            combos: [new Keybind.Combo(SeVirtualKey.R)]
-        )
-    };
 
     public KeybindHandler(Plugin plugin) {
         _plugin = plugin;
@@ -124,7 +124,7 @@ internal class KeybindHandler {
     /// <summary>
     /// Copy the position of the selected element to the clipboard. 
     /// </summary>
-    private unsafe void HandleCopyAction() {
+    internal unsafe void HandleCopyAction() {
         // Get the currently selected element, abort if none is selected
         AtkResNode* selectedNode = Utils.GetCollisionNodeByIndex(Plugin.HudLayoutScreen, 0);
         if (selectedNode == null) {
@@ -146,7 +146,7 @@ internal class KeybindHandler {
     /// Paste the position from the clipboard to the selected element 
     /// and simulate a mouse click on the element.
     /// </summary>
-    private unsafe HudElementData? HandlePasteAction() {
+    internal unsafe HudElementData? HandlePasteAction() {
         // Get the currently selected element, abort if none is selected
         AtkResNode* selectedNode = Utils.GetCollisionNodeByIndex(Plugin.HudLayoutScreen, 0);
         if (selectedNode == null) {
@@ -199,7 +199,7 @@ internal class KeybindHandler {
     /// <summary>
     /// Undo the last operation and simulate a mouse click on the element.
     /// </summary>
-    private unsafe HudElementData? HandleUndoAction() {
+    internal unsafe HudElementData? HandleUndoAction() {
         // Get the last added action from the undo history
         (HudElementData? oldState, HudElementData? newState) = _plugin.HudHistoryManager.PeekUndoAction(Utils.GetCurrentHudLayoutIndex());
         if (oldState == null || newState == null) {
@@ -236,7 +236,7 @@ internal class KeybindHandler {
     /// <summary>
     /// Redo the last operation and simulate a mouse click on the element.
     /// </summary>
-    private unsafe HudElementData? HandleRedoAction() {
+    internal unsafe HudElementData? HandleRedoAction() {
         // Get the last added action from the redo history
         (HudElementData? oldState, HudElementData? newState) = _plugin.HudHistoryManager.PeekRedoAction(Utils.GetCurrentHudLayoutIndex());
         if (oldState == null || newState == null) {
