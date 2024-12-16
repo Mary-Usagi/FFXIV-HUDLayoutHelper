@@ -2,7 +2,7 @@
 using FFXIVClientStructs.FFXIV.Client.System.Input;
 using FFXIVClientStructs.FFXIV.Client.UI;
 
-namespace HUDLayoutHelper;
+namespace HUDLayoutHelper.KeyboardShortcuts;
 
 
 internal class Keybind {
@@ -28,9 +28,9 @@ internal class Keybind {
 
     public List<Combo> Combos { get; set; } = new List<Combo>();
 
-    public Keybind(string name, string text, List<Combo> combos) { 
-        this.Name = name;
-        this.Text = text;
-        this.Combos = combos;
+    public Keybind(string name, string text, List<Combo> combos) {
+        Name = name;
+        Text = text;
+        Combos = combos;
     }
 }

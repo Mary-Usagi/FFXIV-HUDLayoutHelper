@@ -1,14 +1,14 @@
 ﻿using System.Collections.Generic;
+using System.Text.Json;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.System.Input;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using HUDLayoutHelper.Utilities;
 using ImGuiNET;
-using System.Text.Json;
 
 
-namespace HUDLayoutHelper;
+namespace HUDLayoutHelper.KeyboardShortcuts;
 
 internal enum KeybindAction { None, Copy, Paste, Undo, Redo, ToggleAlignmentOverlay }
 
@@ -48,7 +48,7 @@ internal class KeybindManager {
     };
 
     public KeybindManager(Plugin plugin) {
-        this._plugin = plugin;
+        _plugin = plugin;
     }
 
     /// <summary>
@@ -107,7 +107,7 @@ internal class KeybindManager {
                 changedElement = HandleRedoAction();
                 break;
             case KeybindAction.ToggleAlignmentOverlay:
-                this._plugin.ToggleAlignmentOverlay();
+                _plugin.ToggleAlignmentOverlay();
                 break;
         }
 
@@ -115,7 +115,7 @@ internal class KeybindManager {
         if (changedElement != null) {
             Plugin.Debug.Log(Plugin.Log.Debug, $"Changed Element: {changedElement}");
             HudElementData? changedPreviousElement = null;
-            var previousElements = this._plugin.PreviousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex()];
+            var previousElements = _plugin.PreviousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex()];
             previousElements.TryGetValue(changedElement.ElementId, out changedPreviousElement);
             previousElements[changedElement.ElementId] = changedElement;
         }
@@ -184,10 +184,10 @@ internal class KeybindManager {
 
         // Add the previous state and the new state to the undo history
         int hudLayoutIndex = Utils.GetCurrentHudLayoutIndex();
-        this._plugin.HudHistoryManager.AddUndoAction(hudLayoutIndex, previousState, parsedData);
+        _plugin.HudHistoryManager.AddUndoAction(hudLayoutIndex, previousState, parsedData);
 
         // Simulate Mouse Click
-        Utils.SimulateMouseClickOnHudElement(selectedNode, 0, parsedData, Plugin.HudLayoutScreen, this._plugin.CUSTOM_FLAG);
+        Utils.SimulateMouseClickOnHudElement(selectedNode, 0, parsedData, Plugin.HudLayoutScreen, _plugin.CUSTOM_FLAG);
 
         // Send Event to HudLayout to inform about a change 
         Utils.SendChangeEvent(Plugin.AgentHudLayout);
@@ -201,7 +201,7 @@ internal class KeybindManager {
     /// </summary>
     private unsafe HudElementData? HandleUndoAction() {
         // Get the last added action from the undo history
-        (HudElementData? oldState, HudElementData? newState) = this._plugin.HudHistoryManager.PeekUndoAction(Utils.GetCurrentHudLayoutIndex());
+        (HudElementData? oldState, HudElementData? newState) = _plugin.HudHistoryManager.PeekUndoAction(Utils.GetCurrentHudLayoutIndex());
         if (oldState == null || newState == null) {
             Plugin.Log.Debug($"Nothing to undo.");
             return null;
@@ -220,10 +220,10 @@ internal class KeybindManager {
         // Set the position of the currently selected element to the parsed position
         undoNode->ParentNode->SetPositionShort(oldState.PosX, oldState.PosY);
 
-        this._plugin.HudHistoryManager.PerformUndo(Utils.GetCurrentHudLayoutIndex(), undoNodeState);
+        _plugin.HudHistoryManager.PerformUndo(Utils.GetCurrentHudLayoutIndex(), undoNodeState);
 
         // Simulate Mouse Click
-        Utils.SimulateMouseClickOnHudElement(undoNode, undoNodeId, oldState, Plugin.HudLayoutScreen, this._plugin.CUSTOM_FLAG);
+        Utils.SimulateMouseClickOnHudElement(undoNode, undoNodeId, oldState, Plugin.HudLayoutScreen, _plugin.CUSTOM_FLAG);
 
         // Send Event to HudLayout to inform about a change 
         Utils.SendChangeEvent(Plugin.AgentHudLayout);
@@ -238,7 +238,7 @@ internal class KeybindManager {
     /// </summary>
     private unsafe HudElementData? HandleRedoAction() {
         // Get the last added action from the redo history
-        (HudElementData? oldState, HudElementData? newState) = this._plugin.HudHistoryManager.PeekRedoAction(Utils.GetCurrentHudLayoutIndex());
+        (HudElementData? oldState, HudElementData? newState) = _plugin.HudHistoryManager.PeekRedoAction(Utils.GetCurrentHudLayoutIndex());
         if (oldState == null || newState == null) {
             Plugin.Log.Debug($"Nothing to redo.");
             return null;
@@ -256,10 +256,10 @@ internal class KeybindManager {
         // Set the position of the currently selected element to the parsed position
         redoNode->ParentNode->SetPositionShort(newState.PosX, newState.PosY);
 
-        this._plugin.HudHistoryManager.PerformRedo(Utils.GetCurrentHudLayoutIndex(), redoNodeState);
+        _plugin.HudHistoryManager.PerformRedo(Utils.GetCurrentHudLayoutIndex(), redoNodeState);
 
         // Simulate Mouse Click
-        Utils.SimulateMouseClickOnHudElement(redoNode, redoNodeId, newState, Plugin.HudLayoutScreen, this._plugin.CUSTOM_FLAG);
+        Utils.SimulateMouseClickOnHudElement(redoNode, redoNodeId, newState, Plugin.HudLayoutScreen, _plugin.CUSTOM_FLAG);
 
         // Send Event to HudLayout to inform about a change 
         Utils.SendChangeEvent(Plugin.AgentHudLayout);

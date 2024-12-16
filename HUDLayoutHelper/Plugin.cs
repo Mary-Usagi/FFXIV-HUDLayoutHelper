@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using Dalamud.Game.Command;
@@ -5,18 +7,14 @@ using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
-using FFXIVClientStructs.FFXIV.Client.System.Input;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using HUDLayoutHelper.KeyboardShortcuts;
 using HUDLayoutHelper.Utilities;
 using HUDLayoutHelper.Windows;
-using ImGuiNET;
-using System;
-using System.Collections.Generic;
-using System.Text.Json;
 
-namespace HUDLayoutHelper; 
+namespace HUDLayoutHelper;
 public sealed class Plugin : IDalamudPlugin {
     public bool DEBUG = false;
 
@@ -174,7 +172,7 @@ public sealed class Plugin : IDalamudPlugin {
 
         if (AlignmentOverlayWindow.IsOpen) {
             AlignmentOverlayWindow.Toggle();
-        } 
+        }
         AlignmentOverlayWindow.IsOpen = false;
 
         if (ShortcutHintsWindow.IsOpen) {
