@@ -7,24 +7,8 @@ using FFXIVClientStructs.FFXIV.Client.System.Input;
 using FFXIVClientStructs.FFXIV.Client.UI;
 
 namespace HUDLayoutHelper.KeyboardShortcuts;
-internal enum KeybindAction { None, Copy, Paste, Undo, Redo, ToggleAlignmentOverlay }
-internal class HudActions {
-    //private List<HudAction> _allActions { get; } = new();
 
-    //internal HudActions() {
-    //    _allActions = new List<HudAction> {
-    //        Copy,
-    //        Paste,
-    //        Undo,
-    //        Redo,
-    //        ToggleAlignmentOverlay
-    //    };
-    //}
-    
-    //internal List<HudAction> GetAll() {
-    //    return _allActions;
-    //}
-
+internal static class HudActions {
     internal static HudAction Copy = new HudAction {
         Name = "Copy",
         Description = "Copy position of selected HUD element",
