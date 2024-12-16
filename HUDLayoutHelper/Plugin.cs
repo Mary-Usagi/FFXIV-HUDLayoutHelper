@@ -47,7 +47,7 @@ public sealed class Plugin : IDalamudPlugin {
     internal static unsafe AddonHudLayoutScreen* HudLayoutScreen = null;
     internal static unsafe AddonHudLayoutWindow* HudLayoutWindow = null;
 
-    internal KeybindManager KeybindManager { get; } = null!;
+    internal KeybindHandler KeybindHandler { get; } = null!;
 
     public Plugin() {
         Debug = new Debug(this.DEBUG);
@@ -71,7 +71,7 @@ public sealed class Plugin : IDalamudPlugin {
         WindowSystem.AddWindow(ShortcutHintsWindow);
 
         // ===== Initialize handlers ===== 
-        this.KeybindManager = new KeybindManager(this);
+        this.KeybindHandler = new KeybindHandler(this);
 
 
         // ===== Register events =====
@@ -142,7 +142,7 @@ public sealed class Plugin : IDalamudPlugin {
         Plugin.AddonLifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutWindow", HandleControllerMoveEvent);
 
         // Add a check for keyboard shortcuts to the update loop
-        Plugin.Framework.Update += this.KeybindManager.HandleKeyboardShortcuts;
+        Plugin.Framework.Update += this.KeybindHandler.HandleKeyboardShortcuts;
 
         // Add a check for element changes to the update loop
         PreviousHudLayoutIndexElements.Clear();
@@ -160,7 +160,7 @@ public sealed class Plugin : IDalamudPlugin {
     }
     private void RemoveCallbacks() {
         // Remove all event listeners and callbacks
-        Plugin.Framework.Update -= this.KeybindManager.HandleKeyboardShortcuts;
+        Plugin.Framework.Update -= this.KeybindHandler.HandleKeyboardShortcuts;
         Plugin.Framework.Update -= PerformScheduledElementChangeCheck;
         Plugin.Framework.Update -= OnUpdate;
 

@@ -327,7 +327,7 @@ public class ConfigWindow : Window, IDisposable {
         ImGui.TableNextColumn();
         ImGui.TableHeader("Description");
 
-        foreach ((var keybindAction, var keybind) in this._plugin.KeybindManager.KeybindMap) {
+        foreach ((var keybindAction, var keybind) in this._plugin.KeybindHandler.KeybindMap) {
             foreach (var keyCombo in keybind.Combos) {
                 ImGui.TableNextColumn();
                 ImGui.TextWrapped(keyCombo.ToString());

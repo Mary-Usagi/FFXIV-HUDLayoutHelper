@@ -12,7 +12,7 @@ namespace HUDLayoutHelper.KeyboardShortcuts;
 
 internal enum KeybindAction { None, Copy, Paste, Undo, Redo, ToggleAlignmentOverlay }
 
-internal class KeybindManager {
+internal class KeybindHandler {
     private HudElementData? currentlyCopied = null;
     private readonly Plugin _plugin;
 
@@ -47,7 +47,7 @@ internal class KeybindManager {
         )
     };
 
-    public KeybindManager(Plugin plugin) {
+    public KeybindHandler(Plugin plugin) {
         _plugin = plugin;
     }
 
