@@ -3,17 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace HUDLayoutHelper.Utilities {
-    internal class HudElementAction {
-        public HudElementData PreviousState { get; }
-        public HudElementData NewState { get; }
+    internal class HudElementAction(HudElementData previousState, HudElementData newState, bool saved = false) {
+        public HudElementData PreviousState { get; } = previousState;
+        public HudElementData NewState { get; } = newState;
 
-        public bool Saved { get; private set; } = false;
-
-        public HudElementAction(HudElementData previousState, HudElementData newState, bool saved = false) {
-            PreviousState = previousState;
-            NewState = newState;
-            Saved = saved;
-        }
+        public bool Saved { get; private set; } = saved;
 
         public void SaveAction() {
             Saved = true;
@@ -94,9 +88,7 @@ namespace HUDLayoutHelper.Utilities {
         }
 
         private void AddUndoAction(int hudLayoutIndex, HudElementAction action) {
-            if (action == null) {
-                throw new ArgumentNullException(nameof(action));
-            }
+            ArgumentNullException.ThrowIfNull(action);
             if (!HudLayoutExists(hudLayoutIndex)) return;
 
             switch (RedoActionStrategy) {
@@ -233,7 +225,7 @@ namespace HUDLayoutHelper.Utilities {
             return true;
         }
 
-        private bool HistoryEmpty(int hudLayoutIndex, List<List<HudElementAction>> history) {
+        private static bool HistoryEmpty(int hudLayoutIndex, List<List<HudElementAction>> history) {
             if (history[hudLayoutIndex].Count == 0) return true;
             return false;
         }

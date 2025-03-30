@@ -10,20 +10,15 @@ using System.Text;
 namespace HUDLayoutHelper.Windows;
 
 public class ConfigWindow : Window, IDisposable {
-    private Plugin _plugin;
-    private Configuration Configuration;
+    private readonly Plugin _plugin;
+    private readonly Configuration Configuration;
 
-    internal class WindowTab {
-        public string name;
-        public Action action;
-        public bool open;
-        public bool selected;
-        public WindowTab(string name, Action action, bool open = true, bool selected = false) {
-            this.name = name;
-            this.action = action;
-            this.open = open;
-            this.selected = selected;
-        }
+    internal class WindowTab(string name, Action action, bool open = true, bool selected = false) {
+        public string name = name;
+        public Action action = action;
+        public bool open = open;
+        public bool selected = selected;
+
         public void setSelected(bool selected) {
             this.selected = selected;
         }

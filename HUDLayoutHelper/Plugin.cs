@@ -20,7 +20,7 @@ namespace HUDLayoutHelper {
     public sealed class Plugin : IDalamudPlugin {
         public bool DEBUG = false;
 
-        public string Name => "HUDLayoutHelper";
+        public static string Name => "HUDLayoutHelper";
         private const string CommandName = "/hudhelper";
 
         public readonly WindowSystem WindowSystem = new("HUDLayoutHelper");
@@ -182,7 +182,7 @@ namespace HUDLayoutHelper {
         }
         // SETUP END
 
-        private AtkEventStateFlags CUSTOM_FLAG = (AtkEventStateFlags)16;
+        private readonly AtkEventStateFlags CUSTOM_FLAG = (AtkEventStateFlags)16;
         private HudElementData? mouseDownTarget = null;
 
         private unsafe void HandleMouseDownEvent(AddonEvent type, AddonArgs args) {
@@ -284,20 +284,15 @@ namespace HUDLayoutHelper {
         /// <summary>
         /// Represents the data for a mouse event. (AtkEventData) 
         /// </summary>
-        public unsafe struct MouseEventData {
-            public short PosX;
-            public short PosY;
-
-            public MouseEventData(short posX, short posY) {
-                PosX = posX;
-                PosY = posY;
-            }
+        public unsafe struct MouseEventData(short posX, short posY) {
+            public short PosX = posX;
+            public short PosY = posY;
 
             /// <summary>
             /// Converts the mouse event data to an AtkEventData struct. 
             /// By placing the x and y values at the beginning of the byte array and padding the rest with 0. 
             /// </summary>
-            public AtkEventData ToAtkEventData() {
+            public readonly AtkEventData ToAtkEventData() {
                 // Create a byte array with the size of the AtkEventData struct
                 int size = sizeof(AtkEventData);
                 byte[] eventDataBytes = new byte[size];
@@ -327,29 +322,17 @@ namespace HUDLayoutHelper {
 
         internal class Keybind {
             internal enum Action { None, Copy, Paste, Undo, Redo, ToggleAlignmentOverlay }
-            internal struct Description {
-                public string Name { get; set; }
-                public string Text { get; set; }
-                public string ShortText { get; set; }
-
-                public Description(string name, string description, string shortDescription) {
-                    Name = name;
-                    Text = description;
-                    ShortText = shortDescription;
-                }
+            internal struct Description(string name, string description, string shortDescription) {
+                public string Name { get; set; } = name;
+                public string Text { get; set; } = description;
+                public string ShortText { get; set; } = shortDescription;
             }
-            internal struct Keys {
-                public SeVirtualKey MainKey { get; set; }
-                public bool ShiftPressed { get; set; }
-                public KeyStateFlags State { get; set; }
+            internal struct Keys(SeVirtualKey mainKey, KeyStateFlags state, bool shiftPressed) {
+                public SeVirtualKey MainKey { get; set; } = mainKey;
+                public bool ShiftPressed { get; set; } = shiftPressed;
+                public KeyStateFlags State { get; set; } = state;
 
-                public Keys(SeVirtualKey mainKey, KeyStateFlags state, bool shiftPressed) {
-                    MainKey = mainKey;
-                    ShiftPressed = shiftPressed;
-                    State = state;
-                }
-
-                public override string ToString() {
+                public override readonly string ToString() {
                     string extraModifier = ShiftPressed ? $" + Shift" : "";
                     return $"Ctrl{extraModifier} + {MainKey}";
                 }
@@ -455,9 +438,8 @@ namespace HUDLayoutHelper {
             // Update previousElements if a change was made
             if (changedElement != null) {
                 this.Debug.Log(Plugin.Log.Debug, $"Changed Element: {changedElement}");
-                HudElementData? changedPreviousElement = null;
                 var previousElements = previousHudLayoutIndexElements[Utils.GetCurrentHudLayoutIndex(this)];
-                previousElements.TryGetValue(changedElement.ElementId, out changedPreviousElement);
+                previousElements.TryGetValue(changedElement.ElementId, out HudElementData? changedPreviousElement);
                 previousElements[changedElement.ElementId] = changedElement;
             }
         }
@@ -649,11 +631,7 @@ namespace HUDLayoutHelper {
         }
 
         public void ToggleAlignmentOverlay() {
-            if (AlignmentOverlayWindow.ToggledOnByUser) {
-                AlignmentOverlayWindow.ToggledOnByUser = false;
-            } else {
-                AlignmentOverlayWindow.ToggledOnByUser = true;
-            }
+            AlignmentOverlayWindow.ToggledOnByUser = !AlignmentOverlayWindow.ToggledOnByUser;
             Plugin.Log.Info($"Toggled Alignment Overlay {(AlignmentOverlayWindow.ToggledOnByUser ? "on" : "off")}");
         }
 
@@ -790,7 +768,7 @@ namespace HUDLayoutHelper {
             return elements;
         }
 
-        private unsafe bool HasPositionChanged(HudElementData previousData, HudElementData currentData) {
+        private static unsafe bool HasPositionChanged(HudElementData previousData, HudElementData currentData) {
             return previousData.PosX != currentData.PosX || previousData.PosY != currentData.PosY;
         }
     }

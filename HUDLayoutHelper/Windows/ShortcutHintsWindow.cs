@@ -6,8 +6,8 @@ using System.Numerics;
 namespace HUDLayoutHelper.Windows;
 
 public class ShortcutHintsWindow : Window, IDisposable {
-    private Plugin _plugin;
-    private Configuration Configuration;
+    private readonly Plugin _plugin;
+    private readonly Configuration Configuration;
     public ShortcutHintsWindow(Plugin plugin) : base("HUD Layout Helper - Shortcut List") {
         Flags = ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoBringToFrontOnFocus | ImGuiWindowFlags.NoFocusOnAppearing | ImGuiWindowFlags.NoNav;
 

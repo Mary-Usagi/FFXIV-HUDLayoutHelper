@@ -249,7 +249,7 @@ namespace HUDLayoutHelper.Utilities {
         /// <param name="message"></param>
         public unsafe void Log(Action<string, object[]> logFunction, string message) {
             if (Enabled) {
-                logFunction(message, Array.Empty<object>());
+                logFunction(message, []);
             }
         }
 

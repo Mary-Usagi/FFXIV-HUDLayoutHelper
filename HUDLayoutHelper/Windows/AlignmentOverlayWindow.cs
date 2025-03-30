@@ -18,8 +18,8 @@ namespace HUDLayoutHelper.Windows;
 /// 
 /// </summary>
 public class AlignmentOverlayWindow : Window, IDisposable {
-    private Plugin _plugin;
-    private Configuration Configuration;
+    private readonly Plugin _plugin;
+    private readonly Configuration Configuration;
     internal bool ToggledOnByUser { get; set; } = false;
     public AlignmentOverlayWindow(Plugin plugin) : base("Overlay") {
         Flags = ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoInputs;
@@ -48,7 +48,7 @@ public class AlignmentOverlayWindow : Window, IDisposable {
         Flags |= ImGuiWindowFlags.NoMove;
     }
 
-    internal uint ColorToUint(Color color) {
+    internal static uint ColorToUint(Color color) {
         return (uint)(color.A << 24 | color.B << 16 | color.G << 8 | color.R);
     }
 
@@ -222,7 +222,7 @@ public class AlignmentOverlayWindow : Window, IDisposable {
 
         if (overlayGuideLines.Count > 0) {
             //Plugin.Log.Debug($"Guide lines: {overlayGuideLines.Count}");
-            overlayGuideLines = overlayGuideLines.Distinct().ToList();
+            overlayGuideLines = [.. overlayGuideLines.Distinct()];
             //Plugin.Log.Debug($"Guide lines: {overlayGuideLines.Count}");
             //foreach (var guideLine in overlayGuideLines) {
             //    Plugin.Log.Debug($"Guide line: {guideLine.Item1} -> {guideLine.Item2} ({guideLine.Item3})");
