@@ -51,5 +51,4 @@ public class ShortcutHintsWindow : Window, IDisposable {
         ImGui.EndTable();
         ImGui.Spacing();
     }
-
 }
