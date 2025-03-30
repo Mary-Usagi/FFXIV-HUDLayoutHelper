@@ -132,7 +132,7 @@ public class AlignmentOverlayWindow : Window, IDisposable {
         );
         //Plugin.Log.Debug($"hudLayoutElements: {hudLayoutElements.Count}");
         // Create guide nodes for all elements except the selected one
-        List<HudOverlayNode> otherHudOverlayNodes = new List<HudOverlayNode>();
+        List<HudOverlayNode> otherHudOverlayNodes = [];
         foreach (var element in hudLayoutElements) {
             if (!element.Value.IsVisible) continue;
             if (element.Value.ElementId == selectedHudElement.ElementId) continue;
@@ -175,7 +175,7 @@ public class AlignmentOverlayWindow : Window, IDisposable {
         });
 
         // Create guide lines
-        List<(Vector2, Vector2, Color)> overlayGuideLines = new List<(Vector2, Vector2, Color)>();
+        List<(Vector2, Vector2, Color)> overlayGuideLines = [];
 
         foreach (var group in alignedAnchors.GroupBy(x => (x.otherNodeAnchor, x.selectedNodeAnchor))) {
             var otherNode = group.First().otherNode;

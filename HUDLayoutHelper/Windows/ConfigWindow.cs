@@ -44,7 +44,7 @@ public class ConfigWindow : Window, IDisposable {
             Keybinds.action = keybinds;
             Settings.action = settings;
             DebugInfo.action = debugInfo;
-            TabList = new List<WindowTab> { About, Keybinds, Settings, DebugInfo };
+            TabList = [About, Keybinds, Settings, DebugInfo];
         }
     }
     internal WindowTabs windowTabs;

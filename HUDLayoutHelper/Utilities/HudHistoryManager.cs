@@ -28,10 +28,10 @@ namespace HUDLayoutHelper.Utilities {
         private Plugin _plugin { get; }
 
         // The history of undo actions for each element for each HUD Layout
-        internal readonly List<List<HudElementAction>> undoHistory = new();
+        internal readonly List<List<HudElementAction>> undoHistory = [];
 
         // The history of redo actions for each element for each HUD Layout
-        internal readonly List<List<HudElementAction>> redoHistory = new();
+        internal readonly List<List<HudElementAction>> redoHistory = [];
 
         internal int HudLayoutCount { get; } = 4;
         internal int MaxHistorySize { get; private set; }
@@ -63,8 +63,8 @@ namespace HUDLayoutHelper.Utilities {
 
             // Initialize the undo and redo history lists
             for (int i = 0; i < HudLayoutCount; i++) {
-                undoHistory.Add(new List<HudElementAction>());
-                redoHistory.Add(new List<HudElementAction>());
+                undoHistory.Add([]);
+                redoHistory.Add([]);
             }
         }
 

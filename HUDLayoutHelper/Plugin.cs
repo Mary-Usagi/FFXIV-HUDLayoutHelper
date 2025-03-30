@@ -142,7 +142,7 @@ namespace HUDLayoutHelper {
             // Add a check for element changes to the update loop
             previousHudLayoutIndexElements.Clear();
             for (int i = 0; i < this.HudHistoryManager.HudLayoutCount; i++) {
-                previousHudLayoutIndexElements.Add(new Dictionary<int, HudElementData>());
+                previousHudLayoutIndexElements.Add([]);
             }
 
             if (AlignmentOverlayWindow.ToggledOnByUser && !AlignmentOverlayWindow.IsOpen) AlignmentOverlayWindow.Toggle();
@@ -366,7 +366,7 @@ namespace HUDLayoutHelper {
             }
         }
 
-        internal List<Keybind> Keybindings = new List<Keybind>() {
+        internal List<Keybind> Keybindings = [
             new Keybind( action: Keybind.Action.Copy,
                 description: (name: "Copy", text: "Copy position of selected HUD element", shortText: "Copy"),
                 keys: ( mainKey: SeVirtualKey.C, state: KeyStateFlags.Pressed, shiftPressed: false)
@@ -392,7 +392,7 @@ namespace HUDLayoutHelper {
                 keys: ( mainKey: SeVirtualKey.R, state: KeyStateFlags.Pressed, shiftPressed : false)
             )
 
-        };
+        ];
 
         /// <summary>
         /// Handles keyboard shortcuts for copy, paste, undo, and redo actions.
@@ -743,7 +743,7 @@ namespace HUDLayoutHelper {
         }
 
 
-        internal List<Dictionary<int, HudElementData>> previousHudLayoutIndexElements = new();
+        internal List<Dictionary<int, HudElementData>> previousHudLayoutIndexElements = [];
 
         private unsafe void PerformElementChangeCheck() {
             if (this.AgentHudLayout == null || this.HudLayoutScreen == null) return;
