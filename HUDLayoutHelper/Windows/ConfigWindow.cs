@@ -264,7 +264,7 @@ public class ConfigWindow : Window, IDisposable {
         }
 
         // Redo Strategy
-        HudHistoryManager.RedoStrategy[] redoStrategies = (HudHistoryManager.RedoStrategy[])Enum.GetValues(typeof(HudHistoryManager.RedoStrategy));
+        HudHistoryManager.RedoStrategy[] redoStrategies = Enum.GetValues<HudHistoryManager.RedoStrategy>();
         int itemSelectedIndex = Array.IndexOf(redoStrategies, redoActionStrategy);
         string combo_preview_value = Configuration.RedoActionStrategy.ToString();
 
