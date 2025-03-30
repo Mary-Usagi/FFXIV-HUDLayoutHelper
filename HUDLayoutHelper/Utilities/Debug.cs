@@ -144,7 +144,7 @@ namespace HUDLayoutHelper.Utilities {
                 byte* bytePtr = (byte*)receiveEventArgs.Data;
                 uint[] mousePositions = new uint[4];
                 for (int i = 0; i < 4; i++) {
-                    mousePositions[i] = BitConverter.ToUInt16(new byte[] { bytePtr[i * 2], bytePtr[i * 2 + 1] }, 0);
+                    mousePositions[i] = BitConverter.ToUInt16([bytePtr[i * 2], bytePtr[i * 2 + 1]], 0);
                 }
                 Plugin.Log.Debug($"Mouse Position: X={mousePositions[0]}, Y={mousePositions[1]}, Z={mousePositions[2]}, W={mousePositions[3]}");
 
