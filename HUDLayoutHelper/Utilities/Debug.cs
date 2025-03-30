@@ -257,6 +257,5 @@ namespace HUDLayoutHelper.Utilities {
             Plugin.AddonLifecycle.UnregisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutScreen", HandleHudLayoutScreenEvent);
             Plugin.AddonLifecycle.UnregisterListener(AddonEvent.PreReceiveEvent, "_HudLayoutWindow", HandleHudLayoutScreenEvent);
         }
-
     }
 }

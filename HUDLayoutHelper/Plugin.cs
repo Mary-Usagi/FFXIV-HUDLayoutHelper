@@ -772,7 +772,4 @@ namespace HUDLayoutHelper {
             return previousData.PosX != currentData.PosX || previousData.PosY != currentData.PosY;
         }
     }
-
-
-
 }
