@@ -1,6 +1,6 @@
 ﻿using Dalamud.Interface.Windowing;
 using HUDLayoutHelper.Utilities;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -86,8 +86,7 @@ public class ConfigWindow : Window, IDisposable {
             ptr = null;
         }
 
-        byte* p_open2 = null;
-        byte num2 = ImGuiNative.igBeginTabItem(ptr, p_open2, flags);
+        byte num2 = ImGuiNative.BeginTabItem(ptr, null, flags);
         if (num > 2048) {
             Marshal.FreeHGlobal((nint)ptr);
         }

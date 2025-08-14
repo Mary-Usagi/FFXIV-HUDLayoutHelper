@@ -73,7 +73,7 @@ namespace HUDLayoutHelper.Utilities {
             mouseUpEvent.Param = 99;
             mouseUpEvent.NextEvent = null;
             mouseUpEvent.Target = (AtkEventTarget*)atkStagePtr;
-            mouseUpEvent.State.UnkFlags1 = 0;
+            mouseUpEvent.State.ReturnFlags = 0;
             mouseUpEvent.State.StateFlags = (AtkEventStateFlags)6;
             // Add custom Flag to the event to identify it as a custom event
             mouseUpEvent.State.StateFlags |= customFlag;
@@ -114,7 +114,7 @@ namespace HUDLayoutHelper.Utilities {
             hudLayoutWindowPtr = null;
 
             // Get the HudLayout agent, return false if not found
-            AgentHUDLayout* agentHudLayout = (AgentHUDLayout*)Plugin.GameGui.FindAgentInterface("HudLayout");
+            AgentHUDLayout* agentHudLayout = (AgentHUDLayout*)(nint)Plugin.GameGui.FindAgentInterface("HudLayout");
             if (agentHudLayout == null) return false;
 
             // Get the HudLayoutScreen, return false if not found
