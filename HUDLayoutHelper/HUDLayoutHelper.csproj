@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project Sdk="Dalamud.NET.Sdk/13.0.0">
+<Project Sdk="Dalamud.NET.Sdk/14.0.1">
   <PropertyGroup>
-    <Version>0.0.0.2</Version>
+    <Version>0.0.0.3</Version>
     <Description>FFXIV HUD Layout Helper</Description>
     <PackageProjectUrl>https://github.com/Mary-Usagi/FFXIV-HUDLayoutHelper</PackageProjectUrl>
+    <RepoUrl>https://github.com/Mary-Usagi/FFXIV-HUDLayoutHelper</RepoUrl>
     <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
+	<IconUrl>https://raw.githubusercontent.com/Mary-Usagi/FFXIV-HUDLayoutHelper/refs/heads/main/images/icon.png</IconUrl>
+    <DalamudApiLevel>14</DalamudApiLevel>
+	<TestingDalamudApiLevel>14</TestingDalamudApiLevel>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
-  
-  <ItemGroup>
-    <PackageReference Include="System.Numerics.Vectors" Version="4.6.1" />
-  </ItemGroup>
 </Project>

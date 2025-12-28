@@ -32,7 +32,7 @@ public class ShortcutHintsWindow : Window, IDisposable {
         // If any of these conditions are not met, the window will not be opened
         this.IsOpen = Configuration.ShowShortcutHints
             && Plugin.ClientState.IsLoggedIn
-            && Plugin.ClientState is { LocalPlayer.ClassJob.RowId: var classJobId }
+            && Plugin.PlayerState is { ClassJob.RowId: var classJobId }
             && _plugin.AgentHudLayout != null && _plugin.HudLayoutScreen != null;
     }
 

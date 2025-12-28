@@ -155,7 +155,7 @@ namespace HUDLayoutHelper.Utilities {
 
 
         internal static unsafe int GetCurrentHudLayoutIndex(Plugin plugin, bool log = true) {
-            int index = AddonConfig.Instance()->ModuleData->CurrentHudLayout;
+            int index = AddonConfig.Instance()->ActiveDataSet->CurrentHudLayout;
             if (log) plugin.Debug.Log(Plugin.Log.Debug, $"Current HUD Layout Index: {index}");
             if (index is < 0 or >= 10) {
                 plugin.Debug.Log(Plugin.Log.Warning, "Invalid HUD Layout index.");

@@ -61,8 +61,8 @@ namespace HUDLayoutHelper.Utilities {
             }
 
             if (receiveEventArgs.AtkEventType == 15) {
-                if (receiveEventArgs.Data != nint.Zero) {
-                    AtkEventData* eventDataTemp = (AtkEventData*)receiveEventArgs.Data;
+                if (receiveEventArgs.AtkEventData != nint.Zero) {
+                    AtkEventData* eventDataTemp = (AtkEventData*)receiveEventArgs.AtkEventData;
                     if (eventDataTemp->ListItemData.SelectedIndex == 256) {
                         //Plugin.Log.Debug("@@@@@@ Window action");
                         return;
@@ -126,10 +126,10 @@ namespace HUDLayoutHelper.Utilities {
 
             Plugin.Log.Debug($"AddonName: {receiveEventArgs.AddonName}");
             Plugin.Log.Debug($"EventId int: {receiveEventArgs.EventParam}");
-            Plugin.Log.Debug($"Data Ptr: {receiveEventArgs.Data:X}");
+            Plugin.Log.Debug($"Data Ptr: {receiveEventArgs.AtkEventData:X}");
 
-            if (receiveEventArgs.Data != nint.Zero) {
-                AtkEventData* eventData = (AtkEventData*)receiveEventArgs.Data;
+            if (receiveEventArgs.AtkEventData != nint.Zero) {
+                AtkEventData* eventData = (AtkEventData*)receiveEventArgs.AtkEventData;
                 Plugin.Log.Debug($"EventData: {eventData->ToString()}");
                 Plugin.Log.Debug($"ListItemData: {eventData->ListItemData}");
                 Plugin.Log.Debug($"SelectedIndex: {eventData->ListItemData.SelectedIndex}");
@@ -141,7 +141,7 @@ namespace HUDLayoutHelper.Utilities {
                 }
 
                 // Interpret the first 8 bytes as mouse position values
-                byte* bytePtr = (byte*)receiveEventArgs.Data;
+                byte* bytePtr = (byte*)receiveEventArgs.AtkEventData;
                 uint[] mousePositions = new uint[4];
                 for (int i = 0; i < 4; i++) {
                     mousePositions[i] = BitConverter.ToUInt16([bytePtr[i * 2], bytePtr[i * 2 + 1]], 0);

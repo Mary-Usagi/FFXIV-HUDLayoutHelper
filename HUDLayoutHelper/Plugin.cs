@@ -39,6 +39,7 @@ namespace HUDLayoutHelper {
         [PluginService] internal static IAddonLifecycle AddonLifecycle { get; private set; } = null!;
         [PluginService] internal static IFramework Framework { get; private set; } = null!;
         [PluginService] internal static IChatGui ChatGui { get; private set; } = null!;
+        [PluginService] internal static IPlayerState PlayerState { get; private set; } = null!;
 
         public Debug Debug { get; private set; } = null!;
         internal HudHistoryManager HudHistoryManager { get; private set; } = null!;
@@ -384,7 +385,7 @@ namespace HUDLayoutHelper {
         private unsafe void HandleKeyboardShortcuts(IFramework framework) {
             // Executes every frame
             if (!ClientState.IsLoggedIn) return;
-            if (ClientState is not { LocalPlayer.ClassJob.RowId: var classJobId }) return;
+            if (PlayerState is not { ClassJob.RowId: var classJobId }) return;
             if (ImGui.GetIO().WantCaptureKeyboard) return; // TODO: Necessary? 
 
             // Get the state of the control key, abort if not pressed 
