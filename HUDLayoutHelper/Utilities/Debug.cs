@@ -56,11 +56,11 @@ namespace HUDLayoutHelper.Utilities {
             };
 
             // Check if the event type is in the handled list
-            if (!handledTypeList.Contains((AtkEventType)receiveEventArgs.AtkEventType) && !handledByteEventList.Contains(receiveEventArgs.AtkEventType)) {
+            if (!handledTypeList.Contains((AtkEventType)receiveEventArgs.AtkEventType) && !handledByteEventList.Contains((byte)receiveEventArgs.AtkEventType)) {
                 return;
             }
 
-            if (receiveEventArgs.AtkEventType == 15) {
+            if ((byte)receiveEventArgs.AtkEventType == 15) {
                 if (receiveEventArgs.AtkEventData != nint.Zero) {
                     AtkEventData* eventDataTemp = (AtkEventData*)receiveEventArgs.AtkEventData;
                     if (eventDataTemp->ListItemData.SelectedIndex == 256) {

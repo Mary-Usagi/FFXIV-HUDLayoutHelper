@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project Sdk="Dalamud.NET.Sdk/14.0.1">
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
     <Version>0.0.0.3</Version>
     <Description>FFXIV HUD Layout Helper</Description>
@@ -7,8 +7,8 @@
     <RepoUrl>https://github.com/Mary-Usagi/FFXIV-HUDLayoutHelper</RepoUrl>
     <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
 	<IconUrl>https://raw.githubusercontent.com/Mary-Usagi/FFXIV-HUDLayoutHelper/refs/heads/main/images/icon.png</IconUrl>
-    <DalamudApiLevel>14</DalamudApiLevel>
-	<TestingDalamudApiLevel>14</TestingDalamudApiLevel>
+    <DalamudApiLevel>15</DalamudApiLevel>
+	<TestingDalamudApiLevel>15</TestingDalamudApiLevel>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 </Project>

@@ -188,7 +188,7 @@ namespace HUDLayoutHelper {
 
         private unsafe void HandleMouseDownEvent(AddonEvent type, AddonArgs args) {
             if (args is not AddonReceiveEventArgs receiveEventArgs) return;
-            if (receiveEventArgs.AtkEventType != (uint)AtkEventType.MouseDown) return;
+            if ((AtkEventType)receiveEventArgs.AtkEventType != AtkEventType.MouseDown) return;
             if (receiveEventArgs.AtkEvent == nint.Zero) return;
 
             // Check if the event has the custom flag set, if so, filter it out
@@ -228,7 +228,7 @@ namespace HUDLayoutHelper {
 
         private unsafe void HandleMouseUpEvent(AddonEvent type, AddonArgs args) {
             if (args is not AddonReceiveEventArgs receiveEventArgs) return;
-            if (receiveEventArgs.AtkEventType != (uint)AtkEventType.MouseUp) return;
+            if ((AtkEventType)receiveEventArgs.AtkEventType != AtkEventType.MouseUp) return;
             if (receiveEventArgs.AtkEvent == nint.Zero) return;
 
 
@@ -408,7 +408,7 @@ namespace HUDLayoutHelper {
             this.Debug.Log(Plugin.Log.Debug, $"Keybind.Action: {keyboardAction}");
 
             // Abort if a popup is open
-            if (this.HudLayoutWindow->NumOpenPopups > 0) {
+            if (this.HudLayoutWindow->NumBlockingAddons > 0) {
                 this.Debug.Log(Plugin.Log.Warning, "Popup open, not executing action.");
                 return;
             }
@@ -686,7 +686,7 @@ namespace HUDLayoutHelper {
 
         private unsafe void HandleKeyboardMoveEvent(AddonEvent type, AddonArgs args) {
             if (args is not AddonReceiveEventArgs receiveEventArgs) return;
-            if (receiveEventArgs.AtkEventType != 13) // && (AtkEventType)receiveEventArgs.AtkEventType != AtkEventType.InputReceived) 
+            if ((byte)receiveEventArgs.AtkEventType != 13) // && (AtkEventType)receiveEventArgs.AtkEventType != AtkEventType.InputReceived)
                 return;
             if (receiveEventArgs.AtkEvent == nint.Zero) return;
 
@@ -700,7 +700,7 @@ namespace HUDLayoutHelper {
 
         private unsafe void HandleControllerMoveEvent(AddonEvent type, AddonArgs args) {
             if (args is not AddonReceiveEventArgs receiveEventArgs) return;
-            if (receiveEventArgs.AtkEventType != 15) // && (AtkEventType)receiveEventArgs.AtkEventType != AtkEventType.InputReceived) 
+            if ((byte)receiveEventArgs.AtkEventType != 15) // && (AtkEventType)receiveEventArgs.AtkEventType != AtkEventType.InputReceived)
                 return;
             if (receiveEventArgs.AtkEvent == nint.Zero) return;
 
